@@ -9,7 +9,7 @@
     "preview": "vite preview"
   },
   "dependencies": {
-    "@vueuse/core": "^10.1.2",
+    "@vueuse/core": "^10.4.0",
     "pinia": "^2.0.35",
     "stats.js": "^0.17.0",
     "three": "^0.155.0",
