@@ -1,14 +1,16 @@
 
 <template>
   <div class="app-container">
+    <!-- <Sidebar/> -->
     <Navbar/>
     <RouterView class="page-container"/>
-    <footer-component/>
+    <Footer/>
   </div>
 </template>
 
 <script>
-import { RouterLink, RouterView } from "vue-router";
+export default {
+}
 </script>
 <style scoped>
 .app-container{
@@ -17,7 +19,10 @@ import { RouterLink, RouterView } from "vue-router";
   display: flex;
   flex-direction: column;
   
-  background: #FAEDE3;
+  background: url('@/assets/pages/home/background.png');
+  background-size: cover;
+  background-repeat: no-repeat;
+  background-position: center center;
 }
 .page-container{
   max-width: 1280px;

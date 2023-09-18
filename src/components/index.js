@@ -1,8 +1,10 @@
 import Navbar from './Navbar.vue'
+import Sidebar from './Sidebar.vue'
 import JarScene from './JarScene.vue'
-import FooterComponent from './Footer.vue'
+import Footer from './Footer.vue'
 export default [
     Navbar,
+    Sidebar,
     JarScene,
-    FooterComponent
+    Footer
 ]

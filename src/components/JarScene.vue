@@ -47,8 +47,8 @@ export default {
     console.log('doc body', document.body)
     const webGl = ref();
     const { width, height } = useWindowSize();
-    let customWidth = 750
-    let customHeight = 450;
+    let customWidth = 1000
+    let customHeight = 650;
     const aspectRatio = computed(() => {
       return customWidth / customHeight
     });
@@ -72,7 +72,7 @@ export default {
     draco.setDecoderPath('https://www.gstatic.com/draco/v1/decoders/');
     draco.preload();
     loader.setDRACOLoader = ( draco )
-
+    let animationTest;
     function setLighting(renderer){
       console.log('calling set lighting')
       var pmremGenerator = new PMREMGenerator( renderer );
@@ -107,17 +107,23 @@ export default {
       // console.log("GOT MATERIAL", material)
       // box = new Mesh(geometry, material);
       // scene.add(box);
-      loader.load('assets/glb/jar-test-animated.glb', function (gltf) {
+      loader.load('assets/glb/jartest.glb', function (gltf) {
         scene.add(gltf.scene)
         gltf.animations; // Array<THREE.AnimationClip>
         console.log("gltf animations", gltf.animations)
         console.log("gltfasset", gltf.scene.children[0])
         mixer = new AnimationMixer(gltf.scene)
-        let animation = mixer.clipAction(gltf.animations[0])
-        animation.setLoop(LoopRepeat);
-        animation.clampWhenFinished = false;
-        animation.enable = true;
-        animation.play()
+        // let animation = mixer.clipAction(gltf.animations[0])
+        animationTest = mixer.clipAction(gltf.animations[0])
+        console.log("looprepeat", LoopRepeat)
+        // animation.setLoop(LoopRepeat);
+        // animation.clampWhenFinished = false;
+        // animation.enable = true;
+        // animation.play()
+        animationTest.setLoop(LoopRepeat);
+        animationTest.clampWhenFinished = false;
+        animationTest.enable = true;
+        // animationTest.play()
         // const mixer = new AnimationMixer(gltf.scene.children[0]);
         // const clips = gltf.animations;
         // mixer.update(0.2)
@@ -200,6 +206,7 @@ export default {
     onMounted(() => {
       setCanvas();
       animate();
+      console.log('animation:', animation)
     });
 
     return { webGl };
