@@ -1,8 +1,8 @@
 <template>
-  <div class="sidebar-container">
-    <button @click="toggleSidebar">TESTME</button>
-    {{isSidebarOpen}}
-    <button @click="count++">
+  <div v-if="showSidebar" class="sidebar-container">
+    <button class="small-button mr-2" @click="toggleSidebar">TESTME</button>
+    {{isSidebarOpen}} {{showSidebar}}
+    <button class="small-button mr-2" @click="increment">
       {{ count }}
     </button>
   </div>
@@ -13,7 +13,7 @@ import { inject, ref, watch } from 'vue';
 export default {
   name: "Sidebar",
   setup(){
-    const count = ref(0)
+    let count = ref(0)
     let emitter = inject('emitter')
     let showSidebar = ref(false);
     const isSidebarOpen = ref(false);
@@ -47,9 +47,11 @@ export default {
 
 <style lang="scss" scoped>
 .sidebar-container{
+  position: fixed;
   display: flex;
-  width: 100vw !important;
-  height: 100vw !important;
+  width: 100vw;
+  height: 100vh;
+  min-height: 100vh;
   background: #eae8e440;
   justify-content: center;
   color: black;

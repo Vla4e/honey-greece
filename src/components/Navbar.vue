@@ -2,7 +2,6 @@
   <nav class="navbar">
     <div class="links-container">
       <img :src="sidebar" @click="toggleSidebar" class="burger-icon"/>
-      <button @click="testButton">TEST ME {{count}}</button>
     </div>
     <div class="logo-container">
       <img :src="logo" class="navbar-logo" />
@@ -15,7 +14,7 @@ import { inject, ref } from 'vue'
 import logoUrl from '@/assets/images/main-logo.png'
 import burgerIcon from '@/assets/images/burger-icon.svg'
 export default {
-  name: 'Navbar',
+  name: 'NavbarComponent',
   setup() {
     let emitter = inject('emitter')
     let count = ref(0)
@@ -54,10 +53,11 @@ export default {
 .links-container{
   display: flex;
   flex-grow: 1;
-  justify-content: space-around;
-  height: 60px; 
+  justify-content: flex-start;
+  height: 60px;
+  padding: 0px 2%;
   .burger-icon{
-    width: 40px;
+    width: 60px;
   }
 }
 .links-container label {

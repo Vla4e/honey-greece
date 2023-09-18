@@ -1,8 +1,7 @@
-
 <template>
   <div class="app-container">
-    <!-- <Sidebar/> -->
-    <Navbar/>
+    <Sidebar/>
+    <NavbarComponent/>
     <RouterView class="page-container"/>
     <Footer/>
   </div>
