@@ -1,11 +1,33 @@
 <template>
   <nav class="navbar">
     <div class="links-container">
-      <img :src="sidebar" @click="toggleSidebar" class="burger-icon"/>
+      <div class="burger-icon-container">
+        <img :src="sidebar" @click="toggleSidebar" class="burger-icon"/>
+      </div>
+      <div class="blend-links-container">
+        <router-link class="blend-link" to="/">
+          Okto
+        </router-link>
+        
+        <router-link class="blend-link" to="/">
+          Honey Apiary Academy
+        </router-link>
+        
+        <router-link class="blend-link" to="/">
+          Melculum
+        </router-link>
+      </div>
+      <div class="inquire-container">
+        <router-link class="blend-link" to="/">
+          Inquire
+        </router-link>
+      </div>
     </div>
-    <div class="logo-container">
-      <img :src="logo" class="navbar-logo" />
-    </div>
+    <!-- <div class="logo-container">
+      <router-link class="logo-link" to="/">
+        <img :src="logo" class="navbar-logo" />
+      </router-link>
+    </div> -->
   </nav>
 </template>
 
@@ -39,25 +61,62 @@ export default {
   min-height: 100px;
   background: transparent;
   position: relative;
+  margin-bottom: 2%;
+  z-index: 2;
 }
+.blend-link{
+  color: #000;
+  text-align: center;
+  font-family: "DMSans";
+  font-size: 15px;
+  font-style: normal;
+  font-weight: 400;
+  line-height: normal;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+} 
 .logo-container{
   display: flex;
-  justify-content: center;
+  justify-content: flex-start;
   align-items: flex-end;
-  width: 100%;
+  width: 25%;
   position: relative;
+  // margin-top: 3%;
+  .logo-link{
+    width: 15%;
+  }
   .navbar-logo{
-    width: 210px;
+    width: 100%;
   }
 }
 .links-container{
   display: flex;
   flex-grow: 1;
-  justify-content: flex-start;
-  height: 60px;
-  padding: 0px 2%;
+  justify-content: space-between;
+  height: 0px;
+  padding: 0 2% 2% 2%;
   .burger-icon{
-    width: 60px;
+    height: 50px;
+    width: 50px;
+  }
+  .burger-icon-container{
+    width: 25%;
+    display: flex;
+    justify-content: flex-start;
+    align-items: center;
+    z-index: 11;
+  }
+  .blend-links-container{
+    display: flex;
+    justify-content: space-around;
+    align-items: center;
+    width: 50%;
+  }
+  .inquire-container{
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    width: 25%;
   }
 }
 .links-container label {

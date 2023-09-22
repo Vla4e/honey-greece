@@ -1,0 +1,90 @@
+
+<template>
+  <div class="home-container">
+    <div class="background-video-container">
+      <video id="background-video" class="background-video" autoplay loop muted poster="https://assets.codepen.io/6093409/river.jpg">
+        <source :src="homeVideo" type="video/mp4">
+      </video>
+    </div>
+    <div class="video-cover">
+    </div>
+    <div class="texts-container">
+      <img :src="smallJar" class="small-jar-home"/>
+      <span class="home-text">Essence of <br/>Nature</span>
+      <!-- <span class="home-subtext">By Honey Apiary Academy</span> -->
+    </div>
+    <router-link class="route-button small-button" to="/products">See our products</router-link>
+  </div>
+</template>
+
+<script>
+import { ref } from 'vue';
+import homeVideo from '@/assets/pages/home/bg-vid.mp4'
+import smallJar from '@/assets/pages/home/jar-mockup.png'
+export default{
+  name: 'Home',
+  setup(){
+    const count = ref(0)
+    return {count, homeVideo, smallJar}
+  }
+}
+</script>
+
+<style lang="scss" scoped>
+.home-container{
+  display: flex;
+  width: 100%;
+  align-items: center;
+  justify-content: center;
+  z-index: 3 !important;
+}
+.read-the-docs {
+  color: #888;
+}
+.video-cover{
+  background: linear-gradient(180deg, rgba(204, 204, 204, 0.50) 0%, rgba(255, 255, 255, 0.00) 100%);
+  z-index: 2;
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  
+}
+.background-video-container{
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  display: flex;
+  justify-content: flex-start;
+  align-items: flex-start;
+  z-index: 1 !important;
+  overflow:hidden;
+  .background-video{
+    width: 140vw;
+  }
+}
+.texts-container{
+  display: flex;
+  flex-direction: row;
+  align-content: center;
+  justify-content: center;
+  z-index: 4;
+  .small-jar-home{
+    height: 500px; 
+    margin-right: 50px;
+  }
+  .home-text{
+    display: flex;
+    align-items: center;
+    font-family: 'DM Serif';
+    font-size: 100px;
+    font-weight: 600;
+    color: #000;
+    line-height: 82.6%;
+    text-align: left;
+  }
+}
+</style>

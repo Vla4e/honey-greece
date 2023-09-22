@@ -1,6 +1,10 @@
 <template>
   <div class="jar-sc-container" ref="canvasContainer">
-    <div>mfw parko 2047 off da JUICE</div>
+    <div class="animation-controls"> 
+      <button @click="playAnimation" class="small-button route-button">Play Animation</button>
+      <button @click="stopAnimation" class="small-button route-button">Stop Animation</button>
+      <button @click="resetAnimation" class="small-button route-button">Reset Animation</button>
+    </div>
     <canvas ref="webGl" class="webGl jar-sc-canvas" />
   </div>
 </template>
@@ -107,7 +111,7 @@ export default {
       // console.log("GOT MATERIAL", material)
       // box = new Mesh(geometry, material);
       // scene.add(box);
-      loader.load('assets/glb/jartest.glb', function (gltf) {
+      loader.load('assets/glb/jar-spinToFront.glb', function (gltf) {
         scene.add(gltf.scene)
         gltf.animations; // Array<THREE.AnimationClip>
         console.log("gltf animations", gltf.animations)
@@ -120,9 +124,9 @@ export default {
         // animation.clampWhenFinished = false;
         // animation.enable = true;
         // animation.play()
-        animationTest.setLoop(LoopRepeat);
-        animationTest.clampWhenFinished = false;
-        animationTest.enable = true;
+        // animationTest.setLoop(LoopRepeat);
+        animationTest.clampWhenFinished = true;
+        // animationTest.enable = true;
         // animationTest.play()
         // const mixer = new AnimationMixer(gltf.scene.children[0]);
         // const clips = gltf.animations;
@@ -196,7 +200,6 @@ export default {
       // mesh.rotation.y += 0.01;
       requestAnimationFrame(animate);
       let delta = clock.getDelta()
-      // console.log("ANIMATE MIXER", mixer)
       if(mixer && modelReady) mixer.update(delta);
       controls.update();
       renderer.render(scene, camera);
@@ -208,17 +211,40 @@ export default {
       animate();
       console.log('animation:', animation)
     });
-
-    return { webGl };
+    function playAnimation(){
+      console.log('clicked')
+      animationTest.play()
+    }
+    function resetAnimation() {
+      animationTest.stop()
+    }
+    function stopAnimation(){
+      animationTest.halt()
+    }
+    return { webGl, playAnimation, stopAnimation, resetAnimation };
   },
 }
 </script>
-<style scoped>
+<style lang="scss" scoped>
 .jar-sc-container{
   width: 100%;
   display: flex;
   flex-direction: column;
   justify-content: center;
   align-items: center;
+  z-index: 20;
+}
+.animation-controls{
+  display: flex;
+  width: 100%;
+  flex-direction: row;
+  justify-content: center;
+  margin-bottom: 30px;
+  .small-button{
+    margin-right: 10px;
+  }
+  .small-button:last-child{
+    margin-right: 0px;
+  }
 }
 </style>

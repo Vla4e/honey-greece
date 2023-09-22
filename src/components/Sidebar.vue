@@ -56,5 +56,6 @@ export default {
   justify-content: center;
   color: black;
   font-size: 40px;
+  z-index: 10;
 }
 </style>

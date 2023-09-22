@@ -1,6 +1,7 @@
 import { createRouter, createWebHistory } from 'vue-router'
-import HomePage from '@/views/HomePage.vue'
-import HelloWorld from '@/components/HelloWorld.vue'
+import Home from '@/views/Home.vue'
+import ProductTabs from '@/views/ProductTabs.vue'
+import TabList from '@/views/TabList.vue'
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -8,12 +9,17 @@ const router = createRouter({
     {
       path: '/',
       name: 'Home',
-      component: HelloWorld
+      component: Home
     },
     {
-      path: '/scene',
-      name: 'Scene',
-      component: HomePage
+      path: '/products',
+      name: 'ProductTabs',
+      component: ProductTabs
+    },
+    {
+      path: '/tabs',
+      name: 'Tabs',
+      component: TabList
     }
   ]
 })

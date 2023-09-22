@@ -1,9 +1,9 @@
 <template>
   <div class="app-container">
     <Sidebar/>
-    <NavbarComponent/>
+    <NavbarComponent id="nav"/>
     <RouterView class="page-container"/>
-    <Footer/>
+    <!-- <Footer id="footer"/> -->
   </div>
 </template>
 
@@ -17,15 +17,19 @@ export default {
   width: 100%;
   display: flex;
   flex-direction: column;
-  
-  background: url('@/assets/pages/home/background.png');
+  background: white;
+  /* background: url('@/assets/pages/home/background.png');
   background-size: cover;
   background-repeat: no-repeat;
-  background-position: center center;
+  background-position: center center; */
 }
 .page-container{
   max-width: 1280px;
   margin: auto;
   flex-grow: 1;
+  z-index: 3;
+}
+#nav, #footer{
+  z-index: 10;
 }
 </style>
