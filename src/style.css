@@ -95,7 +95,8 @@ button:focus-visible {
   font-size: 20px;
 }
 .route-button{
-  background: white;
+  z-index: 20;
+  background: transparent;
   color: black;
   font-size: 22px;
   display: flex;

@@ -58,7 +58,7 @@ export default {
   display: flex;
   flex-direction: column;
   width: 100vw;
-  min-height: 100px;
+  min-height: 10%;
   background: transparent;
   position: relative;
   margin-bottom: 2%;

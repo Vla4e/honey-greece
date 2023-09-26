@@ -10,10 +10,12 @@
     </div>
     <div class="texts-container">
       <img :src="smallJar" class="small-jar-home"/>
-      <span class="home-text">Essence of <br/>Nature</span>
+      <div class="home-text-container">
+        <span class="home-text">Essence of <br/>Nature</span>
+        <router-link class="route-button small-button" to="/products">See our products</router-link>
+      </div>
       <!-- <span class="home-subtext">By Honey Apiary Academy</span> -->
     </div>
-    <router-link class="route-button small-button" to="/products">See our products</router-link>
   </div>
 </template>
 
@@ -34,6 +36,7 @@ export default{
 .home-container{
   display: flex;
   width: 100%;
+  max-height: 92%;
   align-items: center;
   justify-content: center;
   z-index: 3 !important;
@@ -73,18 +76,25 @@ export default{
   justify-content: center;
   z-index: 4;
   .small-jar-home{
-    height: 500px; 
+    height: 500px !important; 
     margin-right: 50px;
   }
-  .home-text{
+  .home-text-container{
     display: flex;
-    align-items: center;
-    font-family: 'DM Serif';
-    font-size: 100px;
-    font-weight: 600;
-    color: #000;
-    line-height: 82.6%;
-    text-align: left;
+    flex-direction: column;
+    justify-content: center;
+    align-items: flex-start;
+    .home-text{
+      display: flex;
+      align-items: center;
+      font-family: 'DM Serif';
+      font-size: 100px;
+      font-weight: 600;
+      color: #000;
+      line-height: 82.6%;
+      text-align: left;
+      margin-bottom: 15px;
+    }
   }
 }
 </style>
