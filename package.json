@@ -11,7 +11,7 @@
   "dependencies": {
     "@vueuse/core": "^10.4.1",
     "mitt": "^3.0.1",
-    "sass": "^1.67.0",
+    "sass": "^1.68.0",
     "stats.js": "^0.17.0",
     "three": "^0.156.1",
     "vue": "^3.3.4",
