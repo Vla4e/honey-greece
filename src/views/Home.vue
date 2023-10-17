@@ -22,7 +22,7 @@
 <script>
 import { ref } from 'vue';
 import homeVideo from '@/assets/pages/home/bg-vid.mp4'
-import smallJar from '@/assets/pages/home/jar-mockup.png'
+import smallJar from '@/assets/pages/home/jar-medium.png'
 export default{
   name: 'Home',
   setup(){
@@ -76,7 +76,7 @@ export default{
   justify-content: center;
   z-index: 4;
   .small-jar-home{
-    height: 500px !important; 
+    height: 400px !important; 
     margin-right: 50px;
   }
   .home-text-container{

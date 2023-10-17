@@ -1,4 +1,5 @@
 import { createApp } from 'vue'
+import { createPinia } from 'pinia'
 import './style.css'
 import '@/assets/styles/fonts.scss'
 import App from './App.vue'
@@ -9,9 +10,9 @@ import mitt from 'mitt';
 
 const emitter = mitt();
 const app = createApp(App)
-
+const pinia  = createPinia();
 app.use(router)
-
+app.use(pinia)
 //GLOBAL COMPONENTS
 for (const component of components){
   app.component(component.name, component)

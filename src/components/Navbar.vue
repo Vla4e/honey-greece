@@ -2,7 +2,7 @@
   <nav class="navbar">
     <div class="links-container">
       <div class="burger-icon-container">
-        <img :src="sidebar" @click="toggleSidebar" class="burger-icon"/>
+        <!-- <img :src="sidebar" @click="toggleSidebar" class="burger-icon"/> -->
       </div>
       <div class="blend-links-container">
         <router-link class="blend-link" to="/">
@@ -18,9 +18,9 @@
         </router-link>
       </div>
       <div class="inquire-container">
-        <router-link class="blend-link" to="/">
+        <a class="blend-link" href="mailto:vlade_nikolovski@hotmail.com" target="_blank">
           Inquire
-        </router-link>
+        </a>
       </div>
     </div>
     <!-- <div class="logo-container">
@@ -98,6 +98,7 @@ export default {
   .burger-icon{
     height: 50px;
     width: 50px;
+    cursor: pointer;
   }
   .burger-icon-container{
     width: 25%;
@@ -105,6 +106,15 @@ export default {
     justify-content: flex-start;
     align-items: center;
     z-index: 11;
+    :hover{
+      transform: scale(1.1);
+      transition: all ease-in-out 0.3s;
+    }
+    .burger-icon{
+      position: absolute;
+      top: 2%;
+      left: 2%;
+    }
   }
   .blend-links-container{
     display: flex;

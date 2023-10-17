@@ -54,7 +54,7 @@ export default {
     let customWidth = 1000
     let customHeight = 650;
     const aspectRatio = computed(() => {
-      return customWidth / customHeight
+      return width / height
     });
     
     //Define three variables
@@ -84,7 +84,7 @@ export default {
         .load( 'assets/HDR/test-hdr.hdr', function ( texture ) {
           console.log('loader texture', texture)
           var envMap = pmremGenerator.fromEquirectangular( texture ).texture;
-          scene.background = envMap;
+          scene.background = null;
           scene.environment = envMap;
           texture.dispose();
           pmremGenerator.dispose();
@@ -164,17 +164,18 @@ export default {
 
       // Renderer
       const canvas = webGl.value;
-      renderer = new WebGLRenderer({ canvas, antialias: true });
-      // renderer.setSize(width.value, height.value);
-      renderer.setSize(customWidth, customHeight);
+      renderer = new WebGLRenderer({ canvas, antialias: true, alpha: true });
+      renderer.setClearColor(0x000000, 0)
+      renderer.setSize(width.value, height.value);
+      // renderer.setSize(customWidth, customHeight);
       // renderer.render(scene, camera);
       
       setLighting(renderer)
 
       // Controls
-      controls = new OrbitControls(camera, canvas);
+      // controls = new OrbitControls(camera, canvas);
 
-      controls.enableDamping = true;
+      // controls.enableDamping = true;
     };
 
     const updateCamera = () => {
@@ -183,8 +184,8 @@ export default {
     };
 
     const updateRenderer = () => {
-      // renderer.setSize(width.value, height.value);
-      renderer.setSize(customWidth, customHeight);
+      renderer.setSize(width.value, height.value);
+      // renderer.setSize(customWidth, customHeight);
       renderer.render(scene, camera);
     };
 
@@ -201,7 +202,7 @@ export default {
       requestAnimationFrame(animate);
       let delta = clock.getDelta()
       if(mixer && modelReady) mixer.update(delta);
-      controls.update();
+      // controls.update();
       renderer.render(scene, camera);
       stats.end();
     };

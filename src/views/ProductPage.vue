@@ -1,5 +1,5 @@
 <template>
-  <div class="product-tabs-container">
+  <div class="product-page-container">
     <JarScene/>
   </div>
 </template>
@@ -14,7 +14,7 @@ export default {
 </script>
 
 <style lang="scss" scoped>
-.product-tabs-container{
+.product-page-container{
   display: flex;
   width: 100%;
   flex-direction: row;
