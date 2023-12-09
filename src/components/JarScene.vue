@@ -59,10 +59,10 @@ export default {
     //Loaders + configuration of loaders
     const loader = new GLTFLoader();
     const draco = new DRACOLoader();
-    draco.setDecoderConfig({ type: 'js' });
-    draco.setDecoderPath('https://www.gstatic.com/draco/v1/decoders/');
-    draco.preload();
-    loader.setDRACOLoader = ( draco )
+    // draco.setDecoderConfig({ type: 'js' });
+    // draco.setDecoderPath('https://www.gstatic.com/draco/v1/decoders/');
+    // draco.preload();
+    // loader.setDRACOLoader = ( draco )
 
     function panSceneController(){
       
