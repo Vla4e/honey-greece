@@ -1,13 +1,13 @@
 <template>
   <div class="product-page-container">
-    <JarScene/>
+    <ProductScene/>
   </div>
 </template>
 
 <script>
-import JarScene from '../components/JarScene.vue'
+import ProductScene from '../components/ProductScene.vue'
 export default {
-  components: { JarScene },
+  components: { ProductScene },
   setup(){
   }
 }

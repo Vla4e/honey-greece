@@ -1,19 +1,20 @@
 
 <template>
   <div class="home-container">
-    <div class="background-video-container">
+    <!-- <div class="background-video-container">
       <video id="background-video" class="background-video" autoplay loop muted poster="https://assets.codepen.io/6093409/river.jpg">
         <source :src="homeVideo" type="video/mp4">
       </video>
     </div>
     <div class="video-cover">
-    </div>
+    </div> -->
+    <JarScene/>
     <div class="texts-container">
-      <img :src="smallJar" class="small-jar-home"/>
-      <div class="home-text-container">
+      <!-- <img :src="smallJar" class="small-jar-home"/> -->
+      <!-- <div class="home-text-container">
         <span class="home-text">Essence of <br/>Nature</span>
         <router-link class="route-button small-button" to="/products">See our products</router-link>
-      </div>
+      </div> -->
       <!-- <span class="home-subtext">By Honey Apiary Academy</span> -->
     </div>
   </div>
@@ -23,8 +24,10 @@
 import { ref } from 'vue';
 import homeVideo from '@/assets/pages/home/bg-vid.mp4'
 import smallJar from '@/assets/pages/home/jar-medium.png'
+import JarScene from '../components/JarScene.vue'
 export default{
   name: 'Home',
+  components: { JarScene },
   setup(){
     const count = ref(0)
     return {count, homeVideo, smallJar}
@@ -32,7 +35,7 @@ export default{
 }
 </script>
 
-<style lang="scss" scoped>
+<style lang="scss">
 .home-container{
   display: flex;
   width: 100%;
@@ -40,6 +43,12 @@ export default{
   align-items: center;
   justify-content: center;
   z-index: 3 !important;
+  .jar-sc-container{
+    z-index: 1 !important;
+    position: absolute;
+    top: 0;
+    left: 0;
+  }
 }
 .read-the-docs {
   color: #888;

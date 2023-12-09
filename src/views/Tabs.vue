@@ -30,8 +30,12 @@ export default {
     let currentClickedTab = ref(null)
     let emitter = inject('emitter')
     emitter.on('toggleClickedTab', (event) => {
-      // console.log("TAB EVENT", event)
-      currentClickedTab.value = event.tabId
+      console.log("TAB EVENT", event.tabId)
+      if(currentClickedTab.value === event.tabId){
+        currentClickedTab.value = 0
+      } else {
+        currentClickedTab.value = event.tabId
+      }
     })
 
     let tabTitles = [
@@ -61,7 +65,7 @@ export default {
     height: 100vh !important;
     height: 600px;
     grid-template-columns: 1fr 1fr 1fr;
-    transition: all ease-in 0.3s 0.6s;
+    transition: all ease-in 0.3s;
     &-clicked{
       &-1{
         grid-template-columns: 1.70fr 0.65fr 0.65fr;

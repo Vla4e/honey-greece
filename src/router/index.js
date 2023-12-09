@@ -34,8 +34,8 @@ router.beforeEach((to, from, next) => {
   try{
     const navbarStore = useNavbarStore()
     const globalStore = useGlobalStore()
-    console.log('to', to)
-    console.log("from", from);
+    // console.log('to', to)
+    // console.log("from", from);
     if(to.meta.hasNavbar){
       navbarStore.changeNavbarStatus(true)
     } else {

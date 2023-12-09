@@ -12,7 +12,7 @@ export const useNavbarStore = defineStore({
   },
   actions: {
     changeNavbarStatus(value){
-      console.log("CHANGING STATUS", value)
+      // console.log("CHANGING STATUS", value)
       this.showNavbar = value
     }
   }

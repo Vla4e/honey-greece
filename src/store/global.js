@@ -12,7 +12,7 @@ export const useGlobalStore = defineStore({
   },
   actions: {
     changeAnimationFlag(value){
-      console.log("CHANGING ANIMATION FLAG VALUE", value)
+      // console.log("CHANGING ANIMATION FLAG VALUE", value)
       this.playAnimationOnEnter = value
     }
   }

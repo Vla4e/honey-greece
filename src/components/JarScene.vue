@@ -1,10 +1,8 @@
 <template>
-  <div class="jar-sc-container" ref="canvasContainer">
-    <div class="animation-controls"> 
-      <button @click="playAnimation" class="small-button route-button">Play Animation</button>
-      <button @click="stopAnimation" class="small-button route-button">Stop Animation</button>
-      <button @click="resetAnimation" class="small-button route-button">Reset Animation</button>
-    </div>
+  <div v-if="!modelReady" class="test-screen">
+    Loading scene...
+  </div>
+  <div v-show="modelReady" class="jar-sc-container" ref="canvasContainer" id="canvasContainer">
     <canvas ref="webGl" class="webGl jar-sc-canvas" />
   </div>
 </template>
@@ -18,211 +16,174 @@ import { RGBELoader } from 'three/addons/loaders/RGBELoader.js'
 import Stats from 'stats.js';
 import {
   Scene,
-  BoxGeometry,
-  MeshStandardMaterial,
-  Mesh,
-  Color,
-  HemisphereLight,
   PerspectiveCamera,
   WebGLRenderer,
-  TextureLoader,
-  LoopRepeat,
-  Clock,
-  PointLight,
-  AxesHelper,
-  AnimationClip,
-  AnimationAction,
   PMREMGenerator,
-  UnsignedByteType,
-  AnimationMixer,
-  Box3,
-  Vector3,
-  // GLTFLoader,
-  // DRACOLoader
-  // HemisphereLight,
+  MeshBasicMaterial,
+  MeshStandardMaterial,
+  AxesHelper
 } from "three";
 export default {
   setup() {
-    
     let stats = new Stats();
     //ref to canvas, window size
-    stats.showPanel(1);
+    stats.showPanel(0);
     document.body.appendChild(stats.dom)
-    console.log('doc body', document.body)
     const webGl = ref();
-    const { width, height } = useWindowSize();
-    let customWidth = 1000
-    let customHeight = 650;
+    const { width: windowWidth, height: windowHeight } = useWindowSize();
+
+    //panScene() settings
+    let rotationDegrees = 1
+    let rotationRadians = (rotationDegrees * Math.PI) / 180; //convert degrees into radians
+    let jarRotationObj;
+    let treesPositionVector;
+    //Mouse movement events before triggering panScene()
+    let eventCounter = 0;
+    let eventsBeforeTrigger = 1;
+      // "ENUMS" for scene panning parallax effect || ctrl+f -> panScene()
+      const topLeft = 1;
+      const bottomLeft = 2;
+      const topRight = 3;
+      const bottomRight = 4;
+
     const aspectRatio = computed(() => {
-      return width / height
+      return windowWidth.value / windowHeight.value
     });
     
-    //Define three variables
+    //Scene variable definition
     let scene = Scene;
     let camera = PerspectiveCamera;
     let renderer = WebGLRenderer;
-    let box = Mesh;
-    let controls = OrbitControls;
-    let light = HemisphereLight;
+    let modelReady = ref(false);
 
-    //Animation variables
-    let mixer = AnimationMixer;
-    let modelReady = false;
-    let clock = new Clock();
-
+    //Loaders + configuration of loaders
     const loader = new GLTFLoader();
     const draco = new DRACOLoader();
     draco.setDecoderConfig({ type: 'js' });
     draco.setDecoderPath('https://www.gstatic.com/draco/v1/decoders/');
     draco.preload();
     loader.setDRACOLoader = ( draco )
-    let animationTest;
-    function setLighting(renderer){
+
+    function panSceneController(){
+      
+    }
+    async function setLighting(renderer){
       console.log('calling set lighting')
       var pmremGenerator = new PMREMGenerator( renderer );
-      new RGBELoader()
-        .load( 'assets/HDR/test-hdr.hdr', function ( texture ) {
-          console.log('loader texture', texture)
-          var envMap = pmremGenerator.fromEquirectangular( texture ).texture;
-          scene.background = null;
-          scene.environment = envMap;
-          texture.dispose();
-          pmremGenerator.dispose();
-        })
+      let rgbeTexture = await new RGBELoader().loadAsync('assets/HDR/test-hdr.hdr')
+      console.log('loader texture', rgbeTexture)
+      var envMap = pmremGenerator.fromEquirectangular( rgbeTexture ).texture;
+      scene.background = null;
+      scene.environment = envMap;
+      rgbeTexture.dispose();
+      pmremGenerator.dispose();
       pmremGenerator.compileEquirectangularShader();
     }
-    const setCanvas = () => {
+    const setCanvas = async () => {
+      console.log('calledSetCanvas')
       scene = new Scene();
+      //XYZ axes
       scene.add(new AxesHelper(5))
-      // const light1 = new PointLight(0xffffff, 100)
-      // light1.position.set(2.5, 2.5, 2.5)
-      // scene.add(light1)
-
-      // const light2 = new PointLight(0xffffff, 100)
-      // light2.position.set(-2.5, 2.5, 2.5)
-      // scene.add(light2)
-      // scene.background = new Color('skyblue');
-
-    //// Create Object
-      // const geometry = new BoxGeometry(2, 2, 2);
-      // const material = new MeshStandardMaterial({
-      //   map: new TextureLoader().load("/images/earth2.jpg"),
-      // });
-      // console.log("GOT MATERIAL", material)
-      // box = new Mesh(geometry, material);
-      // scene.add(box);
-      loader.load('assets/glb/jar-spinToFront.glb', function (gltf) {
-        scene.add(gltf.scene)
-        gltf.animations; // Array<THREE.AnimationClip>
-        console.log("gltf animations", gltf.animations)
-        console.log("gltfasset", gltf.scene.children[0])
-        mixer = new AnimationMixer(gltf.scene)
-        // let animation = mixer.clipAction(gltf.animations[0])
-        animationTest = mixer.clipAction(gltf.animations[0])
-        console.log("looprepeat", LoopRepeat)
-        // animation.setLoop(LoopRepeat);
-        // animation.clampWhenFinished = false;
-        // animation.enable = true;
-        // animation.play()
-        // animationTest.setLoop(LoopRepeat);
-        animationTest.clampWhenFinished = true;
-        // animationTest.enable = true;
-        // animationTest.play()
-        // const mixer = new AnimationMixer(gltf.scene.children[0]);
-        // const clips = gltf.animations;
-        // mixer.update(0.2)
-        // const clip = AnimationClip.findByName(clips, 'SuzanneAction')
-        // console.log("FOUND CLIP", clip)
-        // const action = mixer.clipAction(clip);
-        // action.play();
-        // gltf.scene; // THREE.Group
-        //center scene;
-        // const box = new Box3().setFromObject( gltf.scene );
-        // const center = box.getCenter( new Vector3() );
-        // gltf.scene.position.x += ( gltf.scene.position.x - center.x );
-        // gltf.scene.position.y += ( gltf.scene.position.y - center.y );
-        // gltf.scene.position.z += ( gltf.scene.position.z - center.z );
-        gltf.scenes; // Array<THREE.Group>
-        gltf.cameras; // Array<THREE.Camera>
-        gltf.asset; // Object
-        modelReady = true;
-      })
-      //// Lights
-      // light = new PointLight(0xffffff, 1);
-      // light = new HemisphereLight(0xffff, 0x080820, 1);
-      // light.position.set(50, 50, 50);
-      // scene.add( light );
-
-      // Camera
-      camera = new PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
-      camera.position.z = 5;
-      camera.position.x = 2;
-      camera.position.y = 0.7;
-      // camera.position.set(0.8, 1.4, 1.0)
-      // scene.add(camera);
-      // camera.add(light);
-
+      let loaderPromise = await loader.loadAsync('assets/glb/home-jar-scene.glb')
+      console.log('loader', loaderPromise)
+      console.log("loader.scene.children", loaderPromise.scene.children)
+      //Load Camera from GLB and add to scene
+      try{
+        camera = loaderPromise.cameras[0]
+        // camera = new PerspectiveCamera(40, width.value / height.value, 1, 1000)
+        camera.position.set(0, 20, 0);
+        camera.lookAt(0, 0, 0);
+        scene.add(camera)
+      } catch (e){
+        console.error("Camera not loaded yet")
+      }
+      //Load preconfigured meshes from GLB and add to scene
+      const [ mesh1, mesh2, mesh3 ] = loaderPromise.scene.children
+      console.log('child0', mesh1)
+      console.log('child1', mesh2)
+      console.log('child2', mesh3)
+      scene.add(mesh1);
+      scene.add(mesh2);
+      scene.add(mesh3);
       // Renderer
       const canvas = webGl.value;
       renderer = new WebGLRenderer({ canvas, antialias: true, alpha: true });
       renderer.setClearColor(0x000000, 0)
-      renderer.setSize(width.value, height.value);
-      // renderer.setSize(customWidth, customHeight);
-      // renderer.render(scene, camera);
-      
-      setLighting(renderer)
-
-      // Controls
-      // controls = new OrbitControls(camera, canvas);
-
-      // controls.enableDamping = true;
+      renderer.setSize(windowWidth.value, windowHeight.value);
+      await setLighting(renderer)
+      modelReady.value = true;
     };
 
-    const updateCamera = () => {
-      camera.aspect = aspectRatio.value;
-      camera.updateProjectionMatrix();
-    };
-
-    const updateRenderer = () => {
-      renderer.setSize(width.value, height.value);
-      // renderer.setSize(customWidth, customHeight);
-      renderer.render(scene, camera);
-    };
-
-    watch(aspectRatio, (val) => {
-      if (val) {
-        updateCamera();
-        updateRenderer();
+    watch(modelReady, (val) => {
+      console.log("VAL CHANGE", val)
+      if(val){
+        
       }
     });
 
+    const firstAnimate = async () =>{
+      await setCanvas().then(()=>{
+        startTrackingMouseMovement()
+        window.addEventListener('resize', onWindowResize, false)
+        animate()
+      })
+    }
     const animate = () => {
       stats.begin();
-      // mesh.rotation.y += 0.01;
-      requestAnimationFrame(animate);
-      let delta = clock.getDelta()
-      if(mixer && modelReady) mixer.update(delta);
-      // controls.update();
-      renderer.render(scene, camera);
+      if(modelReady.value){
+        //set values of rotation object and position vector when scene meshes are added to scene
+        jarRotationObj = scene.children[3].rotation;
+        treesPositionVector = scene.children[2].position; 
+        requestAnimationFrame(animate);
+        renderer.render(scene, camera);
+      }
       stats.end();
     };
 
-    onMounted(() => {
-      setCanvas();
-      animate();
-      console.log('animation:', animation)
+    onMounted(async () => {
+      console.log('mounted - modelReady', modelReady.value)
+      firstAnimate()
+        // camera.position.x = (e.clientX - centerX) * mouseTolerance;
+        // camera.position.y = (e.clientY - centerY) * mouseTolerance;
+        // renderer.render(scene.camera)
+      // firstAnimate();
+      // console.log('about to await setCanvas')
+      // await setCanvas();
+      // animate();
+      // console.log('animation:', animation)
+      
     });
-    function playAnimation(){
-      console.log('clicked')
-      animationTest.play()
+    function onWindowResize(){
+      camera.aspect = windowWidth.value/windowHeight.value;
+      camera.updateProjectionMatrix()
+      renderer.setSize( windowWidth.value, windowHeight.value );
     }
-    function resetAnimation() {
-      animationTest.stop()
+    function checkMousePosition(event){
+      if(modelReady.value){
+        if(eventCounter % eventsBeforeTrigger === 0){ // mouse movement events before triggering panScene()
+          // console.log('Checking mouse position') 
+          panCamera(event)
+        }
+        eventCounter++;
+      }
     }
-    function stopAnimation(){
-      animationTest.halt()
+    function startTrackingMouseMovement(){
+      console.log('starting mouse tracking ! ! !')
+      document.getElementById('canvasContainer').addEventListener('mousemove', (event) => {
+        checkMousePosition(event)
+      })
     }
-    return { webGl, playAnimation, stopAnimation, resetAnimation };
+    function panCamera(event){
+      let mouseToleranceX = 0.0001
+      let mouseToleranceY = 0.0001
+      let centerX = window.innerWidth * 0.5;
+      let centerZ = window.innerHeight * 0.5;
+      let newX = (event.clientX - centerX) * mouseToleranceX;
+      let newY = (event.clientY - centerZ) * mouseToleranceY;
+      camera.position.x = newX
+      camera.position.z = newY
+    }
+    return { webGl, firstAnimate, eventCounter, modelReady };
   },
 }
 </script>
@@ -233,7 +194,8 @@ export default {
   flex-direction: column;
   justify-content: center;
   align-items: center;
-  z-index: 20;
+  z-index: 1;
+  margin-bottom: 5vh;
 }
 .animation-controls{
   display: flex;
@@ -247,5 +209,22 @@ export default {
   .small-button:last-child{
     margin-right: 0px;
   }
+}
+.jar-sc-canvas{
+  // position: absolute;
+  // top: 0;
+  // left:0;
+}
+.test-screen{
+  background: black;
+  opacity: 0.7;
+  width: 100vw;
+  height: 100vh;
+  position: absolute;
+  top: 0;
+  left: 0;
+  font-size: 64px;
+  text-align: center;
+  z-index: 100;
 }
 </style>

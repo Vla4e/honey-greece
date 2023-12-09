@@ -124,7 +124,7 @@ export default {
     else if (props.tabId == 2) currentTabBackground = tab2bg
     else currentTabBackground = tab3bg
     function tabHover(bool){
-      console.log("TABHOVER", bool)
+      // console.log("TABHOVER", bool)
       tabActive.value = bool
       if(!bool){
         tabClicked.value = bool
@@ -179,12 +179,17 @@ export default {
         color: #000;
         text-align: center;
         font-family: "DMSans";
-        font-size: 16px;
-        font-style: normal;
+        font-size: 22px;
+        font-style: bold;
         font-weight: 400;
         line-height: normal;
         letter-spacing: 2px;
         text-transform: capitalize;
+        transition: font-size ease-in-out 0.3s;
+        &:hover{
+          font-size: 24px;
+          transition: all ease-in-out 0.3s;
+        }
       }
     }
   }
@@ -240,28 +245,39 @@ export default {
   }
   .series-container{
     opacity: 1;
-    transition: all ease-in-out 0.5s;
+    transition: opacity ease-in-out 0.5s;
+    transition-delay: 0.3s;
+    position: absolute;
+    left: 50%;
+    top: 60%;
+    transform: translate(-50%, -50%);
+    width: 80%;
   }
   .tab-texts{ 
     max-width: 60%;
     position: absolute;
     top: 25%;
     left: -100%;
-    transition: all ease-in-out 0.3s;
+    transition: all ease-in-out 0.15s;
   }
   .tab-jar{ //clicked jar
     position: absolute;
     // display: none !important;
     max-height: 40%;
     bottom: 25%;
-    right: 50% !important;
+    right: -100% !important;
     transform: translate(50%, 50%);
     transition: all 0.5s ease-in-out;
   }
   .tab-logo{
-    width: 60%;
+    position: absolute;
+    top: 35%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 400px;
     margin-left: auto;
     margin-right: auto;
+    transition: all ease-in-out 0.3s;
   }
 }
 .active-tab{
@@ -331,17 +347,19 @@ export default {
   height: 100%;
   position: absolute;
   top: 0%;
-  left: 0%;
+  // left: 0%;
+  // transform: translate(50%, 50%);
   z-index: 5;
   opacity: 1;
-  transition: opacity ease-in 0.25s;
+  transition: opacity ease-in-out 0.25s;
+  // transition-delay: 0.5s;
   &.hide{
     opacity: 0;
   }
   &.clicked{
-    width: 120% !important;
-    height: 110% !important;
+    transform: scale(1.6, 1.6);
     transition: all ease-in-out 0.3s;
+    // transition-delay: 0.5s;
   }
 }
 </style>

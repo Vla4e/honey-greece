@@ -1,6 +1,6 @@
 <template>
   <div class="app-container">
-    <div v-if="!showSidebar" class="burger-icon-container">
+    <div v-if="!showSidebar && !isMobile" class="burger-icon-container">
       <img :src="burgerIcon" @click="toggleSidebar" class="burger-icon"/>
     </div>
     <Sidebar v-if="showSidebar"/>
@@ -29,7 +29,10 @@ export default {
     let emitter = inject('emitter')
     let showSidebar = ref(false);
     let computedTransition = ref('')
-
+    let isMobile = ref(false)
+    if(screen.width < 768){
+      isMobile = true
+    }
     //ROUTER TRANSITION
     watch(playAnimationOnEnter, () => {
       if(playAnimationOnEnter.value){
@@ -45,7 +48,7 @@ export default {
       showSidebar.value = !showSidebar.value
     })
 
-    return { showSidebar, toggleSidebar, showNavbar, burgerIcon, computedTransition }
+    return { showSidebar, toggleSidebar, showNavbar, burgerIcon, computedTransition, isMobile}
   }
 }
 </script>
