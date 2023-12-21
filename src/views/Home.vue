@@ -5,16 +5,16 @@
       <video id="background-video" class="background-video" autoplay loop muted poster="https://assets.codepen.io/6093409/river.jpg">
         <source :src="homeVideo" type="video/mp4">
       </video>
-    </div>
-    <div class="video-cover">
+    </div> -->
+    <!-- <div class="video-cover">
     </div> -->
     <JarScene/>
     <div class="texts-container">
       <!-- <img :src="smallJar" class="small-jar-home"/> -->
-      <!-- <div class="home-text-container">
+      <div class="home-text-container">
         <span class="home-text">Essence of <br/>Nature</span>
         <router-link class="route-button small-button" to="/products">See our products</router-link>
-      </div> -->
+      </div>
       <!-- <span class="home-subtext">By Honey Apiary Academy</span> -->
     </div>
   </div>
@@ -41,7 +41,7 @@ export default{
   width: 100%;
   max-height: 92%;
   align-items: center;
-  justify-content: center;
+  justify-content: flex-end;
   z-index: 3 !important;
   .jar-sc-container{
     z-index: 1 !important;
@@ -99,7 +99,7 @@ export default{
       font-family: 'DM Serif';
       font-size: 100px;
       font-weight: 600;
-      color: #000;
+      color: white;
       line-height: 82.6%;
       text-align: left;
       margin-bottom: 15px;

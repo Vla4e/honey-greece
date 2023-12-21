@@ -41,10 +41,7 @@ export default {
     let eventCounter = 0;
     let eventsBeforeTrigger = 1;
       // "ENUMS" for scene panning parallax effect || ctrl+f -> panScene()
-      const topLeft = 1;
-      const bottomLeft = 2;
-      const topRight = 3;
-      const bottomRight = 4;
+      const [topLeft, bottomLeft, topRight, bottomRight] = [1, 2, 3, 4];
 
     const aspectRatio = computed(() => {
       return windowWidth.value / windowHeight.value
@@ -59,10 +56,10 @@ export default {
     //Loaders + configuration of loaders
     const loader = new GLTFLoader();
     const draco = new DRACOLoader();
-    // draco.setDecoderConfig({ type: 'js' });
-    // draco.setDecoderPath('https://www.gstatic.com/draco/v1/decoders/');
-    // draco.preload();
-    // loader.setDRACOLoader = ( draco )
+    draco.setDecoderConfig({ type: 'js' });
+    draco.setDecoderPath('https://www.gstatic.com/draco/v1/decoders/');
+    draco.preload();
+    loader.setDRACOLoader = ( draco )
 
     function panSceneController(){
       
@@ -91,7 +88,7 @@ export default {
       try{
         camera = loaderPromise.cameras[0]
         // camera = new PerspectiveCamera(40, width.value / height.value, 1, 1000)
-        camera.position.set(0, 20, 0);
+        camera.position.set(0, 17.5, 0);
         camera.lookAt(0, 0, 0);
         scene.add(camera)
       } catch (e){
@@ -169,7 +166,7 @@ export default {
     }
     function startTrackingMouseMovement(){
       console.log('starting mouse tracking ! ! !')
-      document.getElementById('canvasContainer').addEventListener('mousemove', (event) => {
+      document.getElementById('app').addEventListener('mousemove', (event) => {
         checkMousePosition(event)
       })
     }

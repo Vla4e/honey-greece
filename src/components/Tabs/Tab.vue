@@ -295,7 +295,7 @@ export default {
   }
   .series-container{
     opacity: 0;
-    transition: all ease-in-out 1s;
+    transition: all ease-in 1s, all ease-out 0s;
   }
   .tab-texts{
     display: flex !important;

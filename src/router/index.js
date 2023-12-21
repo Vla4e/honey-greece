@@ -31,11 +31,13 @@ const router = createRouter({
 
 
 router.beforeEach((to, from, next) => {
+  console.log('trying to go to', to)
   try{
     const navbarStore = useNavbarStore()
     const globalStore = useGlobalStore()
     // console.log('to', to)
     // console.log("from", from);
+    if (to.matched.length === 0) next ({'name': 'Home'})
     if(to.meta.hasNavbar){
       navbarStore.changeNavbarStatus(true)
     } else {

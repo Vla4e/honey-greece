@@ -1,58 +1,126 @@
 <template>
-  <div v-if="!modelReady" class="test-screen">
-    Loading scene...
-  </div>
-  <div v-show="modelReady" class="jar-sc-container" ref="canvasContainer" id="canvasContainer">
-    <canvas ref="webGl" class="webGl jar-sc-canvas" />
+  <div class="scene-container">
+    <!-- <button @click="countUp">{{testCount}}</button> -->
+    <canvas ref="webGl" class="webGl" />
+    <button class="reset-button" @click="resetScene">X</button>
+    <div class="size-selection">
+      <button @click="selectJarSize('small')" :class="currentJarSize === 'small' ? 'selected': ''" class="small-jar">
+        300g
+      </button>
+      <button @click="selectJarSize('large')" :class="currentJarSize === 'large' ? 'selected': ''" class="large-jar">
+        150g
+      </button>
+    </div>
   </div>
 </template>
-<script>
+
+<script lang="ts">
+import {
+  Scene,
+  SphereGeometry,
+  MeshBasicMaterial,
+  MeshStandardMaterial,
+  PMREMGenerator,
+  Mesh,
+  PointLight,
+  PerspectiveCamera,
+  WebGLRenderer,
+  TextureLoader,
+  HemisphereLight,
+} from "three";
 import { OrbitControls } from "three/addons/controls/OrbitControls.js";
 import { watch, onMounted, ref, computed } from "vue";
 import { useWindowSize } from "@vueuse/core";
 import { DRACOLoader } from 'three/addons/loaders/DRACOLoader.js';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { RGBELoader } from 'three/addons/loaders/RGBELoader.js'
-import Stats from 'stats.js';
-import {
-  Scene,
-  PerspectiveCamera,
-  WebGLRenderer,
-  PMREMGenerator,
-  MeshBasicMaterial,
-  MeshStandardMaterial,
-  AxesHelper
-} from "three";
 export default {
   setup() {
-    let stats = new Stats();
-    //ref to canvas, window size
-    stats.showPanel(0);
-    document.body.appendChild(stats.dom)
     const webGl = ref();
-    const { width: windowWidth, height: windowHeight } = useWindowSize();
+    const img = "../assets/images/earth.jpg";
+    // const { width: customWidth, height: customHeight } = useWindowSize();
+    const customWidth = 500;
+    const customHeight = 500;
     const aspectRatio = computed(() => {
-      return windowWidth.value / windowHeight.value
+      return customWidth / customHeight;
     });
-    
-    //Scene variable definition
-    let scene = Scene;
-    let camera = PerspectiveCamera;
-    let renderer = WebGLRenderer;
-    let modelReady = ref(false);
+    let camera: PerspectiveCamera;
+    let renderer: WebGLRenderer;
+    let scene: Scene;
+    let mesh: Mesh;
+    let controls: OrbitControls;
+    let light: PointLight;
 
     //Loaders + configuration of loaders
     const loader = new GLTFLoader();
     const draco = new DRACOLoader();
-    draco.setDecoderConfig({ type: 'js' });
-    draco.setDecoderPath('https://www.gstatic.com/draco/v1/decoders/');
-    draco.preload();
-    loader.setDRACOLoader = ( draco )
+    // draco.setDecoderConfig({ type: 'js' });
+    // draco.setDecoderPath('https://www.gstatic.com/draco/v1/decoders/');
+    // draco.preload();
+    // loader.setDRACOLoader = ( draco )
+    let currentJarSize = ref('small');
+    const setCanvas = async () => {
+      // Create Scene
+      scene = new Scene();
+      // scene.background = new TextureLoader().load("/images/galaxy1.avif");
+      
+      let loaderPromise = await loader.loadAsync('assets/glb/jar-centered.glb')
+      console.log("loaderpromise", loaderPromise)
+      // Create Object
+      // const geometry = new SphereGeometry(5, 50, 50);
+      // const material = new MeshStandardMaterial({
+      //   map: new TextureLoader().load("/images/earth2.jpg"),
+      // });
+      // mesh = new Mesh(geometry, material);
+      // scene.add(mesh);
+      scene.add(loaderPromise.scene)
 
+      // Lights
+      // light = new PointLight(0xffffff, 1);
+      light = new HemisphereLight(0xffff, 0x080820, 1);
+      light.position.set(50, 50, 50);
+      scene.add(light);
+
+      // Camera
+      camera = new PerspectiveCamera(35, aspectRatio.value, 0.1, 100);
+      camera.position.z = 0.2;
+      scene.add(camera);
+      camera.add(light);
+
+      // Renderer
+      const canvas = webGl.value;
+      renderer = new WebGLRenderer({ canvas, antialias: true });
+      renderer.setSize(customWidth, customHeight);
+      renderer.setClearColor(0x000000, 0)
+      renderer.render(scene, camera);
+
+      // Controls
+      controls = new OrbitControls(camera, canvas);
+      controls.maxDistance = 0.25;
+      controls.minDistance = 0.15;
+      controls.minPolarAngle = (45 * Math.PI)/180;
+      controls.maxPolarAngle = (100*Math.PI)/180;
+      // controls.maxAzimuthAngle = - Math.PI;
+      // controls.enablePan = true;
+      controls.autoRotate = true;
+      controls.enableDamping = true;
+      setLighting(renderer)
+    };
+
+    const updateCamera = () => {
+      // camera.aspect = aspectRatio.value;
+      camera.aspect = aspectRatio.value;
+      camera.updateProjectionMatrix();
+    };
+
+    const updateRenderer = () => {
+      renderer.setSize(customWidth, customHeight);
+      renderer.render(scene, camera);
+    };
     async function setLighting(renderer){
       console.log('calling set lighting')
       var pmremGenerator = new PMREMGenerator( renderer );
-      let rgbeTexture = await new RGBELoader().loadAsync('assets/HDR/test-hdr.hdr')
+      let rgbeTexture = await new RGBELoader().loadAsync('assets/HDR/meadow.hdr')
       console.log('loader texture', rgbeTexture)
       var envMap = pmremGenerator.fromEquirectangular( rgbeTexture ).texture;
       scene.background = null;
@@ -61,116 +129,95 @@ export default {
       pmremGenerator.dispose();
       pmremGenerator.compileEquirectangularShader();
     }
-    const setCanvas = async () => {
-      console.log('calledSetCanvas')
-      scene = new Scene();
-      //XYZ axes
-      scene.add(new AxesHelper(5))
-      let loaderPromise = await loader.loadAsync('assets/glb/jar-spinToFront.glb')
-      console.log('loader', loaderPromise)
-      console.log("loader.scene.children", loaderPromise.scene.children)
-      //Load Camera from GLB and add to scene
-      try{
-        camera = loaderPromise.cameras[0]
-        // camera = new PerspectiveCamera(40, width.value / height.value, 1, 1000)
-        camera.position.set(0, 20, 0);
-        camera.lookAt(0, 0, 0);
-        scene.add(camera)
-      } catch (e){
-        console.error("Camera not loaded yet")
-      }
-      // Renderer
-      const canvas = webGl.value;
-      renderer = new WebGLRenderer({ canvas, antialias: true, alpha: true });
-      renderer.setClearColor(0x000000, 0)
-      renderer.setSize(windowWidth.value, windowHeight.value);
-      await setLighting(renderer)
-      modelReady.value = true;
-    };
-
-    watch(modelReady, (val) => {
-      console.log("VAL CHANGE", val)
-      if(val){
-        
+    watch(aspectRatio, (val) => {
+      console.log('changed aspectRatio:', val)
+      if (val) {
+        updateCamera();
+        updateRenderer();
       }
     });
-
-    const firstAnimate = async () =>{
-      await setCanvas().then(()=>{
-        window.addEventListener('resize', onWindowResize, false)
-        animate()
-      })
+    async function resetScene(){
+      await setCanvas();
+      animate();
+    }
+    async function selectJarSize(size){ //add when other model arrives
+      if(size === 'small'){
+        currentJarSize.value = size
+        console.log('smallJar selected')
+      } else {
+        currentJarSize.value = size
+        console.log('largeJar selected')
+      }
     }
     const animate = () => {
-      stats.begin();
-      if(modelReady.value){
-        //set values of rotation object and position vector when scene meshes are added to scene
-        requestAnimationFrame(animate);
-        renderer.render(scene, camera);
-      }
-      stats.end();
+      // mesh.rotation.y += 0.01;
+      controls.update();
+      renderer.render(scene, camera);
+      requestAnimationFrame(animate);
     };
 
-    onMounted(async () => {
-      console.log('mounted - modelReady', modelReady.value)
-      firstAnimate()
-        // camera.position.x = (e.clientX - centerX) * mouseTolerance;
-        // camera.position.y = (e.clientY - centerY) * mouseTolerance;
-        // renderer.render(scene.camera)
-      // firstAnimate();
-      // console.log('about to await setCanvas')
-      // await setCanvas();
-      // animate();
-      // console.log('animation:', animation)
-      
+    onMounted( async () => {
+      await setCanvas();
+      animate();
     });
-    function onWindowResize(){
-      camera.aspect = windowWidth.value/windowHeight.value;
-      camera.updateProjectionMatrix()
-      renderer.setSize( windowWidth.value, windowHeight.value );
+    let testCount = 0
+    function countUp(){
+      console.log('counting up', testCount)
+      testCount++
     }
-    return { webGl, firstAnimate, modelReady };
+    return { webGl, testCount, currentJarSize, countUp, resetScene, selectJarSize };
   },
-}
+};
 </script>
+
 <style lang="scss" scoped>
-.jar-sc-container{
+.scene-container{
+  position: relative;
   width: 100%;
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  align-items: center;
-  z-index: 1;
-  margin-bottom: 5vh;
+  height: 100%;
 }
-.animation-controls{
-  display: flex;
-  width: 100%;
-  flex-direction: row;
-  justify-content: center;
-  margin-bottom: 30px;
-  .small-button{
-    margin-right: 10px;
-  }
-  .small-button:last-child{
-    margin-right: 0px;
-  }
-}
-.jar-sc-canvas{
-  // position: absolute;
-  // top: 0;
-  // left:0;
-}
-.test-screen{
-  background: black;
-  opacity: 0.7;
-  width: 100vw;
-  height: 100vh;
+.reset-button{
   position: absolute;
-  top: 0;
-  left: 0;
-  font-size: 64px;
-  text-align: center;
-  z-index: 100;
+  top:5%;
+  right:10%;
+  background: none;
+  // border: 1px solid gray;
+  outline: none !important;
+  border: none !important;
+  color: #000;
+  &:hover, &:active{
+    font-weight: 700;
+  }
+}
+.size-selection{
+  display: flex;
+  width: 100%;
+  justify-content: center;
+  position: absolute;
+  bottom: 15%;
+  button:first-child{
+    margin-right: 15px;
+  }
+  button{
+    color: #000;
+    font-family: 'DMSans';
+    font-size: 16px;
+    font-style: normal;
+    font-weight: 400;
+    line-height: normal;
+    letter-spacing: 2.72px;
+    text-transform: uppercase;
+    background: transparent;
+    outline: none !important;
+    border: none !important;
+    &:hover, &:active{
+      font-weight: 700;
+      transition: font-weight ease-in-out 0.15s;
+    }
+    &.selected{
+      font-weight: 700;
+      // background: red;
+    }
+  }
 }
 </style>
