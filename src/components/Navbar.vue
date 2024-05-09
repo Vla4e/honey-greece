@@ -5,7 +5,8 @@
         <!-- <img :src="sidebar" @click="toggleSidebar" class="burger-icon"/> -->
       </div>
       <div class="blend-links-container">
-        <router-link class="blend-link" to="/">
+        <LinkTree v-for="category in categories" :category="category"/>
+        <!-- <router-link class="blend-link" to="/">
           Okto
         </router-link>
         
@@ -15,7 +16,7 @@
         
         <router-link class="blend-link" to="/">
           Melculum
-        </router-link>
+        </router-link> -->
       </div>
       <div class="inquire-container">
         <a class="blend-link" href="mailto:vlade_nikolovski@hotmail.com" target="_blank">
@@ -40,6 +41,59 @@ export default {
   setup() {
     let emitter = inject('emitter')
     let count = ref(0)
+    let categories = [
+      {
+        main: 'Okto',
+        subCategories: [
+          {
+            text: 'Monofloral series',
+            linkTo: '/okto/monofloral'
+          },
+          {
+            text: 'Blend series',
+            linkTo: '/okto/blend'
+          },
+          {
+            text: 'All products',
+            linkTo: 'products'
+          }
+        ]
+      },
+      {
+        main: 'Honey Apiary Academy',
+        subCategories: [
+          {
+            text: 'Monofloral series',
+            linkTo: '/haa/monofloral'
+          },
+          {
+            text: 'Blend series',
+            linkTo: '/haa/blend'
+          },
+          {
+            text: 'All products',
+            linkTo: 'products'
+          }
+        ]
+      },
+      {
+        main: 'Melculum',
+        subCategories: [
+          {
+            text: 'Monofloral series',
+            linkTo: '/melculum/monofloral'
+          },
+          {
+            text: 'Blend series',
+            linkTo: '/melculum/blend'
+          },
+          {
+            text: 'All products',
+            linkTo: 'products'
+          }
+        ]
+      }
+    ]
     function toggleSidebar(){
       emitter.emit('toggleSidebar')
     }
@@ -47,7 +101,8 @@ export default {
       count.value++
       console.log('counting up', count.value)
     }
-    return { logo: logoUrl, sidebar: burgerIcon, toggleSidebar, testButton, count };
+    console.log('categ', categories)
+    return { logo: logoUrl, sidebar: burgerIcon, toggleSidebar, testButton, count, categories };
   },
 };
 </script>

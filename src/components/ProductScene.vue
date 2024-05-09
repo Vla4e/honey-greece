@@ -82,7 +82,7 @@ export default {
       scene.add(light);
 
       // Camera
-      camera = new PerspectiveCamera(35, aspectRatio.value, 0.1, 100);
+      camera = new PerspectiveCamera(35, aspectRatio.value, 0.01, 1000);
       camera.position.z = 0.2;
       scene.add(camera);
       camera.add(light);
@@ -220,4 +220,8 @@ export default {
     }
   }
 }
+// .webGl{
+//   position: relative;
+//   z-index: 1000;
+// }
 </style>

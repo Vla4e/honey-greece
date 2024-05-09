@@ -5,6 +5,7 @@ import Home from '@/views/Home.vue';
 import Tabs from '@/views/Tabs.vue';
 import ProductPage from '@/views/ProductPage.vue';
 
+const transitionDelay = 500; // Page transition delay to ensure animations plays out before transitioning.
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
   routes: [
@@ -12,19 +13,28 @@ const router = createRouter({
       path: '/',
       name: 'Home',
       component: Home,
-      meta: {hasNavbar: true, playAnimationOnEnter: false}
+      meta: {
+        hasNavbar: true, 
+        playAnimationOnEnter: false
+      }
     },
     {
       path: '/products',
       name: 'Tabs',
       component: Tabs,
-      meta: {hasNavbar: false, playAnimationOnEnter: true}
+      meta: {
+        hasNavbar: false, 
+        playAnimationOnEnter: true
+      }
     },
     {
       path: '/product',
       name: 'Product',
       component: ProductPage,
-      meta: {hasNavbar: true, playAnimationOnEnter: false}
+      meta: {
+        hasNavbar: true, 
+        playAnimationOnEnter: false
+      }
     },
   ]
 })
@@ -45,10 +55,13 @@ router.beforeEach((to, from, next) => {
     }
     if(to.meta.playAnimationOnEnter){
       globalStore.changeAnimationFlag(true)
+      setTimeout(()=>{
+        next()
+      }, transitionDelay)
     } else {
       globalStore.changeAnimationFlag(false)
+      next()
     }
-    next()
   } catch (e) {
     console.error(e)
     next()

@@ -19,6 +19,7 @@ import {
   PerspectiveCamera,
   WebGLRenderer,
   PMREMGenerator,
+  Mesh,
   MeshBasicMaterial,
   MeshStandardMaterial,
   AxesHelper
@@ -55,15 +56,14 @@ export default {
 
     //Loaders + configuration of loaders
     const loader = new GLTFLoader();
+    const backgroundLoader = new GLTFLoader();
     const draco = new DRACOLoader();
     draco.setDecoderConfig({ type: 'js' });
     draco.setDecoderPath('https://www.gstatic.com/draco/v1/decoders/');
     draco.preload();
     loader.setDRACOLoader = ( draco )
+    backgroundLoader.setDRACOLoader = ( draco )
 
-    function panSceneController(){
-      
-    }
     async function setLighting(renderer){
       console.log('calling set lighting')
       var pmremGenerator = new PMREMGenerator( renderer );
@@ -82,8 +82,11 @@ export default {
       //XYZ axes
       scene.add(new AxesHelper(5))
       let loaderPromise = await loader.loadAsync('assets/glb/home-jar-scene.glb')
-      console.log('loader', loaderPromise)
-      console.log("loader.scene.children", loaderPromise.scene.children)
+      let backgroundLoaderPromise = await backgroundLoader.loadAsync('assets/glb/background.glb')
+      console.log('BLP', backgroundLoaderPromise)
+      // console.log("BLPCHILDREN", backgroundLoaderPromise.scene.children)
+      // console.log('loader', loaderPromise)
+      // console.log("loader.scene.children", loaderPromise.scene.children)
       //Load Camera from GLB and add to scene
       try{
         camera = loaderPromise.cameras[0]
@@ -95,6 +98,22 @@ export default {
         console.error("Camera not loaded yet")
       }
       //Load preconfigured meshes from GLB and add to scene
+      // backgroundLoaderPromise.scene.traverse((node) => {
+      //   console.log("traversing", node)
+      //   if(node instanceof Mesh){
+      //     scene.add(node)
+      //   }
+      //   // scene.add(child)
+      // })
+      const [ mesh4, mesh5, mesh6, mesh7 ] = backgroundLoaderPromise.scene.children
+      console.log('child0', mesh4)
+      console.log('child1', mesh5)
+      console.log('child2', mesh6)
+      console.log('child2', mesh7)
+      // scene.add(mesh4);
+      // scene.add(mesh5);
+      // scene.add(mesh6);
+      // scene.add(mesh7);
       const [ mesh1, mesh2, mesh3 ] = loaderPromise.scene.children
       console.log('child0', mesh1)
       console.log('child1', mesh2)

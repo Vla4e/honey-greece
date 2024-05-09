@@ -5,9 +5,11 @@
     </div>
     <Sidebar v-if="showSidebar"/>
     <NavbarComponent v-show="!showSidebar && showNavbar" id="nav"/>
-    <Transition :name="computedTransition">
-      <RouterView v-show="!showSidebar" class="page-container"/>
-    </Transition>
+    <!-- <Transition :name="computedTransition">
+      <div v-show="showSlide" class="transition-slide"/>
+    </Transition> -->
+    <PageTransition></PageTransition>
+    <RouterView v-show="!showSidebar" class="page-container"/>
     <!-- <Footer id="footer"/> -->
   </div>
 </template>
@@ -28,17 +30,10 @@ export default {
 
     let emitter = inject('emitter')
     let showSidebar = ref(false);
-    let computedTransition = ref('')
     let isMobile = ref(false)
     if(screen.width < 768){
       isMobile = true
     }
-    //ROUTER TRANSITION
-    watch(playAnimationOnEnter, () => {
-      if(playAnimationOnEnter.value){
-        computedTransition.value = 'slide'
-      } else computedTransition.value = ''
-    })
     
     //SIDEBAR
     function toggleSidebar(){
@@ -48,7 +43,7 @@ export default {
       showSidebar.value = !showSidebar.value
     })
 
-    return { showSidebar, toggleSidebar, showNavbar, burgerIcon, computedTransition, isMobile}
+    return {showSidebar, toggleSidebar, showNavbar, burgerIcon, isMobile}
   }
 }
 </script>
@@ -65,7 +60,7 @@ export default {
   background-position: center center; */
 }
 .page-container{
-  max-width: 1280px;
+  max-width: 90%;
   margin: auto;
   flex-grow: 1;
   z-index: 3;
@@ -89,29 +84,5 @@ export default {
     width: 50px;
     height: 50px;
   }
-}
-.slide-enter-active,
-.slide-leave-active {
-  transition: all 2s ease-out;
-}
-
-.slide-enter-to {
-  position: absolute;
-  right: 0;
-}
-
-.slide-enter-from {
-  position: absolute;
-  right: -100%;
-}
-
-.slide-leave-to {
-  position: absolute;
-  left: -100%;
-}
-
-.slide-leave-from {
-  position: absolute;
-  left: 0;
 }
 </style>

@@ -13,7 +13,7 @@
       <!-- <img :src="smallJar" class="small-jar-home"/> -->
       <div class="home-text-container">
         <span class="home-text">Essence of <br/>Nature</span>
-        <router-link class="route-button small-button" to="/products">See our products</router-link>
+        <router-link class="route-button small-button" to="/products">Start your journey</router-link>
       </div>
       <!-- <span class="home-subtext">By Honey Apiary Academy</span> -->
     </div>
@@ -93,6 +93,7 @@ export default{
     flex-direction: column;
     justify-content: center;
     align-items: flex-start;
+    margin-top: -300px;
     .home-text{
       display: flex;
       align-items: center;
