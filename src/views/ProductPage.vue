@@ -132,11 +132,11 @@ Available in 300g and 150g jars,"
     //Default to first array entry
     let selectedCategory = ref("Blends");
     let selectedCategoryArray = ref(blends);
-    console.log("SELECTEDCATARRAY", selectedCategoryArray.value);
+    // console.log("SELECTEDCATARRAY", selectedCategoryArray.value);
     let selectedSubCategory = ref(selectedCategoryArray.value[0]);
-    console.log("SELECTEDSUBCAT", selectedSubCategory.value);
+    // console.log("SELECTEDSUBCAT", selectedSubCategory.value);
     function selectCategory(value) {
-      console.log("SVALUE", value);
+      // console.log("SVALUE", value);
       if (value !== selectedCategory.value) {
         selectedCategory.value = value;
         if (value === "Blends") {
@@ -149,7 +149,7 @@ Available in 300g and 150g jars,"
       }
     }
     function selectSubcategory(value) {
-      console.log("VALUE", value);
+      // console.log("VALUE", value);
       selectedSubCategory.value = value;
     }
     return {

@@ -53,11 +53,12 @@ export default {
 
     //Loaders + configuration of loaders
     const loader = new GLTFLoader();
+    const newJarLoader = new GLTFLoader();
     const draco = new DRACOLoader();
     // draco.setDecoderConfig({ type: 'js' });
     // draco.setDecoderPath('https://www.gstatic.com/draco/v1/decoders/');
     // draco.preload();
-    // loader.setDRACOLoader = ( draco )
+    // newJarLoader.setDRACOLoader = ( draco )
     let currentJarSize = ref('small');
     const setCanvas = async () => {
       // Create Scene
@@ -65,7 +66,36 @@ export default {
       // scene.background = new TextureLoader().load("/images/galaxy1.avif");
       
       let loaderPromise = await loader.loadAsync('assets/glb/jar-centered.glb')
-      console.log("loaderpromise", loaderPromise)
+      // let newJarLoaderPromise = await newJarLoader.loadAsync('assets/glb/jar-300g-new.glb')
+      // let newJarLoaderPromise = await newJarLoader.loadAsync('assets/glb/jar-300g-newest.glb')
+      let newJarLoaderPromise = await newJarLoader.loadAsync('assets/glb/jar-300g-latest.glb')
+      console.log("newJarLoader", newJarLoaderPromise)
+      let jarScene = newJarLoaderPromise.scene.children[0]
+      newJarLoaderPromise.scene.traverse(function (obj) {
+        console.log("object being traversed", obj)
+        if(obj.isMesh){
+          if(obj.name === 'med'){
+            obj.renderOrder = 0;
+            obj.depthWrite = false;
+            obj.opacity = 0;
+            obj.material.needsUpdate = true;
+          } else if(obj.name === 'med_1'){
+            obj.renderOrder = 1;
+          } else if(obj.name === 'med_2'){
+            obj.renderOrder = 2;
+          } else if(obj.name === 'med_3'){
+            obj.renderOrder = 3;
+          }
+        }
+      })
+      console.log("NEWJARLOADERPROMISE AFTER TRAVERSAL", newJarLoaderPromise)
+      let meshes = newJarLoaderPromise.scene.children[0].children;
+      let targetMesh = meshes[1]
+      // console.log("oldJARLOADER", loaderPromise)
+      console.log("MESHES", meshes)
+      // let newScene = newJarLoaderPromise.scene.children[0]
+      // newScene.frustumCulled = false
+      // console.log("SCENE:", newScene)
       // Create Object
       // const geometry = new SphereGeometry(5, 50, 50);
       // const material = new MeshStandardMaterial({
@@ -73,17 +103,24 @@ export default {
       // });
       // mesh = new Mesh(geometry, material);
       // scene.add(mesh);
-      scene.add(loaderPromise.scene)
+      // scene.add(loaderPromise.scene)
+      scene.add(jarScene)
 
       // Lights
-      // light = new PointLight(0xffffff, 1);
-      light = new HemisphereLight(0xffff, 0x080820, 1);
-      light.position.set(50, 50, 50);
-      scene.add(light);
+      light = new PointLight(0xffffff, 1);
+      // light = new HemisphereLight(0xffff, 0x080820, 1);
+      light.position.set(targetMesh.position.x, targetMesh.position.y, targetMesh.position.z + 0.5);
+      // scene.add(light);
 
       // Camera
-      camera = new PerspectiveCamera(35, aspectRatio.value, 0.01, 1000);
-      camera.position.z = 0.2;
+      camera = new PerspectiveCamera(35, aspectRatio.value, 0.1, 1000);
+      camera.position.set(targetMesh.position.x, targetMesh.position.y, targetMesh.position.z + 0.5); // Position the camera in front of the mesh
+      camera.lookAt(0, 0, 0); 
+      // camera.position.z = 0.6;
+      // camera.position.x = 0.5;
+      // camera.position.y = 0.5;
+      // camera.zoom = 20;
+      // camera.updateProjectionMatrix()
       scene.add(camera);
       camera.add(light);
 
@@ -92,6 +129,7 @@ export default {
       renderer = new WebGLRenderer({ canvas, antialias: true });
       renderer.setSize(customWidth, customHeight);
       renderer.setClearColor(0x000000, 0)
+      console.log("WILL RENDER")
       renderer.render(scene, camera);
 
       // Controls
@@ -120,7 +158,7 @@ export default {
     async function setLighting(renderer){
       console.log('calling set lighting')
       var pmremGenerator = new PMREMGenerator( renderer );
-      let rgbeTexture = await new RGBELoader().loadAsync('assets/HDR/meadow.hdr')
+      let rgbeTexture = await new RGBELoader().loadAsync('assets/HDR/garden.hdr')
       console.log('loader texture', rgbeTexture)
       var envMap = pmremGenerator.fromEquirectangular( rgbeTexture ).texture;
       scene.background = null;

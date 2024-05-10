@@ -32,6 +32,7 @@ export default {
     document.body.appendChild(stats.dom)
     const webGl = ref();
     const { width: windowWidth, height: windowHeight } = useWindowSize();
+    console.log("Window size and width from useWindowSize", windowWidth, windowHeight)
 
     //panScene() settings
     let rotationDegrees = 1

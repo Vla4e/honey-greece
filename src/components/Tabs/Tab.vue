@@ -6,44 +6,24 @@
   :class="`tab-${tabId}`" 
   class="tab"
   >
-        <!-- SINGLE DIV -->
-        <img :src="currentTabBackground" class="tab-background" :class="[!tabActive ? 'hide' : 'show', tabClicked ? 'clicked': '']" />
-        <div :class="!tabActive ? 'inactive-tab': tabClicked ? 'clicked-tab' : 'active-tab'" @click="tabClick()">
-          <img :src="logoSource" class="tab-logo" :class="`tab-logo-${tabId}`"/>
-          <!-- CLICKED -->
-          <div class="series-container">
-            <router-link class="series-link" :to="`/${series}`" v-for="(series,idx) in series" :key="idx">
-              {{series}}
-            </router-link>
-          </div>
-          <!-- <JarScene class="jar-clicked"/> -->
-          <!-- ACTIVE -->
-          <div class="tab-texts">
-            <span class="tab-title">{{tabTitle}}</span>
-            <span class="tab-text">{{tabText}}</span>
-          </div>
-          <img :src="mockJar" class="tab-jar"/>
-        </div>
-        <!--  -->
-        <!-- <div :key="`inactive-${tabId}`" v-if="!tabActive" class="inactive-tab">
-          <img :src="logoSource" class="tab-logo" :class="`tab-logo-${tabId}`"/>
-        </div>
-        <div :key="`clicked-${tabId}`" v-else-if="tabClicked"  @click="tabClick()" class="clicked-tab">
-            <img :src="logoSource" class="tab-logo" :class="`tab-logo-${tabId}`"/>
-            <div class="series-container">
-              <router-link class="series-link" :to="`/${series}`" v-for="(series,idx) in series" :key="idx">
-                {{series}}
-              </router-link>
-            </div>
-        </div>
-        <div :key="`active-${tabId}`" @click="tabClick()"  v-else class="active-tab">
-          <div class="tab-texts">
-            <img :src="logoSource" class="tab-logo" :class="`tab-logo-${tabId}`"/>
-            <span class="tab-title">{{tabTitle}}</span>
-            <span class="tab-text">{{tabText}}</span>
-          </div>
-          <img :src="mockJar" class="tab-jar"/>
-        </div> -->
+    <!-- SINGLE DIV -->
+    <!-- <img :src="currentTabBackground" class="tab-background" :class="[!tabActive ? 'hide' : 'show', tabClicked ? 'clicked': '']" /> -->
+    <div :class="!tabActive ? 'inactive-tab': tabClicked ? 'clicked-tab' : 'active-tab'" @click="tabClick(tabId)">
+      <img :src="logoSource" class="tab-logo" :class="`tab-logo-${tabId}`"/>
+      <!-- CLICKED -->
+      <div class="series-container">
+        <router-link class="series-link" :to="`/product`" v-for="(series,idx) in series" :key="idx">
+          {{series}}
+        </router-link>
+      </div>
+      <!-- <JarScene class="jar-clicked"/> -->
+      <!-- ACTIVE -->
+      <div class="tab-texts">
+        <span class="tab-title">{{tabTitle}}</span>
+        <span class="tab-text">{{tabText}}</span>
+      </div>
+      <img :src="mockJar" class="tab-jar"/>
+    </div>
   </div>
 </template>
 
@@ -109,13 +89,13 @@ export default {
     let logoUrl = computed(() => {
       switch(props.tabId){
         case 1:
-          const imgUrl = new URL('@/assets/pages/tabs/tab1.png', import.meta.url).href;
+          const imgUrl = new URL('@/assets/pages/tabs/tab1-larger.png', import.meta.url).href;
           return imgUrl;
         case 2:
-          const imgUrl2 = new URL('@/assets/pages/tabs/tab2.png', import.meta.url).href;
+          const imgUrl2 = new URL('@/assets/pages/tabs/tab2-larger.png', import.meta.url).href;
           return imgUrl2;
         case 3:
-          const imgUrl3 = new URL('@/assets/pages/tabs/tab3.png', import.meta.url).href;
+          const imgUrl3 = new URL('@/assets/pages/tabs/tab3-larger.png', import.meta.url).href;
           return imgUrl3;
       }
     })
@@ -131,8 +111,9 @@ export default {
         singleTabEmitter.emit('toggleClickedTab', {value: tabClicked.value, tabId: null})
       }
     }
-    function tabClick(){
-      console.log("TABCLICKED", tabClicked.value)
+    function tabClick(tabId){
+      if(tabId === 3) return //Tab 3 is coming soon
+
       tabClicked.value = !tabClicked.value
       singleTabEmitter.emit('toggleClickedTab', {value: tabClicked.value, tabId: props.tabId})
       
@@ -166,6 +147,18 @@ export default {
   border-right: 2px gray solid;
   overflow: hidden !important;
   position: relative;
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+  &-1{
+    background-image: url('@/assets/pages/tabs/bg-1.png');
+  }
+  &-2{
+    background-image: url('@/assets/pages/tabs/bg-2.png');
+  }
+  &-3{
+    background-image: url('@/assets/pages/tabs/bg-3.png');
+  }
   .inactive-tab{
   }
   .active-tab{
@@ -256,7 +249,7 @@ export default {
   .tab-texts{ 
     max-width: 60%;
     position: absolute;
-    top: 25%;
+    top: 30%;
     left: -100%;
     transition: all ease-in-out 0.15s;
   }
@@ -302,14 +295,14 @@ export default {
     flex-direction: column;
     max-width: 60%;
     position: absolute;
-    top: 25%;
+    top: 30%;
     left: 10%;
     transition: left ease-in-out 1s;
   }
   .tab-jar{ //hovered jar
     position: absolute;
     bottom: 0% !important;
-    right: -50%;
+    right: -30%;
     transition: all 0.8s ease-in-out;
     max-height: 50%;
   }
@@ -333,7 +326,7 @@ export default {
   .tab-texts{
     max-width: 60%;
     position: absolute;
-    top: 25%;
+    top: 30%;
     left: -100%;
   }
   .tab-jar{

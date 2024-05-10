@@ -1,13 +1,10 @@
 <template>
-  <div class="app-container">
+  <div class="app-container" :style="hideOverflow ? 'overflow: hidden': ''">
     <div v-if="!showSidebar && !isMobile" class="burger-icon-container">
       <img :src="burgerIcon" @click="toggleSidebar" class="burger-icon"/>
     </div>
     <Sidebar v-if="showSidebar"/>
     <NavbarComponent v-show="!showSidebar && showNavbar" id="nav"/>
-    <!-- <Transition :name="computedTransition">
-      <div v-show="showSlide" class="transition-slide"/>
-    </Transition> -->
     <PageTransition></PageTransition>
     <RouterView v-show="!showSidebar" class="page-container"/>
     <!-- <Footer id="footer"/> -->
@@ -24,6 +21,14 @@ export default {
   setup(){
     let globalStore = useGlobalStore()
     let { playAnimationOnEnter } = storeToRefs(globalStore)
+    let hideOverflow = ref(false)
+    watch(playAnimationOnEnter, () => {
+      if(playAnimationOnEnter.value){
+        hideOverflow.value = true;
+      } else {
+        hideOverflow.value = false
+      }
+    })
 
     let navbarStore = useNavbarStore()
     let { showNavbar } = storeToRefs(navbarStore)
@@ -43,17 +48,19 @@ export default {
       showSidebar.value = !showSidebar.value
     })
 
-    return {showSidebar, toggleSidebar, showNavbar, burgerIcon, isMobile}
+    return {showSidebar, toggleSidebar, showNavbar, burgerIcon, isMobile, hideOverflow}
   }
 }
 </script>
 <style lang="scss" scoped>
 .app-container{
+  // overflow: hidden;
   height: 100%;
   width: 100%;
   display: flex;
   flex-direction: column;
   background: white;
+  position: relative;
   /* background: url('@/assets/pages/home/background.png');
   background-size: cover;
   background-repeat: no-repeat;

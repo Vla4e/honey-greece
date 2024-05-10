@@ -41,12 +41,12 @@ export default {
     let tabTitles = [
       `Ultra Premium Greek Honey`,
       `Ultra Premium Greek Honey`,
-      `Ultra Premium Greek Honey`,
+      `Coming soon`,
     ]
     let tabTexts = [
       `Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad.`,
       `Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad.`,
-      `Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad.`
+      ``
     ]
     let tab1Series = ['Mono Floral series','Multi Floral series','All Products']
     let tab2Series = ['Blend series', 'Mono Floral series', 'All Products']

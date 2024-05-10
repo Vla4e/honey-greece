@@ -33,7 +33,7 @@ const router = createRouter({
       component: ProductPage,
       meta: {
         hasNavbar: true, 
-        playAnimationOnEnter: false
+        playAnimationOnEnter: true
       }
     },
   ]
