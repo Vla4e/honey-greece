@@ -29,7 +29,7 @@ export default {
     let stats = new Stats();
     //ref to canvas, window size
     stats.showPanel(0);
-    document.body.appendChild(stats.dom)
+    // document.body.appendChild(stats.dom)
     const webGl = ref();
     const { width: windowWidth, height: windowHeight } = useWindowSize();
     console.log("Window size and width from useWindowSize", windowWidth, windowHeight)
