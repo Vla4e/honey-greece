@@ -1,6 +1,6 @@
 <template>
   <div class="product-page-container">
-    <span class="floating-text">
+    <span class="floating-text" :style="computedTextLength">
       {{ currentFlavour.name }}
     </span>
 
@@ -92,10 +92,10 @@ export default {
 
   setup(props) {
     const router = useRoute();
-    console.log("SELECTEDLINE AND BRAND", router.query.line, props.selectedBrand)
-    let emitter = inject('emitter')
 
+    
     //receives distance of Mesh from Canvas ends
+    let emitter = inject('emitter')
     emitter.on('meshEdges', (meshEdges)=>{
       calculateLineWidths(meshEdges)
     })
@@ -116,13 +116,14 @@ export default {
       brandProductLines = ref(selectedBrand.value.brandProductLines)
       if(router.query?.line){
         currentProductLine.value = selectedBrand.value.brandProductLines[router.query.line]
+      } else { // Default if no selectedLine was passed as query
+        currentProductLine.value = selectedBrand.value.brandProductLines['Blends']
       }
-    } else {
+    } else { //Default to Okto/Blends if no prop was passed as selectedBrand
       selectedBrand.value = brandConfigs[0]
       brandProductLines = ref(selectedBrand.value.brandProductLines)
       currentProductLine.value = brandProductLines.value['Blends']
     }
-
     productLineFlavours = computed(() => currentProductLine.value.flavours)
     currentFlavour.value = productLineFlavours.value[0]
 
@@ -138,7 +139,30 @@ export default {
           return imgUrl2;
       }
     })
+    
+    let computedTextLength = computed(()=>{
+      console.log("recomputing")
+      let nameLength = currentFlavour.value.name.length
+      switch(true){
+        case (nameLength < 12):{
+          return 'font-size: 130px'
+        }
+        case (nameLength < 16):{
+          return 'font-size: 130px'
+        }
+        case (nameLength < 20):{
+          return 'font-size: 110px'
+        }
+        case (nameLength < 24):{
+          return 'font-size: 90px'
+        }
+        case (nameLength < 28):{
+          return 'font-size: 70px'
+          
+        }
 
+      }
+    })
     watch(productLineFlavours, (newFlavours) => {
       if (newFlavours.length > 0) {
         currentFlavour.value = newFlavours[0];
@@ -191,28 +215,6 @@ export default {
         document.documentElement.style.setProperty('--pointer-line-right-width', `${rightLineDistance}px`);
         return
       }
-      // if (productViewer.value) { //Calculated stylish-pointer-line width to end at pointerWidth% of product-viewer width
-      //   const productViewerWidth = productViewer.value.offsetWidth;
-      //   const productViewerPositionalData = productViewer.value.getBoundingClientRect()
-      //   const pointerWidth = productViewerWidth * 0.38; // width % of product-viewer
-      //   const pointerRightSideWidth = productViewerWidth *0.35;
-      //   const width1440 = productViewerWidth * 0.25;
-      //   const widthRight1440 = productViewerWidth *0.25;
-      //   document.documentElement.style.setProperty('--pointer-line-width-1440', `${width1440}px`);
-      //   document.documentElement.style.setProperty('--pointer-line-right-width-1440', `${widthRight1440}px`);
-      //   document.documentElement.style.setProperty('--pointer-line-width', `${pointerWidth}px`);
-      //   document.documentElement.style.setProperty('--pointer-line-right-width', `${pointerRightSideWidth}px`);
-      //   if(seriesItem.value){
-      //     let productLinePositionaldata = seriesItem.value[0].getBoundingClientRect();
-      //     let delta1 = productViewerPositionalData.left - productLinePositionaldata.right
-      //     document.documentElement.style.setProperty('--pointer-line-width-1200', `${delta1}px`);
-      //   }
-      //   if(blendItem.value){
-      //     let flavourPositionalData = blendItem.value[0].getBoundingClientRect();
-      //     let delta2 = flavourPositionalData.left - productViewerPositionalData.right
-      //     document.documentElement.style.setProperty('--pointer-line-right-width-1200', `${delta2}px`);
-      //   }
-      // }
     }
     
     return {
@@ -228,6 +230,7 @@ export default {
       currentFlavour,
       currentProductLine,
       computedLogo,
+      computedTextLength,
       selectProductLine,
       selectFlavour,
       switchBrand,
@@ -462,7 +465,7 @@ export default {
   width: 100%;
   .brand-image{
     width: 80%;
-    margin: auto;
+    height: auto;
     opacity: 0.3;
     cursor: pointer;
   }
