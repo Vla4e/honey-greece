@@ -6,6 +6,7 @@ import Tabs from '@/views/Tabs.vue';
 import ProductPage from '@/views/ProductPage.vue';
 
 const transitionDelay = 500; // Page transition delay to ensure animations plays out before transitioning.
+const allowedSelectedBrands = ['Okto', 'HAA', 'Melculum']
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
   routes: [
@@ -29,42 +30,58 @@ const router = createRouter({
     },
     {
       path: '/product',
+      redirect: '/product/Okto'
+    },
+    {
+      path: '/product/:selectedBrand',
       name: 'Product',
       component: ProductPage,
       meta: {
         hasNavbar: true, 
         playAnimationOnEnter: true
-      }
+      },
+      props: (route) => ({
+        selectedBrand: route.params.selectedBrand,
+        selectedLine: route.query.line // You can also derive this value dynamically if needed
+      })
     },
   ]
 })
 
+function processRouteTransition(to, next) {
+  console.log("PARAMS", to.params, to.query)
+  if (to.matched.length === 0) {
+    next({ name: 'Home' });
+  } else if (to.name === 'Product' && to.params.selectedBrand) {
+    if (!allowedSelectedBrands.includes(to.params.selectedBrand)) {
+      next({ name: 'Product', params: { selectedBrand: 'Okto' } });
+    } else {
+      next();
+    }
+  } else {
+    next();
+  }
+}
 
 router.beforeEach((to, from, next) => {
-  console.log('trying to go to', to)
-  try{
-    const navbarStore = useNavbarStore()
-    const globalStore = useGlobalStore()
-    // console.log('to', to)
-    // console.log("from", from);
-    if (to.matched.length === 0) next ({'name': 'Home'})
-    if(to.meta.hasNavbar){
-      navbarStore.changeNavbarStatus(true)
-    } else {
-      navbarStore.changeNavbarStatus(false)
-    }
-    if(to.meta.playAnimationOnEnter){
-      globalStore.changeAnimationFlag(true)
-      setTimeout(()=>{
-        next()
-      }, transitionDelay)
-    } else {
-      globalStore.changeAnimationFlag(false)
-      next()
-    }
-  } catch (e) {
-    console.error(e)
-    next()
+  const navbarStore = useNavbarStore();
+  const globalStore = useGlobalStore();
+
+  if (to.meta.hasNavbar) {
+    navbarStore.changeNavbarStatus(true);
+  } else {
+    navbarStore.changeNavbarStatus(false);
   }
-})
+
+  if (to.meta.playAnimationOnEnter) {
+    globalStore.changeAnimationFlag(true);
+    setTimeout(() => {
+      processRouteTransition(to, next);
+    }, transitionDelay);
+  } else {
+    globalStore.changeAnimationFlag(false);
+    processRouteTransition(to, next);
+  }
+});
+
 export default router

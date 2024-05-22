@@ -12,9 +12,12 @@
       <img :src="logoSource" class="tab-logo" :class="`tab-logo-${tabId}`"/>
       <!-- CLICKED -->
       <div class="series-container">
-        <router-link class="series-link" :to="`/product`" v-for="(series,idx) in series" :key="idx">
+        <!-- <router-link class="series-link" :to="`/product`" v-for="(series,idx) in series" :key="idx">
           {{series}}
-        </router-link>
+        </router-link> -->
+        <span class="series-link" @click="goToProductLine(brand, productLine)" v-for="(productLine, idx) in productLines" :key="idx">
+          {{ productLine }}
+        </span>
       </div>
       <!-- <JarScene class="jar-clicked"/> -->
       <!-- ACTIVE -->
@@ -29,11 +32,13 @@
 
 <script>
 import {ref, computed, inject } from 'vue';
+import router from '@/router/index.js'
 import JarScene from '@/components/JarScene.vue'
 import mockJar from '@/assets/pages/home/jar-medium.png'
 import tab1bg from '@/assets/pages/tabs/bg-1.png'
 import tab2bg from '@/assets/pages/tabs/bg-2.png'
 import tab3bg from '@/assets/pages/tabs/bg-3.png'
+import { stringifyQuery } from 'vue-router';
 export default {
   name: 'tab',
   components: { JarScene },
@@ -68,7 +73,11 @@ export default {
       required: false,
       default: ''
     },
-    series: {
+    brand: {
+      type: String,
+      required: false
+    },
+    productLines: {
       type: Array,
       required: false,
       default: () => {
@@ -78,10 +87,16 @@ export default {
           'Test3'
         ]
       }
+    },
+    line: {
+      type: String,
+      required: true,
+      default: 'Okto'
     }
   },
   setup(props){
     // console.log("USEIMAGE", useImage)
+    console.log("PROPS RECIEVED", props)
     let singleTabEmitter = inject('emitter')
     let tabActive = ref(false)
     let tabOpen = ref(false)
@@ -118,10 +133,16 @@ export default {
       singleTabEmitter.emit('toggleClickedTab', {value: tabClicked.value, tabId: props.tabId})
       
     }
+
+    function goToProductLine(brand, productLine){
+      router.push({ name: 'Product', params: { selectedBrand: brand}, query: {line: productLine}})
+      console.log("Going to:", brand, productLine)
+    }
     return{ 
       tabTitle: props.tabTitle,
       tabText: props.tabText,
-      series: props.series,
+      productLines: props.productLines,
+      brand: props.brand,
       backgroundSource: props.backgroundSource, 
       logoSource: logoUrl, 
       tabActive,
@@ -130,7 +151,9 @@ export default {
       mockJar,
       currentTabBackground,
       tabHover,
-      tabClick }
+      tabClick,
+      goToProductLine
+    }
   }
 }
 </script>
@@ -150,6 +173,7 @@ export default {
   background-size: cover;
   background-position: center;
   background-repeat: no-repeat;
+  cursor: pointer;
   &-1{
     background-image: url('@/assets/pages/tabs/bg-1.png');
   }

@@ -1,15 +1,15 @@
 <template>
-  <div class="link-tree">
-    <router-link class="tree-route" :to="'product'">
+  <div :class="category.disabled ? 'disabled' : ''" class="link-tree">
+    <span class="tree-route" :to="'product'">
       {{typedCategories.main}}
-    </router-link>
+    </span>
     <div class="dropdown-tree">
       <img :src="treeRoot" class="root"/>
       <div class="branches">
         <div v-for="(subCategory, idx) in typedCategories" :key="idx" class="branch" :class="subCategory.type">
           <img :src="computeSource(subCategory.type)" class="branch-image"/>
-          <router-link :to="'test'" class="branch-link">
-            {{subCategory.text}}
+          <router-link :to="subCategory.linkTo" class="branch-link">
+            {{ subCategory.text }}
           </router-link>
         </div>
       </div>
@@ -31,7 +31,7 @@ export default {
     }
   },
   setup (props) {
-    console.log("PROPS", props.category)
+    // console.log("PROPS", props.category)
     let typedCategories = [] 
     if(props.category.subCategories){
       let subCategories = props.category.subCategories
@@ -165,6 +165,13 @@ export default {
     line-height: normal;
     letter-spacing: 1.5px;
     text-transform: uppercase;
+    cursor: pointer;
+  }
+  &.disabled{
+    pointer-events: none !important;
+    .dropdown-tree{
+      pointer-events: none !important;
+    }
   }
 }
 </style>

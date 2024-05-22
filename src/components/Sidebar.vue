@@ -56,7 +56,7 @@ export default {
     showSidebar:{
       // immediate: true,
       handler: (val) => {
-        console.log("VAL", val)
+        console.log("SHOWSIDEBAR VAL CHANGED", val)
       }
     }
   }
@@ -155,8 +155,9 @@ export default {
     transition: all ease-in-out 0.3s;
   }
   .x-icon{
-    width: 50px;
-    height: 50px;
+    width: 45px;
+    height: 45px;
+    cursor: pointer;
   }
 }
 </style>

@@ -44,31 +44,43 @@ export default {
     let categories = [
       {
         main: 'Okto',
+        disabled: false,
         subCategories: [
           {
             text: 'Monofloral series',
-            linkTo: '/okto/monofloral'
+            linkTo: '/Okto?line=Monofloral'
           },
           {
             text: 'Blend series',
-            linkTo: '/okto/blend'
-          },
-          {
-            text: 'All products',
-            linkTo: 'products'
+            linkTo: '/Okto?line=Blends'
           }
         ]
       },
       {
         main: 'Honey Apiary Academy',
+        disabled: false,
         subCategories: [
           {
             text: 'Monofloral series',
-            linkTo: '/haa/monofloral'
+            linkTo: '/HAA?line=Monofloral'
           },
           {
             text: 'Blend series',
-            linkTo: '/haa/blend'
+            linkTo: '/HAA?line=Blends'
+          }
+        ]
+      },
+      {
+        main: 'Melculum',
+        disabled: true,
+        subCategories: [
+          {
+            text: 'Monofloral series',
+            linkTo: '/melculum/monofloral'
+          },
+          {
+            text: 'Blend series',
+            linkTo: '/melculum/blend'
           },
           {
             text: 'All products',
@@ -76,8 +88,10 @@ export default {
           }
         ]
       },
+      
       {
-        main: 'Melculum',
+        main: 'All products',
+        disabled: true,
         subCategories: [
           {
             text: 'Monofloral series',
@@ -101,7 +115,7 @@ export default {
       count.value++
       console.log('counting up', count.value)
     }
-    console.log('categ', categories)
+    // console.log('categ', categories)
     return { logo: logoUrl, sidebar: burgerIcon, toggleSidebar, testButton, count, categories };
   },
 };
@@ -116,7 +130,7 @@ export default {
   min-height: 10%;
   background: transparent;
   position: relative;
-  margin-bottom: 2%;
+  // margin-bottom: 2%;
   z-index: 2;
 }
 .blend-link{

@@ -25,23 +25,42 @@ export default {
     let globalStore = useGlobalStore()
     let { playAnimationOnEnter } = storeToRefs(globalStore)
     //ROUTER TRANSITION
-    watch(playAnimationOnEnter, () => {
-      if(playAnimationOnEnter.value){
-          showSlide.value = true
-          setTimeout(()=> {
-            showSlide2.value = true
-          }, 600)
-          setTimeout(()=>{
-            showSlide.value = false
-          }, 2600)
-          setTimeout(()=>{
-            showSlide2.value = false
-          }, 2000)
-          setTimeout(()=>{
-            globalStore.changeAnimationFlag(false)
-          }, 3500)
+    watch(playAnimationOnEnter, (newVal) => {
+      if (newVal) {
+        requestAnimationFrame(() => {
+            showSlide.value = true; // start first slide animation
+          setTimeout(() => {
+            showSlide2.value = true;
+          }, 300); // start second slide animation
+          setTimeout(() => {
+            showSlide.value = false;
+          }, 1800); // hide first slide after delay
+          setTimeout(() => {
+            showSlide2.value = false;
+          }, 1500); // hide the second slide
+          setTimeout(() => {
+            globalStore.changeAnimationFlag(false);
+          }, 2000); // reset the animation flag
+        });
       }
-    })
+    });
+    // watch(playAnimationOnEnter, () => {
+    //   if(playAnimationOnEnter.value){
+    //       showSlide.value = true
+    //       setTimeout(()=> {
+    //         showSlide2.value = true
+    //       }, 600)
+    //       setTimeout(()=>{
+    //         showSlide.value = false
+    //       }, 2600)
+    //       setTimeout(()=>{
+    //         showSlide2.value = false
+    //       }, 2000)
+    //       setTimeout(()=>{
+    //         globalStore.changeAnimationFlag(false)
+    //       }, 3500)
+    //   }
+    // })
     return { showSlide, showSlide2 }
   }
 }
@@ -80,52 +99,39 @@ export default {
   font-weight: 600;
   color: white;
 }
-.slide-1-enter-active,
-.slide-1-leave-active {
-  transition: all 0.5s ease-out;
-}
 
-.slide-1-enter-to {
-  position: absolute;
-  right: 0;
+// Slide animations - consider transition duration in setTimeouts above
+.slide-1-enter-active, .slide-1-leave-active{
+  transition: transform 0.5s ease-out;
+}
+.slide-2-enter-active, .slide-2-leave-active {
+  transition: transform 0.5s ease-out;
 }
 
 .slide-1-enter-from {
-  position: absolute;
-  right: -100%;
+  transform: translateX(100%);
+  // opacity: 0;
+}
+.slide-2-enter-from {
+  transform: translateX(100%);
+  // opacity: 0;
+}
+
+.slide-1-enter-to, .slide-1-leave-from {
+  transform: translateX(0%);
+  // opacity: 1;
+}
+.slide-2-enter-to, .slide-2-leave-from {
+  transform: translateX(0%);
+  // opacity: 1;
 }
 
 .slide-1-leave-to {
-  position: absolute;
-  left: -100%;
+  transform: translateX(-100%);
+  // opacity: 0;
 }
-
-.slide-1-leave-from {
-  position: absolute;
-  left: 0%;
-}
-.slide-2-enter-active,
-.slide-2-leave-active {
-  transition: all 0.5s ease-out;
-}
-
-.slide-2-enter-to {
-  position: absolute;
-  right: 0;
-}
-
-.slide-2-enter-from {
-  position: absolute;
-  right: -100%;
-}
-
-.slide-2-leave-to {
-  position: absolute;
-  left: -100%;
-}
-
-.slide-2-leave-from {
-  position: absolute;
-  left: 0%;
+ .slide-2-leave-to {
+  transform: translateX(-100%);
+  // opacity: 0;
 }
 </style>
