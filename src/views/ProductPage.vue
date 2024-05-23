@@ -52,7 +52,7 @@
 
     <div class="blend-selection">
       <div class="brand-selection">
-        <img @click="switchBrand()" class="brand-image" :src="computedLogo"/>
+        <!-- <img @click="switchBrand()" class="brand-image" :src="computedLogo"/> -->
       </div>
       <span
         class="blend"
@@ -252,7 +252,7 @@ export default {
 <style lang="scss" scoped>
 .product-page-container {
   position: relative;
-  justify-content: space-between;
+  // justify-content: space-between;
   display: grid;
   grid-template-rows: 1fr;
   grid-template-columns: 30% 40% 30%;
@@ -470,63 +470,15 @@ export default {
     opacity: 1;
   }
 }
-.brand-selection{
-  height: 40%;
+.brand-selection {
+  height: 30%;
   width: 100%;
-  .brand-image{
-    width: 80%;
-    height: auto;
+  margin-bottom: 15%;
+  .brand-image {
+    width: 60%; /* Set the width of the image to 60% of its container */
+    height: auto; /* Maintains the aspect ratio */
     opacity: 0.3;
     cursor: pointer;
   }
 }
-// .series-item-container{
-//   width: 100% !important;
-//   flex-direction: row !important;
-//   justify-content: space-between !important;
-//   align-items: center;
-//   min-height: 25% !important;
-//   .series-items{
-//     display: flex;
-//     flex-direction: column;
-//     justify-content: space-around !important;
-//     height: 100%;
-//     .series-item-selected{
-//       // width: auto;
-//     }
-//   }
-//   .brand-selection-test{
-//     display: flex;
-//     flex-direction: column;
-//     align-items: center;
-//     justify-content: center;
-//     height: 100%;
-//     .brand-image{
-//       // width: 80%;
-//       // height: auto;
-//       max-height: 150px;
-//       opacity: 0.3;
-//       cursor: pointer;
-//     }
-//     .arrow {
-//       max-width: 10%;
-//       opacity: 0.3;
-//       transition: all ease-in-out 0.2s;
-//     }
-
-//     .arrow-up {
-//       transform: rotate(270deg); /* Pointing up */
-//       &:active {
-//         transform: rotate(270deg) translateX(70%); /* Maintains rotation and moves up */
-//       }
-//     }
-
-//     .arrow-down {
-//       transform: rotate(90deg); /* Pointing down */
-//       &:active {
-//         transform: rotate(90deg) translateX(70%); /* Maintains rotation and moves down */
-//       }
-//     }
-//   }
-// }
 </style>
