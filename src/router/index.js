@@ -49,7 +49,6 @@ const router = createRouter({
 })
 
 function processRouteTransition(to, next) {
-  console.log("PARAMS", to.params, to.query)
   if (to.matched.length === 0) {
     next({ name: 'Home' });
   } else if (to.name === 'Product' && to.params.selectedBrand) {

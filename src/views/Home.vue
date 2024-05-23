@@ -1,16 +1,8 @@
 
 <template>
   <div class="home-container">
-    <!-- <div class="background-video-container">
-      <video id="background-video" class="background-video" autoplay loop muted poster="https://assets.codepen.io/6093409/river.jpg">
-        <source :src="homeVideo" type="video/mp4">
-      </video>
-    </div> -->
-    <!-- <div class="video-cover">
-    </div> -->
     <JarScene/>
     <div class="texts-container">
-      <!-- <img :src="smallJar" class="small-jar-home"/> -->
       <div class="home-text-container">
         <span class="home-text">Essence of <br/>Nature</span>
         <router-link class="route-button small-button" to="/products">Start your journey</router-link>
@@ -23,14 +15,12 @@
 <script>
 import { ref } from 'vue';
 import homeVideo from '@/assets/pages/home/bg-vid.mp4'
-import smallJar from '@/assets/pages/home/jar-medium.png'
 import JarScene from '../components/JarScene.vue'
 export default{
   name: 'Home',
   components: { JarScene },
   setup(){
-    const count = ref(0)
-    return {count, homeVideo, smallJar}
+    return { homeVideo }
   }
 }
 </script>

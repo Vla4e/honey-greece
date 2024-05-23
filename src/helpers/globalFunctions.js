@@ -7,7 +7,9 @@ export default {
   delayedNavigation(path, delay) {
     console.log("this router", router)
     setTimeout(() => {
-      router.push(path);
+      router.push(path).catch(err => {
+        console.log("error while routing", err)
+      });
     }, delay);
   }
 }

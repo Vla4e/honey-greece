@@ -78,11 +78,12 @@ export default {
     const setCanvas = async () => {
       // Create Scene
       scene = new Scene();
-
-      let newJarLoaderPromise = await newJarLoader.loadAsync('/assets/glb/jar-300g-latest.glb')
+      // let newJarLoaderPromise = await newJarLoader.loadAsync('/assets/glb/jar-300g-latest.glb')
+      let newJarLoaderPromise = await newJarLoader.loadAsync('/assets/glb/300g-honey.glb')
+      
       newJarLoaderPromise.scene.traverse(function (obj) {
         if(obj.isMesh){
-          console.log("ISMESH:", obj.name)
+          // console.log("ISMESH:", obj.name)
           if(obj.name === 'med'){
             
             obj.material.transparent = true;

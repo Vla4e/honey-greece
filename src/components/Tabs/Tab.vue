@@ -135,7 +135,9 @@ export default {
     }
 
     function goToProductLine(brand, productLine){
-      router.push({ name: 'Product', params: { selectedBrand: brand}, query: {line: productLine}})
+      router.push({ name: 'Product', params: { selectedBrand: brand}, query: {line: productLine}}).catch(err => {
+        console.log("error while routing", err)
+      });
       console.log("Going to:", brand, productLine)
     }
     return{ 

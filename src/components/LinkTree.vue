@@ -1,15 +1,15 @@
 <template>
-  <div :class="category.disabled ? 'disabled' : ''" class="link-tree">
-    <span class="tree-route" :to="'product'">
-      {{typedCategories.main}}
+  <div :class="brand.disabled ? 'disabled' : ''" class="link-tree">
+    <span @click="goToPage(typedBrands.name)" class="tree-route" :class="currentBrandPage ? 'active': ''">
+      {{typedBrands.name}}
     </span>
-    <div class="dropdown-tree">
+    <div v-if="renderDropdownTree" class="dropdown-tree">
       <img :src="treeRoot" class="root"/>
       <div class="branches">
-        <div v-for="(subCategory, idx) in typedCategories" :key="idx" class="branch" :class="subCategory.type">
-          <img :src="computeSource(subCategory.type)" class="branch-image"/>
-          <router-link :to="subCategory.linkTo" class="branch-link">
-            {{ subCategory.text }}
+        <div v-for="(line, idx) in typedBrands" :key="idx" class="branch" :class="typedBrands.type">
+          <img :src="computeSource(line.type)" class="branch-image"/>
+          <router-link :to="line.linkTo" class="branch-link">
+            {{ line.text }}
           </router-link>
         </div>
       </div>
@@ -22,29 +22,70 @@ import treeRoot from "@/assets/components/link-tree/tree-root.svg"
 import treeNode from "@/assets/components/link-tree/tree-node.svg"
 import treeLeftmost from "@/assets/components/link-tree/tree-leftmost.svg"
 import treeRightmost from "@/assets/components/link-tree/tree-rightmost.svg"
+
+import { ref, watch } from 'vue'
+import router from '@/router/index.js'
+import { useRoute } from 'vue-router';
+
 export default {
   name: 'LinkTree',
   props: {
-    category: {
+    brand: {
       type: Array,
       required: true,
     }
   },
   setup (props) {
-    // console.log("PROPS", props.category)
-    let typedCategories = [] 
-    if(props.category.subCategories){
-      let subCategories = props.category.subCategories
-      typedCategories = subCategories.map((category, idx) => {
+    let currentBrandPage = ref(false)
+    const route = useRoute()
+
+    //Add type values to lines (branches), so correct branch image can be computed
+    let renderDropdownTree = ref(false)
+    let typedBrands = [] 
+    if(props.brand.lines){
+      let lines = props.brand.lines
+      typedBrands = lines.map((brand, idx) => {
         return {
-          ...category,
-          type: idx === 0 ? 'first' : idx === subCategories.length -1 ? 'last' : 'inbetween',
+          ...brand,
+          type: idx === 0 ? 'first' : idx === lines.length -1 ? 'last' : 'inbetween',
         }
       })
-      typedCategories.main = props.category.main
-      typedCategories.link = props.category.linkto
-      console.log("TYPED CATS", typedCategories)
+      typedBrands.name = props.brand.name
+      typedBrands.link = props.brand.linkto
+      if(!props.brand.lines.length){
+        renderDropdownTree.value = false
+      } else renderDropdownTree.value = true
     }
+    
+    //Check whether route matches component's brand, set to active if true
+    watch(() => [
+      route.name,
+      route.params
+    ], ([name, params]) => {
+      if(name && params){
+        if(params.selectedBrand){
+          if(props.brand.name === params.selectedBrand){
+            currentBrandPage.value = true
+          } else {
+            currentBrandPage.value = false
+          }
+        }
+      }
+    }, { immediate: true });
+
+    function goToPage(brand){
+      if(brand === 'All Products'){
+        router.push({ name: 'AllProducts'}).catch(err => {
+          console.log("error while routing", err)
+        });
+      } else {
+        currentBrandPage.value = true
+        router.push({ name: 'Product', params: { selectedBrand: brand}}).catch(err => {
+          console.log("error while routing", err)
+        });
+      }
+    }
+
     function computeSource(type){
       if(type === 'first'){
         return treeLeftmost
@@ -52,7 +93,19 @@ export default {
         return treeRightmost
       } else return treeNode
     }
-    return {treeRoot, treeNode, treeLeftmost, treeRightmost, typedCategories, computeSource}
+
+    return {
+      treeRoot,
+      treeNode,
+      treeLeftmost,
+      treeRightmost,
+      renderDropdownTree,
+      brand: props.brand,
+      typedBrands,
+      currentBrandPage,
+      computeSource,
+      goToPage
+    }
   }
 }
 </script>
@@ -166,6 +219,9 @@ export default {
     letter-spacing: 1.5px;
     text-transform: uppercase;
     cursor: pointer;
+    &.active{
+      font-weight: 700;
+    }
   }
   &.disabled{
     pointer-events: none !important;

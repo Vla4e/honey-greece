@@ -7,23 +7,31 @@
     <div class="series-selection">
       <div class="pushdown" style="height: 35%; width: 100%;"></div>
       <div class="series-item-container">
-        <div
-          class="series-item"
-          ref="seriesItem"
-          v-for="(brandProductLine, idx) in brandProductLines"
-          :class="currentProductLine.name === brandProductLine.name ? 'selected' : ''"
-          @click="selectProductLine(brandProductLine.name)"
-          :key="idx"
-        >
-          <span class="series-item-text">
-            {{ brandProductLine.name }}
-          </span>
+        
+        <!-- <div class="brand-selection-test">
+          <img @click="switchBrand()" class="arrow arrow-up" :src="arrow"/>
+          <img class="brand-image" :src="computedLogo"/>
+          <img @click="switchBrand()" class="arrow arrow-down" :src="arrow"/>
+        </div> -->
+        <div class="series-items">
           <div
-            class="stylish-pointer"
-            :style="currentProductLine.name === brandProductLine.name ? 'display: flex;' : 'display: none;'"
+            class="series-item"
+            ref="seriesItem"
+            v-for="(brandProductLine, idx) in brandProductLines"
+            :class="currentProductLine.name === brandProductLine.name ? 'selected' : ''"
+            @click="selectProductLine(brandProductLine.name)"
+            :key="idx"
           >
-            <img :src="pointerLine" class="pointer-line" />
-            <img :src="pointerCircle" class="pointer-circle" />
+            <span class="series-item-text">
+              {{ brandProductLine.name }}
+            </span>
+            <div
+              class="stylish-pointer"
+              :style="currentProductLine.name === brandProductLine.name ? 'display: flex;' : 'display: none;'"
+            >
+              <img :src="pointerLine" class="pointer-line" />
+              <img :src="pointerCircle" class="pointer-circle" />
+            </div>
           </div>
         </div>
       </div>
@@ -83,6 +91,7 @@ import ProductScene from "../components/ProductScene.vue";
 import downloadIcon from "@/assets/pages/product-page/download-icon.png";
 import pointerLine from "@/assets/pages/product-page/pointer-line.svg";
 import pointerCircle from "@/assets/pages/product-page/pointer-circle.svg";
+import arrow from "@/assets/pages/product-page/arrow.svg";
 
 import brandConfigs from "@/assets/brand-information/index.js"
 
@@ -221,6 +230,7 @@ export default {
       downloadIcon,
       pointerCircle,
       pointerLine,
+      arrow,
       productViewer,
       blendItem,
       seriesItem,
@@ -470,4 +480,53 @@ export default {
     cursor: pointer;
   }
 }
+// .series-item-container{
+//   width: 100% !important;
+//   flex-direction: row !important;
+//   justify-content: space-between !important;
+//   align-items: center;
+//   min-height: 25% !important;
+//   .series-items{
+//     display: flex;
+//     flex-direction: column;
+//     justify-content: space-around !important;
+//     height: 100%;
+//     .series-item-selected{
+//       // width: auto;
+//     }
+//   }
+//   .brand-selection-test{
+//     display: flex;
+//     flex-direction: column;
+//     align-items: center;
+//     justify-content: center;
+//     height: 100%;
+//     .brand-image{
+//       // width: 80%;
+//       // height: auto;
+//       max-height: 150px;
+//       opacity: 0.3;
+//       cursor: pointer;
+//     }
+//     .arrow {
+//       max-width: 10%;
+//       opacity: 0.3;
+//       transition: all ease-in-out 0.2s;
+//     }
+
+//     .arrow-up {
+//       transform: rotate(270deg); /* Pointing up */
+//       &:active {
+//         transform: rotate(270deg) translateX(70%); /* Maintains rotation and moves up */
+//       }
+//     }
+
+//     .arrow-down {
+//       transform: rotate(90deg); /* Pointing down */
+//       &:active {
+//         transform: rotate(90deg) translateX(70%); /* Maintains rotation and moves down */
+//       }
+//     }
+//   }
+// }
 </style>
