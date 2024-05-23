@@ -1,9 +1,10 @@
 <template>
   <div class="app-container" :style="hideOverflow ? 'overflow: hidden': ''">
-    <div v-if="!showSidebar && !isMobile" class="burger-icon-container">
-      <img :src="burgerIcon" @click="toggleSidebar" class="burger-icon"/>
+    <div v-if="!isMobile" class="burger-icon-container">
+      <!-- <img :src="burgerIcon" @click="toggleSidebar" class="burger-icon"/> -->
+      <BurgerMenuIcon @click="toggleSidebar" class="burger-icon"/>
     </div>
-    <Sidebar v-if="showSidebar"/>
+    <Sidebar v-show="showSidebar"/>
     <NavbarComponent v-show="!showSidebar && showNavbar" id="nav"/>
     <PageTransition></PageTransition>
     <RouterView v-show="!showSidebar" class="page-container"/>
@@ -81,15 +82,15 @@ export default {
   align-items: center;
   z-index: 11;
   :hover{
-    transform: scale(1.1);
-    transition: all ease-in-out 0.3s;
+    // transform: scale(1.1);
+    // transition: scale ease 0.3s;
   }
   .burger-icon{
     position: absolute;
     top: 2%;
     left: 2%;
-    width: 50px;
-    height: 50px;
+    // width: 50px;
+    // height: 50px;
     cursor: pointer;
   }
 }

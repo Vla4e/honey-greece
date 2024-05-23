@@ -2,9 +2,9 @@
   <div class="sidebar-container">
     <div class="background-cover">
     </div>
-    <div class="x-icon-container">
+    <!-- <div class="x-icon-container">
       <img :src="closeIcon" @click="toggleSidebar" class="x-icon"/>
-    </div>
+    </div> -->
     <div class="left-side">
         <router-link class="sidebar-link" to="/">
           <span class="link-heading">History</span>

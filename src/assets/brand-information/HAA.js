@@ -40,27 +40,27 @@ const HAAConfig = {
       name: "Monoflorals",
       flavours: [
         {
-          name: "Oak Honey",
+          name: "Oak Limited Reserve",
           tagline: "Collected in Greece",
           description: `Oak honey has a deep, dark color and a robust flavor profile with earthy and woody undertones. Revered by the ancient Greeks as the sacred tree of Zeus, oak brings a unique character to this honey rich in antioxidants.`,
         },
         {
-          name: "Thyme Honey",
+          name: "Thyme Limited Reserve",
           tagline: "Collected in Greece",
           description: `Thyme honey from the Aegean regions has a bright and floral character, with a lively aroma reminiscent of Mediterranean herbs. Its flavor is distinctively bold, with a pleasant tingle in the throat that adds complexity.`,
         },
         {
-          name: "Cotton Honey",
+          name: "Cotton Blossom Limited Reserve",
           tagline: "Collected in Greece",
           description: `Highly aromatic and produced from the white flowers and buds of cotton. It is of amber colour and its taste is quite sweet and intense leaving a buttery and peppery aftertaste.`,
         },
         {
-          name: "Fir Honey",
+          name: "Fir Limited Reserve",
           tagline: "Collected in Greece",
           description: `Fir tree honey from the Agrafa region offers a gentle sweetness and a unique aroma that evokes the mountain peaks where it's produced. Its deep amber color and smooth texture add to its appeal. This honey never crystallizes, making it one of the finest and most flavorful Greek honeys.`,
         },
         {
-          name: "Pinewood Honey",
+          name: "Pinewood Limited Reserve",
           tagline: "Collected in Greece",
           description: `Selected on Thassos island,  with a deep, earthy profile, a hint of resin and a touch of caramelized sweetness. Its complex aroma carries subtle notes of pine forests and wild herbs.`,
         },

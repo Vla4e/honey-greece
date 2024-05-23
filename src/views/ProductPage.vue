@@ -1,8 +1,13 @@
 <template>
   <div class="product-page-container">
-    <span class="floating-text" :style="computedTextLength">
+    <!-- <span class="floating-text" ">
       {{ currentFlavour.name }}
-    </span>
+    </span> -->
+    <transition name="fade" mode="out-in">
+      <span class="floating-text" :style="{ 'font-size': computedTextLength + 'px' }" :key="currentFlavour.name">
+        {{ currentFlavour.name }}
+      </span>
+    </transition>
 
     <div class="series-selection">
       <div class="pushdown" style="height: 35%; width: 100%;"></div>
@@ -102,6 +107,7 @@ export default {
   setup(props) {
     const router = useRoute();
 
+    const { width: windowWidth, height: windowHeight } = useWindowSize();
     
     //receives distance of Mesh from Canvas ends
     let emitter = inject('emitter')
@@ -150,27 +156,44 @@ export default {
     })
     
     let computedTextLength = computed(()=>{
-      console.log("recomputing")
       let nameLength = currentFlavour.value.name.length
+      let fontSize;
       switch(true){
+        case (nameLength > 28):{
+          fontSize = 80
+          break;
+        }
         case (nameLength < 12):{
-          return 'font-size: 130px'
+          fontSize = 130
+          break;
         }
         case (nameLength < 16):{
-          return 'font-size: 130px'
+          fontSize = 120
+          break;
         }
         case (nameLength < 20):{
-          return 'font-size: 110px'
+          fontSize = 110
+          break;
         }
-        case (nameLength < 24):{
-          return 'font-size: 90px'
+        case (nameLength < 22):{
+          fontSize = 100
+          break;
+        }
+        case (nameLength <= 24):{
+          fontSize = 100
+          break;
         }
         case (nameLength < 28):{
-          return 'font-size: 70px'
-          
+          fontSize =  90;
+          break;
         }
-
+        default: fontSize = 100;
       }
+      if(windowWidth.value <= 1440){
+        fontSize -= 20
+      }
+      console.log("FS", fontSize)
+      return fontSize
     })
     watch(productLineFlavours, (newFlavours) => {
       if (newFlavours.length > 0) {
@@ -184,6 +207,15 @@ export default {
       brandProductLines.value = newBrand.brandProductLines
       currentProductLine.value = brandProductLines.value['Blends']
     })
+
+    // watch(currentFlavour, (newVal, oldVal) => {
+    //   let element = document.querySelector('.floating-text');
+    //   element.classList.remove('fadeIn');
+    //   // Using nextTick to ensure the class removal has been processed
+    //   Vue.nextTick(() => {
+    //     element.classList.add('fadeIn');
+    //   });
+    // });
 
     function selectProductLine(productLine) {
       if (productLine !== currentProductLine.value.name) {
@@ -262,8 +294,9 @@ export default {
     z-index: 1;
     color: rgba(0, 0, 0, 0.1);
     font-family: "DMSans";
-    max-width: 70%;
-    font-size: 100px;
+    max-width: 85%;
+    // font-size: 100px;
+    line-height: 90px;
     font-style: normal;
     font-weight: 700;
     letter-spacing: 5px;
@@ -272,26 +305,26 @@ export default {
     position: absolute;
     left: 0%;
     top: 5%;
-    animation: fadeIn 0.5s;
-    -webkit-animation: fadeIn 5s;
-    -moz-animation: fadeIn 5s;
-    -o-animation: fadeIn 5s;
-    -ms-animation: fadeIn 5s;
-    @media(max-width: 1980px){
-      font-size: 75px;
-      max-width: 72%;
-    }
-    @media(min-width: 1600px){
-      line-height: 108px;
-    }
-    @media(max-width: 1440px){
-      font-size: 75px;
-      max-width: 75%;
-    }
-    @media(max-width: 1366px){
-      font-size: 65px;
-      max-width: 95%;
-    }
+    // animation: fadeIn 0.5s;
+    // -webkit-animation: fadeIn 5s;
+    // -moz-animation: fadeIn 5s;
+    // -o-animation: fadeIn 5s;
+    // -ms-animation: fadeIn 5s;
+    // @media(max-width: 1980px){
+    //   font-size: 75px;
+    //   max-width: 72%;
+    // }
+    // @media(min-width: 1600px){
+    //   line-height: 108px;
+    // }
+    // @media(max-width: 1440px){
+    //   font-size: 75px;
+    //   max-width: 75%;
+    // }
+    // @media(max-width: 1366px){
+    //   font-size: 65px;
+    //   max-width: 95%;
+    // }
   }
 
   .blend-selection {
@@ -391,7 +424,7 @@ export default {
       .description-text {
         color: #000;
         font-family: "DMSans";
-        font-size: 14px;
+        font-size: 18px;
         font-style: normal;
         font-weight: 400;
       }
@@ -480,5 +513,14 @@ export default {
     opacity: 0.3;
     cursor: pointer;
   }
+}
+.fade-enter-active,
+.fade-leave-active {
+  transition: opacity 0.15s ease;
+}
+
+.fade-enter-from,
+.fade-leave-to {
+  opacity: 0;
 }
 </style>
