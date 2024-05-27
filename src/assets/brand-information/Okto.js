@@ -1,5 +1,6 @@
 const oktoConfig = {
   brand: "Okto",
+  fullBrandName: "Okto",
   tagline: "Ultra Premium Greek Honey",
   productLines: ['Blends', 'Monoflorals'],
   brandDescription: `Oktώ emerges as our esteemed premium brand, characterized by its exceptional quality and unwavering commitment to excellence. With a focus on delivering superior taste and consistency, Oktώ brings forth a range of premium honey selections, each bearing the hallmark of quality and authenticity that defines Hellenic Premium Honey.`,
@@ -10,27 +11,27 @@ const oktoConfig = {
       name: "Blends",
       flavours: [
         {
-          name: "Blend #1",
+          name: "#1",
           tagline: "Collected in Greece",
           description: "Oak honey has a deep, dark color and a robust flavor profile with earthy and woody undertones. Revered by the ancient Greeks as the sacred tree of Zeus, oak brings a unique character to this honey rich in antioxidants."
         },
         {
-          name: "Blend #2",
+          name: "#2",
           tagline: "Collected in Greece",
           description: "Oak honey has a deep, dark color and a robust flavor profile with earthy and woody undertones. Revered by the ancient Greeks as the sacred tree of Zeus, oak brings a unique character to this honey rich in antioxidants."
         },
         {
-          name: "Blend #3",
+          name: "#3",
           tagline: "Collected in Greece",
           description: "Oak honey has a deep, dark color and a robust flavor profile with earthy and woody undertones. Revered by the ancient Greeks as the sacred tree of Zeus, oak brings a unique character to this honey rich in antioxidants."
         },
         {
-          name: "Blend #4",
+          name: "#4",
           tagline: "Collected in Greece",
           description: "Oak honey has a deep, dark color and a robust flavor profile with earthy and woody undertones. Revered by the ancient Greeks as the sacred tree of Zeus, oak brings a unique character to this honey rich in antioxidants."
         },
         {
-          name: "Blend #5",
+          name: "#5",
           tagline: "Collected in Greece",
           description: "Oak honey has a deep, dark color and a robust flavor profile with earthy and woody undertones. Revered by the ancient Greeks as the sacred tree of Zeus, oak brings a unique character to this honey rich in antioxidants."
         },

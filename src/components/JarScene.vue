@@ -144,7 +144,7 @@ export default {
 
     const firstAnimate = async () => {
       await setCanvas().then(() => {
-        startTrackingMouseMovement();
+        // startTrackingMouseMovement();
         window.addEventListener("resize", onWindowResize, false);
         animate();
       });

@@ -1,5 +1,6 @@
 import NavbarComponent from './Navbar.vue'
 import Sidebar from './Sidebar.vue'
+import ContactForm from './ContactForm/ContactForm.vue'
 import JarScene from './JarScene.vue'
 import Footer from './Footer.vue'
 import ProductScene from './ProductScene.vue'
@@ -9,6 +10,7 @@ import BurgerMenuIcon from './Navbar/BurgerMenuIcon.vue'
 export default [
     NavbarComponent,
     Sidebar,
+    ContactForm,
     JarScene,
     Footer,
     ProductScene,

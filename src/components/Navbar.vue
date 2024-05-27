@@ -8,9 +8,9 @@
         <LinkTree v-for="brand in brands" :brand="brand"/>
       </div>
       <div class="inquire-container">
-        <a class="blend-link" href="mailto:vlade_nikolovski@hotmail.com" target="_blank">
+        <span class="blend-link" @click="toggleContactForm()">
           Inquire
-        </a>
+        </span>
       </div>
     </div>
     <!-- <div class="logo-container">
@@ -38,13 +38,13 @@ export default {
     Object.keys(brandConfigs).forEach((brand) => {
       let tempBrand = brandConfigs[brand]
       brands.push({
-        name: tempBrand.brand,
+        name: tempBrand.fullBrandName,
         linkTo: `/product/${tempBrand.brand}?line=${tempBrand.productLines[0]}`,
         disabled: false,
         lines: tempBrand.productLines.map((productLine) => {
           return {
             text: productLine,
-            linkTo: `/product/${tempBrand.brand}?line=${productLine} `
+            linkTo: `/product/${tempBrand.brand}?line=${productLine}`
           }
         })
       })
@@ -80,15 +80,15 @@ export default {
       brands.push(brand)
     })
 
-    function toggleSidebar(){
-      emitter.emit('toggleSidebar')
+    function toggleContactForm(){
+      console.log("TOGGLING")
+      emitter.emit('toggleContactForm')
     }
-
     return { 
       logo: logoUrl,
       sidebar: burgerIcon,
-      toggleSidebar,
-      brands 
+      brands,
+      toggleContactForm
     };
   },
 };
@@ -116,6 +116,7 @@ export default {
   line-height: normal;
   letter-spacing: 1.5px;
   text-transform: uppercase;
+  cursor: pointer;
 } 
 .logo-container{
   display: flex;

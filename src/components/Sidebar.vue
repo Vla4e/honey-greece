@@ -6,28 +6,28 @@
       <img :src="closeIcon" @click="toggleSidebar" class="x-icon"/>
     </div> -->
     <div class="left-side">
-        <router-link class="sidebar-link" to="/">
+        <router-link class="sidebar-link disabled" to="/history">
           <span class="link-heading">History</span>
         </router-link>
-        <router-link class="sidebar-link" to="/">
+        <router-link class="sidebar-link" to="/product/HAA?line=Blends">
           <span class="link-heading">Honey apiary academy</span>
           <span class="link-subheading">Ultra Premium Greek Honey</span>
         </router-link>
-        <router-link class="sidebar-link" to="/">
+        <router-link class="sidebar-link" to="/product/Okto?line=Blends">
           <span class="link-heading">Okto</span>
           <span class="link-subheading">Premium Greek Honey</span>
         </router-link>
-        <router-link class="sidebar-link" to="/">
+        <router-link class="sidebar-link disabled" to="/">
           <span class="link-heading">Melculum</span>
           <span class="link-subheading">Diversity Series</span>
         </router-link>
     </div>
     <div class="right-side">
-      <div class="sidebar-link">
+      <div class="sidebar-link disabled">
         <span class="link-heading">Contact</span>
         <span class="link-info">Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat.</span>
       </div>
-      <router-link class="sidebar-link" to="/">
+      <router-link class="sidebar-link disabled" to="/about">
         <span class="link-heading">About</span>
       </router-link>
     </div>
@@ -35,31 +35,11 @@
 </template>
 
 <script>
-import { inject, ref, watch } from 'vue';
-import closeIcon from '@/assets/images/x-icon.svg'
 export default {
   name: "Sidebar",
   setup(){
-    let emitter = inject('emitter')
-    let showSidebar = ref(false);
-    function toggleSidebar(){
-      emitter.emit('toggleSidebar')
-    }
-    emitter.on('toggleSidebar', (e) => {
-      console.log('heard and triggered', showSidebar.value)
-      showSidebar.value = !showSidebar.value
-      console.log('CHANGED VALUE', showSidebar.value)
-    })
-    return { showSidebar, toggleSidebar, closeIcon}
+    return {}
   },
-  watch: {
-    showSidebar:{
-      // immediate: true,
-      handler: (val) => {
-        console.log("SHOWSIDEBAR VAL CHANGED", val)
-      }
-    }
-  }
 }
 </script>
 
@@ -73,11 +53,11 @@ export default {
   background-image: url('@/assets/images/bg.png');
   background-repeat: no-repeat;
   background-size: cover;
-  justify-content: center;
+  justify-content: space-around;
   align-items: center;
   color: black;
   font-size: 40px;
-  z-index: 10;
+  z-index: 12;
   .background-cover{
     position: absolute;
     top: 0;
@@ -88,7 +68,7 @@ export default {
     z-index: 11;
   }
   .left-side, .right-side{
-    height: 50%;
+    max-height: 60%;
     display: flex;
     flex-direction: column;
     justify-content: flex-start;
@@ -98,17 +78,17 @@ export default {
     width: 45%;
   }
   .right-side{
-    width: 30%;
+    width: 35%;
   }
   .sidebar-link{
     display: flex;
     flex-direction: column;
+    &.disabled{
+      pointer-events: none !important;
+      color: #13131370 !important;
+    }
     &:not(:last-child){
       margin-bottom: 40px;
-    }
-    :hover{
-      transform: scale(1.1);
-      transition: all ease-in-out 0.3s;
     }
     .link-heading{
       color: #000;
@@ -120,6 +100,12 @@ export default {
       letter-spacing: 9.18px;
       text-align: left;
       text-transform: uppercase;
+      &:hover{
+        &:not(.disabled){
+        transform: scale(1.01);
+          transition: all ease-in-out 0.3s;
+        }
+      }
     }
     .link-subheading{
       color: #000;
@@ -131,6 +117,7 @@ export default {
       letter-spacing: 4px;
       text-transform: uppercase;
       text-align: left;
+      cursor: default;
     }
     .link-info{
       color: #000;
@@ -141,6 +128,7 @@ export default {
       line-height: normal;
       text-transform: capitalize;
       text-align: left;
+      max-width: 60%;
     }
   }
 }
@@ -151,7 +139,7 @@ export default {
   z-index: 12;
   cursor: pointer;
   :hover{
-    transform: scale(1.1);
+    transform: scale(1.1) translateX(300%);
     transition: all ease-in-out 0.3s;
   }
   .x-icon{

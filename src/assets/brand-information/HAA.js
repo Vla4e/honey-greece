@@ -1,5 +1,6 @@
 const HAAConfig = {
   brand: "HAA",
+  fullBrandName: "Honey Apiary Academy",
   tagline: "Ultra Premium Greek Honey",
   productLines: ['Blends', 'Monoflorals'],
   brandDescription: `At Honey Academy Apiary, our ultra premium brand, we uphold the highest standards of quality and craftsmanship. Utilizing advanced technical procedures, we meticulously select a strictly limited number of cells, transporting them to locations of particular picomorphism within the vegetation. This dedication to precision ensures that each jar embodies the pinnacle of excellence, delivering an extraordinary honey experience that delights the most discerning palates.`,

@@ -31,7 +31,7 @@
 
 <script>
 import Tab from "@/components/Tabs/Tab.vue"
-import { inject, ref } from 'vue';
+import { inject, ref, onUnmounted } from 'vue';
 
 import brandConfigs from "@/assets/brand-information/index.js"
 
@@ -51,7 +51,10 @@ export default {
         currentClickedTab.value = event.tabId
       }
     })
-
+    onUnmounted(() => {
+      emitter.off('toggleClickedTab')
+    })
+    
     let tabTitles = [
       `Ultra Premium Greek Honey`,
       `Ultra Premium Greek Honey`,

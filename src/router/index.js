@@ -1,12 +1,20 @@
 import { createRouter, createWebHistory } from 'vue-router';
 import { useNavbarStore } from '@/store/navbar.js';
 import { useGlobalStore } from '@/store/global.js';
+import brandConfigs from '@/assets/brand-information/index.js'
 import Home from '@/views/Home.vue';
 import Tabs from '@/views/Tabs.vue';
 import ProductPage from '@/views/ProductPage.vue';
 
 const transitionDelay = 500; // Page transition delay to ensure animations plays out before transitioning.
 const allowedSelectedBrands = ['Okto', 'HAA', 'Melculum']
+
+//Rework this so it's not hardcoded
+let allowedLines = ['Blends', 'Monoflorals']
+// brandConfigs.forEach((brand) => {
+//   allowedLines.push()
+// })
+
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
   routes: [
@@ -49,11 +57,26 @@ const router = createRouter({
 })
 
 function processRouteTransition(to, next) {
+  console.log("Going to", to.name, to.params, to.query);
+
+  // Set default query if not already set
+  if (!to.query.line) {
+    to.query.line = 'Blends';
+  }
+
+  // Check if the line query is allowed
+  if (!allowedLines.includes(to.query.line)) {
+    next({ name: to.name, params: to.params, query: { ...to.query, line: 'Blends' } });
+    return;
+  }
+
+  // Check for unregistered routes
   if (to.matched.length === 0) {
     next({ name: 'Home' });
   } else if (to.name === 'Product' && to.params.selectedBrand) {
+    // Ensure selectedBrand is allowed
     if (!allowedSelectedBrands.includes(to.params.selectedBrand)) {
-      next({ name: 'Product', params: { selectedBrand: 'Okto' } });
+      next({ name: 'Product', params: { selectedBrand: 'Okto' }, query: to.query });
     } else {
       next();
     }

@@ -331,6 +331,9 @@ export default {
     right: -30%;
     transition: all 0.8s ease-in-out;
     max-height: 50%;
+    @media(max-width: 1600px){
+      max-height: 35%;
+    }
   }
 }
 .inactive-tab{

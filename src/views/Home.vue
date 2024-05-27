@@ -83,7 +83,7 @@ export default{
     flex-direction: column;
     justify-content: center;
     align-items: flex-start;
-    margin-top: -300px;
+    // margin-top: -300px;
     .home-text{
       display: flex;
       align-items: center;
