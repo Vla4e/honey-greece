@@ -74,7 +74,7 @@ export default {
     }, { immediate: true });
 
     function goToPage(brand){
-      console.log("going to:", brand)
+      // console.log("going to:", brand)
       if(brand === 'All Products'){
         router.push({ name: 'AllProducts'}).catch(err => {
           console.log("error while routing", err)

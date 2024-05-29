@@ -3,10 +3,13 @@
     <canvas ref="webGl" class="webGl" />
     <!-- <button class="reset-button" @click="resetScene">X</button> -->
     <div class="size-selection">
-      <button @click="selectJarSizeTest('large')" :class="currentJarSize === 'large' ? 'selected': ''" class="large-jar">
-        300g {{currentJarSize}}
+      <button v-if="currentBrand === 'okto'" @click="selectJarSize('large')" :class="currentJarSize === 'large' ? 'selected': ''" class="large-jar">
+        450g
       </button>
-      <button @click="selectJarSizeTest('small')" :class="currentJarSize === 'small' ? 'selected': ''" class="small-jar">
+      <button @click="selectJarSize('medium')" :class="currentJarSize === 'medium' ? 'selected': ''" class="medium-jar">
+        300g
+      </button>
+      <button @click="selectJarSize('small')" :class="currentJarSize === 'small' ? 'selected': ''" class="small-jar">
         150g
       </button>
     </div>
@@ -17,6 +20,9 @@
 import {
   Scene,
   SphereGeometry,
+  LineBasicMaterial,
+  BufferGeometry,
+  Line,
   MeshBasicMaterial,
   MeshStandardMaterial,
   PMREMGenerator,
@@ -28,315 +34,499 @@ import {
   HemisphereLight,
   Vector2,
   Vector3,
+  Quaternion,
   Box3,
+  Box3Helper,
   AxesHelper,
   CameraHelper,
   BoxHelper
 } from "three";
 
 
-import { watch, onMounted, onUnmounted,  ref, computed, nextTick, inject  } from "vue";
-import { objectEntries, useWindowSize } from "@vueuse/core";
+import { watch, onMounted, onUnmounted,  ref, computed, nextTick, inject, toRaw  } from "vue";
+import { get, objectEntries, useWindowSize } from "@vueuse/core";
+import { useProductStore } from '@/store/product.js';
 
 import { OrbitControls } from "three/addons/controls/OrbitControls.js";
 import { DRACOLoader } from 'three/addons/loaders/DRACOLoader.js';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { RGBELoader } from 'three/addons/loaders/RGBELoader.js'
 
-import TWEEN from '@tweenjs/tween.js';
+import { debounce } from '@/helpers/globalFunctions.js'
+import TWEEN, { update } from '@tweenjs/tween.js';
 
-const smallJarSource = '/assets/glb/jar-150g-v5.glb'
-const largeJarSource = '/assets/glb/300g-honey.glb'
+
+
+/* "ENUMS" */
+// IMPORTANT: JAR HEIGHTS and WIDTHS are 0.3 < n < 1 in World Scale //
+const jarConfigs = Object.freeze({
+  small:   { name: "small", source: "/assets/glb/jar-150g-v8.glb" },
+  medium:  { name: "medium", source: "/assets/glb/jar-300g-v4.glb" },
+  large: { name: "large", source: "/assets/glb/jar-450g-v4.glb" }
+});
+const cameraConfigs = Object.freeze({
+  x: 0.28,
+  y: 0.04,
+  z: 0
+})
 
 export default {
   setup() {
     let emitter = inject('emitter')
-    let calculationCounter = 0;
     const webGl = ref();
     const sceneContainer = ref();
 
-    // console.log("SCENECON", sceneContainer.value)
-    // console.log("WEBG", webGl)
     const img = "../assets/images/earth.jpg";
-    // const { width: customWidth, height: customHeight } = useWindowSize();
+    const productStore = useProductStore();
+    let slugs = {
+      brand: 'haa',
+      productLine: 'monoflorals',
+      size: '300g',
+      flavour: 'fir_limited',
+      fileType: 'png'
+    }
+    let jarTextures = {};
+    let currentBrand = ref('')
 
-    const customWidth = 650;
-    const customHeight = 650;
     const containerWidth = ref(0);
     const containerHeight = ref(0);
 
     const aspectRatio = computed(() => {
+      // console.log("computed cWidth, cHeight", toRaw(containerWidth.value), toRaw(containerHeight.value))
       return containerWidth.value / containerHeight.value;
     });
     
-    let camera: PerspectiveCamera;
-    let renderer: WebGLRenderer;
-    let scene: Scene;
-    let mesh: Mesh;
-    let controls: OrbitControls;
-    let light: PointLight;
+    let globalCamera: PerspectiveCamera;
+    let globalRenderer: WebGLRenderer;
+    let globalScene: Scene;
+    let globalOrbitControls: OrbitControls;
+    let globalPointLight: PointLight;
     let cameraHelper: CameraHelper;
     let axesHelper: AxesHelper;
+    let initialLeftWorld: Vector3;
+    let initialRightWorld: Vector3;
+    let globalQuaternion: Quaternion;
+    let initialMeshQuaternion;
+    let initialMeshRotation;
+    let initialCameraPosition;
+    let initialCameraQuaternion;
+    let initialZoom;
     let LOGTIMER = 0;
     let animationDONE = false;
-
+    let isLoadingTexture = false;
+    let isAnimationYActive = false;
+    let isFirstLoad = true;
+    let isResettingRotation = false;
+    let resetStartTime = 0;
+    const resetDuration = 1000;
     //Loaders + configuration of loaders
     const loader = new GLTFLoader();
-    const smallJarLoader = new GLTFLoader();
-    const largeJarLoader = new GLTFLoader();
-
-    const draco = new DRACOLoader();
-
+    const globalTextureLoader = new TextureLoader();
+    // Draco compression loader.
+    // const draco = new DRACOLoader();
     // draco.setDecoderConfig({ type: 'js' });
     // draco.setDecoderPath('https://www.gstatic.com/draco/v1/decoders/');
     // draco.preload();
-    // largeJarLoader.setDRACOLoader = ( draco )
+    // loader.setDRACOLoader = ( draco )
 
-    let currentJarSize = ref('large');
-    let jarModels = {};
+    let currentJarSize = ref(jarConfigs.medium.name);
     let currentJarScene: Scene;
-
+    let upcomingJarSize = ref('');
+    let upcomingJarScene: Scene;
+    let jarScenes = {}; // store loaded model to avoid reloading
+    
     const setCanvas = async () => {
       // Create Scene
-      scene = new Scene();
+      globalScene = new Scene();
 
-      // let largeJarLoaderPromise = await largeJarLoader.loadAsync('/assets/glb/jar-300g-latest.glb')
-      let largeJarLoaderPromise = await loader.loadAsync('/assets/glb/300g-honey.glb')
-      console.log("lgg", largeJarLoaderPromise)
-      largeJarLoaderPromise.scene.traverse(function (obj) {
-        if(obj.isMesh){
-          // console.log("ISMESH:", obj.name)
-          if(obj.name === 'med'){
-            // obj.material.transparent = true;
-            // obj.material.opacity = 1;
-          } else if(obj.name === 'med_1'){ //GLASS
-          } else if(obj.name === 'med_2'){ // LID
-          } else if(obj.name === 'med_3'){ //LABEL
-          }
-        }
-      })
+      let jarPromise = await loadGlb(jarConfigs.medium.source)
+      // console.log("JarPromise: ", jarPromise)
       
 
-      let jarScene = largeJarLoaderPromise.scene.children[0] //Scene to be loaded
-      jarModels['large'] = jarScene;
+      currentJarScene = jarPromise.scene; //Scene to be loaded
+      jarScenes[currentJarSize.value] = currentJarScene; 
 
-      let meshes = largeJarLoaderPromise.scene.children[0].children;
+      let meshes = currentJarScene.children;
       let targetMesh = meshes[1]
 
-      scene.add(jarScene)
-      currentJarScene = jarScene;
-
+      //Add jar scene to global scene
+      globalScene.add(currentJarScene)
+      // updateTexture();
       // Lights (added to camera below)
-      light = new PointLight(0xffffff, 1);
-      light.position.set(targetMesh.position.x, targetMesh.position.y, targetMesh.position.z + 0.5);
+      globalPointLight = new PointLight(0xffffff, 1);
+      globalPointLight.position.set(targetMesh.position.x, targetMesh.position.y, targetMesh.position.z + 0.5);
 
       // Camera
-      // const sceneAxis = new AxesHelper(5);
-      // sceneAxis.setColors('red', 'blue', 'green')
-      camera = new PerspectiveCamera(25, aspectRatio.value, 0.1, 1000);
-      camera.position.set(targetMesh.position.x, targetMesh.position.y, targetMesh.position.z + 0.24); // Position the camera in front of the mesh
-      camera.add(light);
-      scene.add(camera);
-      // scene.add(sceneAxis)
-      
-      /*
-      // Dev helpers
+      globalCamera = new PerspectiveCamera(25, aspectRatio.value, 0.001, 5);
+      let axesHelper2 = new AxesHelper(5);
+      axesHelper2.setColors('blue', 'green', 'red')
+      // targetMesh.add(axesHelper2)
+      globalCamera.position.set(cameraConfigs.x, cameraConfigs.y, cameraConfigs.z); // Position the camera in front of the mesh
+      globalCamera.lookAt(0, cameraConfigs.y , 0)
+      globalCamera.add(globalPointLight); //add pointlight to camera
+      globalScene.add(globalCamera);
+
+
+      // development axes helpers
       axesHelper = new AxesHelper(5);
       axesHelper.setColors('red', 'blue', 'green')
-      cameraHelper = new CameraHelper(camera);
-      scene.add(cameraHelper)
-      scene.add(axesHelper) 
-      */
+      cameraHelper = new CameraHelper(globalCamera);
+      // globalScene.add(cameraHelper)
+      // globalScene.add(axesHelper)
 
       // Renderer
       const canvas = webGl.value;
-      renderer = new WebGLRenderer({ canvas, antialias: true });
-      renderer.setSize(containerWidth.value, containerHeight.value);
-      renderer.setClearColor(0x000000, 0)
-      renderer.setPixelRatio(window.devicePixelRatio);
-      renderer.render(scene, camera);
+      // console.log("Canvas dimensions beofe attaching WebGLRenderer:", canvas.clientWidth, canvas.clientHeight)
+      globalRenderer = new WebGLRenderer({ canvas, antialias: true });
+      globalRenderer.setSize(containerWidth.value, containerHeight.value);
+      globalRenderer.setClearColor(0x000000, 0)
+      globalRenderer.setPixelRatio(window.devicePixelRatio);
+      globalRenderer.render(globalScene, globalCamera);
 
       // Orbit Controls
-      controls = new OrbitControls(camera, canvas);
-      controls.target.set(0, 0.01, 0)
-      controls.update();
+      globalOrbitControls = new OrbitControls(globalCamera, canvas);
+      // globalOrbitControls.position.set(0, 0.02, 0)
+      globalOrbitControls.target.set(0, cameraConfigs.y, 0)
+      globalOrbitControls.update();
 
-      //Zoom Distances - Max (zoom out) distance is equal to camera Z starting position
-      controls.maxDistance = 0.24;
-      controls.minDistance = 0.18;
+      //Zoom Distances - Max (zoom out) distance is equal to camera x starting position
+      globalOrbitControls.maxDistance = cameraConfigs.x;
+      globalOrbitControls.minDistance = 0.18;
 
       // controls.enableZoom = false;
 
       //Vertical Rotation Limiting Angles
-      controls.minPolarAngle = (60 * Math.PI)/180;
-      controls.maxPolarAngle = (90*Math.PI)/180;
+      globalOrbitControls.minPolarAngle = (60 * Math.PI)/180;
+      globalOrbitControls.maxPolarAngle = (90 * Math.PI)/180;
 
-      controls.enablePan = false;
-      controls.autoRotate = true;
-      controls.enableDamping = true;
-
-      setLighting(renderer)
+      globalOrbitControls.enablePan = false;
+      //Account for slide transition - jar is centerd upon first view
+      setTimeout(()=>{
+        globalOrbitControls.autoRotate = true;
+      }, 1000)
+      globalOrbitControls.enableDamping = false;
+      
+      setLighting(globalRenderer)
     };
 
     const loadGlb = async (source) => {
       let loaderPromise = await loader.loadAsync(source)
-
       if(loaderPromise){
+        loaderPromise.scene.name = source
         let scene = loaderPromise.scene;
+        scene.position.set(0, 0, 0)
+        // const axesHelperNew = new AxesHelper(5)
+        // scene.add(axesHelperNew)
         let meshes = scene.children;
         let targetMesh = meshes[0];
         const meshNames = meshes.map((mesh) => {
-          console.log("MESHNAME", mesh.name)
+          // // console.log("MESHNAME", mesh.name)
           return mesh.name
         })
-        console.log('meshNames', meshNames)
+        // // console.log('meshNames', meshNames)
   
         return { gltf: loaderPromise, scene, meshes, targetMesh, meshNames, loaded: true }
       } else return {loaded: false}
     }
 
-    const prepareJarForSlideIn = async () => {
-      // let smallJarPromise = await smallJarLoader.loadAsync('/assets/glb/jar-150g-v5.glb');
-        let {gltf, scene: smallJarScene, meshes, targetMesh, meshNames, loaded} = await loadGlb(smallJarSource)
-        console.log("STARTING SJPOS", smallJarScene.position.x, smallJarScene.position.y, smallJarScene.position.z)
-        smallJarScene.position.x = 0.5; // Place off-camera
-        smallJarScene.visible = false; // Make invisible initially
-        scene.add(smallJarScene); // Add to scene but off-camera // REWORK TO GLOBAL VARIABLES
-        jarModels['small'] = scene; // Store reference
+    async function loadTexture() {
+      isFirstLoad = false;
+      const baseTextureUrl = '/assets/label-textures';
+      isLoadingTexture = true;
 
-    };
-    const prepareJar = async () => {
-      let smallJarPromise = await smallJarLoader.loadAsync('/assets/glb/jar-150g-v5.glb');
-      console.log("STARTING SJPOS", smallJarPromise.scene.position.x, smallJarPromise.scene.position.y, smallJarPromise.scene.position.z)
-      smallJarPromise.scene.position.x = 0.3; // Place off-camera
-      smallJarPromise.scene.position.y = 0.01; // Place off-camera
-      smallJarPromise.scene.visible = false; // Make invisible initially
-      scene.add(smallJarPromise.scene); // Add to scene but off-camera
-      jarModels['small'] = smallJarPromise.scene; // Store reference
-    };
-    const animateJarOut = (jar, onCompleteCallback) => {
-      console.log("animate OUT started")
-      console.log("JAR POS BEFORE ANYTHING", jar.position.x, jar.position.y, jar.position.z)
-      new TWEEN.Tween(jar.position)
-        .to({ x: -0.2 }, 1000) // Move out of view - Very sensitive to X value (use 1 decimal point values)
-        // .onUpdate(() => console.log("JarOUT update", jar.lookAt))
-        .onComplete(() => {
-          onCompleteCallback() // arrow function passed upon animateJarOut call
-        })
-        .start();
-      new TWEEN.Tween(jar.rotation)
-      .to({ y: jar.rotation.y + Math.PI * 2 }, 1000) // Complete one full rotation
-      .easing(TWEEN.Easing.Linear.None) // Use a linear easing for constant rotation speed
-      .start();
-    };
-    const animateJarOut2 = (jar, onCompleteCallback) => {
-      console.log("animate OUT started");
-      console.log("JAR POS BEFORE ANYTHING", jar.position.x, jar.position.y, jar.position.z);
-
-      const left = new Vector3(); // Create a new vector to hold the left direction
-      const cameraDirection = new Vector3(); // Vector for the camera direction
-      camera.getWorldDirection(cameraDirection); // Get the forward vector (pointing from camera towards scene)
-      left.crossVectors(camera.up, cameraDirection.negate()).normalize(); // Calculate the left vector as cross product of up and negative forward vector
-      const targetPosition = jar.position.clone().add(left.multiplyScalar(0.2)); // Calculate the target position to the left
-
-      new TWEEN.Tween(jar.position)
-        .to({ x: targetPosition.x, y: targetPosition.y, z: targetPosition.z }, 1000)
-        .onComplete(onCompleteCallback)
-        .start();
-
-      new TWEEN.Tween(jar.rotation)
-        .to({ y: jar.rotation.y + Math.PI * 2 }, 1000) // Complete one full rotation
-        .easing(TWEEN.Easing.Linear.None) // Use a linear easing for constant rotation speed
-        .start();
-    };
-
-    const animateJarIn = (jar, onCompleteCallback) => {
-      console.log("animate IN starting", jar)
-      jar.visible = true;
-      new TWEEN.Tween(jar.position)
-        .to({ x: 0 }, 1000) // Move into the central view
-        // .onUpdate(() => console.log("jarIN update", jar.position.x))
-        .onComplete(() => {
-          // controls.target = jar.children[2].position; // Reset orbit controls target
-          // controls.update();
-          // let tempAxes = new AxesHelper(5)
-          // jar.children[3].add(tempAxes)
-        })
-        .start();
-        new TWEEN.Tween(jar.rotation)
-        .to({ y: jar.rotation.y + Math.PI * 2 }, 1000) // Complete one full rotation
-        .easing(TWEEN.Easing.Linear.None) // Use a linear easing for constant rotation speed
-        .start();
-    };
-    const animateJarIn2 = (jar, onCompleteCallback) => {
-      console.log("animate IN starting", jar);
-      jar.visible = true;
-
-      const left = new Vector3();
-      const cameraDirection = new Vector3();
-      camera.getWorldDirection(cameraDirection);
-      left.crossVectors(camera.up, cameraDirection.negate()).normalize();
-      const startPosition = jar.position.clone().sub(left.multiplyScalar(0.2)); // Start from slightly to the left
-      jar.position.set(startPosition.x, startPosition.y, startPosition.z);
-
-      new TWEEN.Tween(jar.position)
-        .to({ x: jar.position.x + left.x * 0.2, y: jar.position.y, z: jar.position.z }, 1000)
-        .onComplete(() => {
-          // onCompleteCallback(); // Execute callback after animation completes
-        })
-        .start();
-
-      new TWEEN.Tween(jar.rotation)
-        .to({ y: jar.rotation.y + Math.PI * 2 }, 1000) // Complete one full rotation
-        .easing(TWEEN.Easing.Linear.None) // Use a linear easing for constant rotation speed
-        .start();
-    };
-
-    const selectJarSizeTest = async (size) => {
-      console.log("Attempting to selectJarSize", size)
-
-      if(size === 'small' && !jarModels['small']) {
-        await prepareJar()
+      // initialize nested object
+      if (!jarTextures[slugs.brand]) {
+          jarTextures[slugs.brand] = {};
+      }
+      if (!jarTextures[slugs.brand][slugs.productLine]) {
+          jarTextures[slugs.brand][slugs.productLine] = {};
+      }
+      if (!jarTextures[slugs.brand][slugs.productLine][slugs.size]) {
+          jarTextures[slugs.brand][slugs.productLine][slugs.size] = {};
       }
 
-      if (currentJarSize.value !== size) {
-        animateJarOut(currentJarScene, () => {
-          console.log("Removing currentJarScene")
-          scene.remove(currentJarScene); // Remove old jar
-          console.log("JM SMALL", jarModels[size])
-          currentJarScene = jarModels[size]; // Update the current jar
-          animateJarIn(currentJarScene); // Animate new jar in
-        });
+      // check if texture exists, return it
+      if (jarTextures[slugs.brand][slugs.productLine][slugs.size][slugs.flavour]) {
+        console.log("EXISTING TEXTURE !!!!!!!!!!")
+          return jarTextures[slugs.brand][slugs.productLine][slugs.size][slugs.flavour];
       }
+
+      // load if not
+      let textureUrl = `${baseTextureUrl}/${slugs.brand}/${slugs.productLine}/${slugs.size}/${slugs.flavour}.png`;
+      let texture = await globalTextureLoader.loadAsync(textureUrl);
+      texture.flipY = false;
+      jarTextures[slugs.brand][slugs.productLine][slugs.size][slugs.flavour] = texture;
+      console.log("JAR TEXTURES", jarTextures);
+
+      return texture;
+    }
+
+    async function updateTexture(preLoadedTexture = null) {
+      let stopLoading = preLoadedTexture ? false : true;
+      console.log("CALLED UPDATE TEXTURE", isLoadingTexture, stopLoading)
+      if(isLoadingTexture && stopLoading) return
+      let labelMesh = null;
+
+      currentJarScene.traverse((obj) => {
+        if(obj.isMesh){
+          if(obj.name.includes('label')){
+            // console.log("MESHOBJ", obj)
+            labelMesh = obj
+          }
+        }
+      })
       
-      currentJarSize.value = size
+      // Check if the mesh and its material support textures
+      if (labelMesh) {
+        if (labelMesh.material && labelMesh.material.map) {
+          // Dispose of the current texture to free up memory
+          labelMesh.material.map.dispose();
+        }
+      } else return
+
+      // Create a new texture loader
+      if(preLoadedTexture){
+        console.log("had preloaded")
+        labelMesh.material.map = preLoadedTexture;
+        labelMesh.material.needsUpdate = true;
+      } else {
+        let texture = await loadTexture();
+        texture.flipY = false;
+        labelMesh.material.map = texture;
+        labelMesh.material.needsUpdate = true;
+      }
+      console.log("finished LOADING TEXTURE")
+      isLoadingTexture = false
+    }
+
+    const prepareSceneForSwitch = async (size, movement) => {
+      // Loaded jars are stored in jarScene, fetch if already loaded
+      if (jarScenes[size]) {
+          upcomingJarScene = jarScenes[size];
+          upcomingJarSize.value = size;
+          upcomingJarScene.position.set(movement.right.x, movement.right.y, movement.right.z);
+          upcomingJarScene.visible = false; // Initially invisible, will be shown in animateJarIn
+      } else {
+          console.log("Loading new model:");
+          let jarPromise = await loadGlb(jarConfigs[size].source);
+          jarPromise.scene.position.set(movement.right.x, movement.right.y, movement.right.z);
+          jarPromise.scene.visible = false; // Make invisible initially
+          globalScene.add(jarPromise.scene); // Add to scene but off-camera
+          jarScenes[size] = jarPromise.scene; // Store reference
+          upcomingJarScene = jarPromise.scene;
+          upcomingJarSize.value = size;
+      }
+
+      // Zoom in to account for smaller jar
+      if(globalCamera.zoom !== 1){
+        let zoomFactor = 1;
+        new TWEEN.Tween({ zoom: globalCamera.zoom })
+          .to({ zoom: zoomFactor }, 1000)
+          .easing(TWEEN.Easing.Quadratic.InOut)
+          .onUpdate(function (event) {
+            globalCamera.zoom = event.zoom;
+            globalCamera.updateProjectionMatrix();
+          })
+          .onComplete(() => {
+            console.log("Zoom animation completed.");
+          })
+          .start();
+            globalOrbitControls.maxDistance = cameraConfigs.x; //camera zoom apparently does not change positional coordinates.
+            globalOrbitControls.update();
+      }
+
+      // Zoom out to account for larger jar
+      if (size === 'large') {
+        let zoomFactor = 0.7
+        new TWEEN.Tween({ zoom: globalCamera.zoom })
+          .to({ zoom: zoomFactor }, 1000)
+          .easing(TWEEN.Easing.Quadratic.InOut)
+          .onUpdate(function (event) {
+            globalCamera.zoom = event.zoom;
+            globalCamera.updateProjectionMatrix();
+          })
+          .onComplete(() => {
+            console.log("Zoom animation completed.");
+          })
+          .start();
+            globalOrbitControls.maxDistance = cameraConfigs.x; //camera zoom apparently does not change positional coordinates.
+            globalOrbitControls.update();
+      }
+
+      globalScene.add(upcomingJarScene);
     };
+
+    function getCameraDirections() {
+      let cameraDirection = new Vector3();
+      globalCamera.getWorldDirection(cameraDirection);
+      let cameraUp = globalCamera.up.clone();
+
+      let cameraRight = new Vector3().crossVectors(cameraDirection, cameraUp).normalize();
+      let cameraLeft = cameraRight.clone().negate();
+
+      return { left: cameraLeft, right: cameraRight };
+    }
+
+    function calculateJarMovement(target) {
+      const cameraDirections = getCameraDirections();
+      console.log("Camera Directions", cameraDirections);
+
+      let moveDistanceLeft = 0.15; // distance in World Scale
+      let moveDistanceRight = 0.2; // distance in World Scale
+      let moveVectorLeft = cameraDirections.left.multiplyScalar(moveDistanceLeft);
+      let moveVectorRight = cameraDirections.right.multiplyScalar(moveDistanceRight);
+
+      let left = {
+          x: target.position.x + moveVectorLeft.x,
+          y: target.position.y + moveVectorLeft.y,
+          z: target.position.z + moveVectorLeft.z
+      };
+      let right = {
+          x: target.position.x + moveVectorRight.x,
+          y: target.position.y + moveVectorRight.y,
+          z: target.position.z + moveVectorRight.z
+      };
+
+      return {right, left}
+    }
+
+
+    const animateJarIn = (jar) => {
+      jar.visible = true;
+      new TWEEN.Tween(jar.position)
+        .to({ x: 0, y: 0, z: 0 }, 1000)
+        .easing(TWEEN.Easing.Back.Out)
+        .onComplete(() => {
+          console.log("AnimateJarIn completed")
+          console.log("end of process", globalOrbitControls.autoRotate)
+          globalOrbitControls.autoRotate = true;
+          globalOrbitControls.update()
+        })
+        .start();
+    };
+
+
+    const animateJarOut = (jar, movement, texture) => {
+      console.log("SHOULD ANIMATE OUT:", jar.name)
+      new TWEEN.Tween(jar.position)
+        .to({ 
+          x: movement.left.x,
+          y: movement.left.y,
+          z: movement.left.z,
+         }, 800) // Move out of view - Very sensitive to X value (use 1 decimal point values)
+        .easing(TWEEN.Easing.Back.In)
+        .onComplete(() => {
+          currentJarSize.value = upcomingJarSize.value;
+          currentJarScene = upcomingJarScene
+          globalScene.remove(jar)
+          updateTexture(texture).then(async ()=>{
+            await nextTick();
+            console.log("will animateJarIn")
+            setTimeout( () => { // Delay transition for renderer to update.
+              animateJarIn(currentJarScene) 
+            }, 1000)
+          });
+        })
+        .start();
+
+    };
+
+    const animateJarInY = (jar) => {
+      jar.visible = true;
+      jar.position.y = 0.15;
+      new TWEEN.Tween(jar.position)
+        .to({ y: 0 }, 600)
+        .easing(TWEEN.Easing.Linear.Out)
+        .onComplete(() => {
+          console.log("AnimateJarIn completed")
+          console.log("end of process", globalOrbitControls.autoRotate)
+          globalOrbitControls.autoRotate = true;
+          globalOrbitControls.update()
+          isAnimationYActive = false;
+        })
+        .start();
+    };
+
+    const animateJarOutY = (jar) => {
+      console.log("SHOULD ANIMATE OUT:", jar)
+
+      new TWEEN.Tween(jar.position)
+        .to({ 
+          y: -0.15,
+         }, 600) // Move out of view - Very sensitive to X value (use 1 decimal point values)
+        .easing(TWEEN.Easing.Linear.In)
+        .onComplete( async () => {
+          updateTexture().then(async ()=>{
+            await nextTick();
+            console.log("will animateJarIn")
+            setTimeout( () => { // Delay transition for renderer to update.
+              animateJarInY(currentJarScene) 
+            }, 1000)
+          });
+        })
+        .start();
+    };
+
+    const selectJarSize = async (size) => {
+      console.log("Attempting to selectJarSize", size, currentJarSize.value)
+      if(size === currentJarSize.value){
+        return
+      } else {
+        globalOrbitControls.autoRotate = false;
+        globalOrbitControls.update()
+        console.log("Beginning process", globalOrbitControls.autoRotate)
+        slugs.size = size === 'small' ? '150g' : size === 'medium' ? '300g' : '450g'
+        let texture = await loadTexture()
+        console.log("loaded texture")
+        let movement = calculateJarMovement(currentJarScene)
+        console.log("calculated movement")
+        await prepareSceneForSwitch(size, movement)
+        // console.log("INITIAL ROTATION:", initialMeshQuaternion)
+        // globalOrbitControls.autoRotate = false
+        console.log("prepared scene")
+        animateJarOut(currentJarScene, movement, texture)
+      }
+    };
+
     const updateCamera = (newWidth, newHeight) => {
       
-      camera.aspect = newWidth / newHeight;
-      camera.updateProjectionMatrix();
+      globalCamera.aspect = newWidth / newHeight;
+      globalCamera.updateProjectionMatrix();
+      console.log("Updated Camera Aspect Ratio to:", globalCamera.aspect);
     };
 
     const updateRenderer = (newWidth, newHeight) => {
-      renderer.setSize(newWidth, newHeight);
-      renderer.render(scene, camera);
+      // console.log("Renderer resized and rerendering")
+      globalRenderer.setSize(newWidth, newHeight);
+      globalRenderer.render(globalScene, globalCamera);
+      console.log("Renderer Dimensions set to:", containerWidth.value, containerHeight.value);
     };
-
+    const debouncedUpdateSize = debounce(function() {
+      console.log("DEBOUNCE SIZE UPDATE CALLED ====================")
+      updateContainerSize();
+      if (containerWidth.value && containerHeight.value) {
+        updateCamera(containerWidth.value, containerHeight.value);
+        updateRenderer(containerWidth.value, containerHeight.value);
+        // globalOrbitControls.update();
+        getDistanceFromCanvas(globalScene.children[0].children[0]);
+      }
+    }, 600);
     function updateContainerSize() {
+      // console.log("before UpdateCSize webGl w/h: ", toRaw(webGl.value.clientWidth), toRaw(webGl.value.clientHeight))
+      // console.log("before UpdateCSize scene-container w/h: ", toRaw(webGl.value.parentElement.clientWidth), toRaw(webGl.value.parentElement.clientHeight))
       if (webGl.value && webGl.value.parentElement) {
-        // console.log("webGl.value.parentElement.clientHeight;", webGl.value.parentElement.clientHeight)
         containerWidth.value = webGl.value.parentElement.clientWidth;
         containerHeight.value = webGl.value.parentElement.clientHeight;
       }
     }
     async function setLighting(renderer){
-      // // console.log('calling set lighting')
+      // // // console.log('calling set lighting')
       var pmremGenerator = new PMREMGenerator( renderer );
       let rgbeTexture = await new RGBELoader().loadAsync('/assets/HDR/garden.hdr')
-      // // console.log('loader texture', rgbeTexture)
+      // // // console.log('loader texture', rgbeTexture)
       var envMap = pmremGenerator.fromEquirectangular( rgbeTexture ).texture;
-      scene.background = null;
-      scene.environment = envMap;
+      globalScene.background = null;
+      globalScene.environment = envMap;
       rgbeTexture.dispose();
       pmremGenerator.dispose();
       pmremGenerator.compileEquirectangularShader();
@@ -371,94 +561,117 @@ export default {
     async function resetScene(){
       // await setCanvas();
       // animate();
-      console.log("scene:", scene)
+      // console.log("scene:", globalScene)
       let tempPos;
       // const meshAxes = new AxesHelper(5);
       // scene.add(meshAxes)
       let iterations = 0;
-      scene.traverse((obj) => {
+      globalScene.traverse((obj) => {
         if(obj.isMesh){
           let tempAxes = new AxesHelper(5)
           if(iterations === 0){
-            console.log("AXESCOLOR 0")
+            // console.log("AXESCOLOR 0")
             tempAxes.setColors('red', 'green', 'blue')
           }else if(iterations === 1){
-            console.log("AXESCOLOR 1")
+            // console.log("AXESCOLOR 1")
             tempAxes.setColors('purple', 'yellow', 'blue')
           }else if(iterations === 2){
-            console.log("AXESCOLOR 2")
+            // console.log("AXESCOLOR 2")
             tempAxes.setColors('pink', 'brown', 'blue')
             tempPos = obj.position
           }else if(iterations === 3){
-            console.log("AXESCOLOR 3")
+            // console.log("AXESCOLOR 3")
             tempAxes.setColors('black', 'skyblue', 'blue')
           }
-          console.log("OBJ ", obj.name, "is positioned at:", obj.position.x, obj.position.y, obj.position.z, "iteration:", iterations)
+          // console.log("OBJ ", obj.name, "is positioned at:", obj.position.x, obj.position.y, obj.position.z, "iteration:", iterations)
           obj.add(tempAxes)
           iterations++
-          // console.log("OBJ POS:")
+          // // console.log("OBJ POS:")
         }
       })
-      console.log("Scene pos:", scene.position.x, scene.position.y, scene.position.z)
-      console.log("Cam pos:", camera.position.x, camera.position.y, camera.position.z)
-      camera.position.set(0, 0, 0.6)
-      camera.lookAt(tempPos)
-      camera.updateProjectionMatrix();
-      console.log("Cam LOOKAT:", camera)
+      // console.log("Scene pos:", globalScene.position.x, globalScene.position.y, globalScene.position.z)
+      // console.log("Cam pos:", globalCamera.position.x, globalCamera.position.y, globalCamera.position.z)
+      globalCamera.position.set(0, 0, 0.6)
+      globalCamera.lookAt(tempPos)
+      globalCamera.updateProjectionMatrix();
+      // console.log("Cam LOOKAT:", globalCamera)
     }
 
-    async function selectJarSize(size){ //add when other model arrives
-      if(size === 'small'){
-        currentJarSize.value = size
-      } else {
-        currentJarSize.value = size
-      }
-    }
 
     const animate = () => {
-      // mesh.rotation.y += 0.01;
-      controls.update();
-      renderer.render(scene, camera);
+      globalOrbitControls.update();
+      globalRenderer.render(globalScene, globalCamera);
       requestAnimationFrame(animate);
       TWEEN.update();
       if(LOGTIMER === 0 && animationDONE){
-        console.log("scene:", scene.position.x, scene.position.y, scene.position.z )
-        // console.log("controls:", controls.target.x, controls.target.y, controls.target.z)
+        // console.log("scene:", globalScene.position.x, globalScene.position.y, globalScene.position.z )
+        // // console.log("controls:", controls.target.x, controls.target.y, controls.target.z)
         LOGTIMER++
       }
     };
     
-    function getFixedScreenEdges(target) {
-      const bbox = new Box3().setFromObject(target);
-      const center = bbox.getCenter(new Vector3());
-      const size = bbox.getSize(new Vector3());
+    function initializeEdges(target) {
+        const bbox = new Box3().setFromObject(target);
+        const center = bbox.getCenter(new Vector3());
+        const size = bbox.getSize(new Vector3());
+        const jarWidthHalf = size.x / 2;
 
-      // Assuming the jar's width is along the x-axis and constant
-      const jarWidthHalf = size.x / 2; 
+        // Store initial world coordinates
+        initialMeshQuaternion = target.quaternion.clone();
+        initialMeshRotation = target.rotation.clone()
+        initialCameraPosition = globalCamera.position.clone();
+        initialCameraQuaternion = globalCamera.quaternion.clone();
+        initialZoom = globalCamera.zoom;
 
-      // World coordinates of the edges
-      const leftWorld = new Vector3(center.x - jarWidthHalf, center.y, center.z);
-      const rightWorld = new Vector3(center.x + jarWidthHalf, center.y, center.z);
-
-      leftWorld.project(camera);
-      rightWorld.project(camera);
-
-      const widthHalf = 0.5 * renderer.domElement.width;
-      const leftEdge = (leftWorld.x + 1) * widthHalf;
-      const rightEdge = (rightWorld.x + 1) * widthHalf;
-
-      emitter.emit('meshEdges', {leftEdge, rightEdge})
+        initialLeftWorld = new Vector3(center.x - jarWidthHalf, center.y, center.z);
+        initialRightWorld = new Vector3(center.x + jarWidthHalf, center.y, center.z);
     }
+
+    function getDistanceFromCanvas(target) {
+      const distanceToOrigin = globalCamera.position.distanceTo(target.position);
+      // Ensure the camera and target are updated (important if anything has changed)
+      globalCamera.updateMatrixWorld();
+      globalCamera.updateProjectionMatrix();
+      target.updateMatrixWorld();
+
+      // Bounding box in world coordinates
+      const box = new Box3().setFromObject(target);
+      const size = new Vector3();
+      const center = new Vector3();
+      box.getSize(size);
+      box.getCenter(center);
+
+      // Project the center to NDC
+      center.project(globalCamera);
+
+      // Calculate screen coordinates of the center
+      const widthHalf = 0.5 * globalRenderer.domElement.width;
+      const centerScreenX = (center.x * widthHalf) + widthHalf;
+
+      // Calculate the mesh width in screen space (approximate)
+      const frustumHeight = 2.0 * distanceToOrigin * Math.tan(globalCamera.fov * 0.5 * Math.PI / 180);
+      const frustumWidth = frustumHeight * globalCamera.aspect;
+      const meshWidthScreen = size.x / frustumWidth * globalRenderer.domElement.width;
+
+      // Calculate the left edge of the mesh in screen coordinates
+      const leftEdgeScreenX = centerScreenX - meshWidthScreen / 2;
+
+      // Ensure the distance is non-negative.
+      const edgeDistance = Math.max(0, Math.min(leftEdgeScreenX, globalRenderer.domElement.width));
+      emitter.emit('meshEdges', {leftEdge: edgeDistance, rightEdge: edgeDistance})
+    }
+
   
     onMounted( async () => {
       await nextTick();
 
       updateContainerSize(); // Set initial size
-      window.addEventListener('resize', updateContainerSize);
+      window.addEventListener('resize', debouncedUpdateSize);
 
       await setCanvas();
-
-      getFixedScreenEdges(scene.children[0].children[0])
+      // initializeEdges(globalScene.children[0]);
+      await nextTick()
+      getDistanceFromCanvas(globalScene.children[0].children[0])
 
       animate();
     });
@@ -467,20 +680,120 @@ export default {
       window.removeEventListener('resize', updateContainerSize); // Clean up
     });
 
-    watch([containerWidth, containerHeight], ([newWidth, newHeight]) => {
-      if (renderer && newWidth && newHeight) {
-        // updateCamera(newWidth, newHeight)
-        updateRenderer(newWidth, newHeight)
+    // watch(() => productStore.getProductLineSlug, (slug) => {
+    //   slugs.productLine = slug
+    //   console.log(`PRODUCTLINE`, slug);
+    // }, { immediate: true })
+
+    // watch(() => productStore.getFlavourSlug, (slug) => {
+    //   console.log(`FLAVOUR SLUGS ===>`, slug, slugs.flavour, !!currentJarScene);
+    //   if(slug !== slugs.flavour){
+    //     slugs.flavour = slug
+    //     if(currentJarScene){
+    //       updateTexture()
+    //     } else {
+    //       let interval = setInterval(() => {
+    //         console.log("interval CALLED", !!currentJarScene)
+    //         if(currentJarScene){
+    //           updateTexture()
+    //           clearInterval(interval)
+    //         }
+    //       }, 250)
+    //     }
+    //   }
+    // }, { immediate: true })
+
+    // watch(() => productStore.getBrandSlug, (slug) => {
+    //   slugs.brand = slug
+    //   currentBrand.value = slug
+    //   console.log(`BRAND`, slug);
+    // }, { immediate: true })
+
+    // watch(currentJarSize, (newJarSize) => {
+    //   console.log("JAR SIZE CHANGED", newJarSize)
+    // })
+    watch(() => ({
+      flavour: productStore.getFlavourSlug,
+      productLine: productStore.getProductLineSlug,
+      brand: productStore.getBrandSlug,
+      size: currentJarSize.value  // Assuming currentJarSize is a ref or reactive
+    }), (currentValues) => {
+      // Update slugs if changed
+      let tempSize = currentValues.size === 'large' ? '450g' : currentValues.size === 'medium' ? '300g' : '150g';
+      console.log(currentValues.flavour, slugs.flavour, currentValues.flavour === slugs.flavour)
+      console.log(currentValues.brand, slugs.brand, currentValues.brand === slugs.brand)
+      console.log(currentValues.productLine, slugs.productLine, currentValues.productLine === slugs.productLine)
+      console.log(tempSize, slugs.size, tempSize === slugs.size)
+      // Check if only the flavour slug has changed
+      if (
+        currentValues.flavour !== slugs.flavour &&
+        currentValues.brand === slugs.brand &&
+        currentValues.productLine === slugs.productLine &&
+        tempSize === slugs.size &&
+        !isFirstLoad
+      ) {
+          console.log('Only flavour changed, special function can be called here.');
+          slugs.flavour = currentValues.flavour;
+          if(currentJarScene){
+            animateJarOutY(currentJarScene)
+            return
+          } else {
+            let interval = setInterval(() => {
+              if(currentJarScene && !isAnimationYActive){
+                animateJarOutY(currentJarScene)
+                isAnimationYActive = true;
+                clearInterval(interval)
+                return
+              }
+            }, 250)
+          }
+        // Call your specific function here if needed
       }
-    }, { immediate: true });
+      if (currentValues.flavour !== slugs.flavour) {
+        slugs.flavour = currentValues.flavour;
+        console.log(`FLAVOUR SLUGS ===>`, currentValues.flavour, slugs.flavour, !!currentJarScene);
+        if (currentJarScene) {
+          updateTexture();
+        } else {
+          let interval = setInterval(() => {
+            console.log("interval CALLED", !!currentJarScene);
+            if (currentJarScene) {
+              updateTexture();
+              clearInterval(interval);
+            }
+          }, 250);
+        }
+      }
+
+      if (currentValues.productLine !== slugs.productLine) {
+        slugs.productLine = currentValues.productLine;
+        console.log(`PRODUCTLINE`, currentValues.productLine);
+      }
+
+      if (currentValues.brand !== slugs.brand) {
+        slugs.brand = currentValues.brand;
+        currentBrand.value = currentValues.brand;
+        console.log(`BRAND`, currentValues.brand);
+      }
+
+      if (tempSize !== slugs.size) {
+        console.log("JAR SIZE CHANGED", tempSize);
+      }
+
+    }, {
+      immediate: true,
+      deep: true
+    });
+
 
     return { 
       webGl, 
       sceneContainer, 
-      currentJarSize, 
-      resetScene, 
+      currentJarSize,
+      currentBrand,
+      resetScene,
       selectJarSize,
-      selectJarSizeTest
+      updateTexture
     };
   },
 };
@@ -489,7 +802,7 @@ export default {
 <style lang="scss" scoped>
 .scene-container{
   position: relative;
-  // width: 100%;
+  width: 100%;
   height: 55%;
 }
 .reset-button{
@@ -511,7 +824,7 @@ export default {
   justify-content: center;
   // position: absolute;
   bottom: 0%;
-  button:first-child{
+  button:not(:last-child){
     margin-right: 15px;
   }
   button{

@@ -5,7 +5,6 @@ import '@/assets/styles/fonts.scss'
 import App from './App.vue'
 import router from './router'
 import components from './components'
-import globalFunctions from './helpers/globalFunctions.js'
 import mitt from 'mitt';
 
 const emitter = mitt();
@@ -20,6 +19,5 @@ for (const component of components){
 
 //GLOBAL VARIABLES
 app.provide('emitter', emitter)
-app.provide('useImage', globalFunctions.useImage)
 
 app.mount('#app')

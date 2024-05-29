@@ -34,7 +34,7 @@
               class="stylish-pointer"
               :style="displayStyle(brandProductLine)"
             >
-              <img :src="pointerLine" class="pointer-line" />
+              <img ref="pointerline" :src="pointerLine" class="pointer-line" />
               <img :src="pointerCircle" class="pointer-circle" />
             </div>
           </div>
@@ -99,6 +99,7 @@ import pointerCircle from "@/assets/pages/product-page/pointer-circle.svg";
 import arrow from "@/assets/pages/product-page/arrow.svg";
 
 import brandConfigs from "@/assets/brand-information/index.js"
+import { useProductStore } from '@/store/product.js'
 
 export default {
   components: { ProductScene },
@@ -106,9 +107,10 @@ export default {
 
   setup(props) {
     const route = useRoute();
-    console.log("ROUTE ====> ", toRaw(route))
+
     const { width: windowWidth, height: windowHeight } = useWindowSize();
     
+    const productStore = useProductStore()
     //receives distance of Mesh from Canvas ends
     let emitter = inject('emitter')
     emitter.on('meshEdges', (meshEdges)=>{
@@ -131,13 +133,14 @@ export default {
 
     let currentFlavour = ref(null)
     let currentProductLine = ref(null)
-    let selectedBrand = ref(null); // Okto / Haa / Melculum
+    let selectedBrand = ref(null); // Okto / Haa / Melculum string
     let brandProductLines = ref(null);
     let productLineFlavours = ref(null);
 
     if(props.selectedBrand){
       selectedBrand.value = brandConfigs[props.selectedBrand]
       brandProductLines = ref(selectedBrand.value.brandProductLines)
+      console.log("route query", route.query?.line)
       if(route.query?.line){
         currentProductLine.value = brandProductLines.value[route.query.line]
       } else { // Default if no selectedLine was passed as query
@@ -201,23 +204,23 @@ export default {
       if(windowWidth.value <= 1440){
         fontSize -= 20
       }
-      console.log("FS", fontSize)
+      // console.log("Calculated fontsize", fontSize)
       return fontSize
     })
 
     const isSelected = function (brandProductLine){
-      console.log("HUH", toRaw(brandProductLine.name), currentProductLine.value.name, toRaw(brandProductLine.name) === currentProductLine.value.name)
+      // console.log("HUH", toRaw(brandProductLine.name), currentProductLine.value.name, toRaw(brandProductLine.name) === currentProductLine.value.name)
       return currentProductLine.value.name === brandProductLine.name ? 'selected' : '';
     }
 
     const displayStyle = function (brandProductLine) {
-      console.log("DUH", toRaw(brandProductLine.name), currentProductLine.value.name)
+      // console.log("DUH", toRaw(brandProductLine.name), currentProductLine.value.name)
       return { display: currentProductLine.value.name === brandProductLine.name ? 'flex' : 'none' };
     };
 
     watch(() => route.params, (params) => {
       if(params && params.selectedBrand){
-        console.log("PARAMS === >", params.selectedBrand)
+        // console.log("PARAMS === >", params.selectedBrand)
         if(params.selectedBrand !== selectedBrand.value.brand){
           console.log("Not the same param")
           switchBrand()
@@ -234,12 +237,30 @@ export default {
     });
 
     watch(selectedBrand, (newBrand) => {
+      console.log("newBrand", toRaw(newBrand))
       brandProductLines.value = newBrand.brandProductLines
-      currentProductLine.value = brandProductLines.value['Blends']
-    })
-
+      currentProductLine.value = brandProductLines.value[route.query?.line ? route.query.line : 'Monoflorals']
+      if(newBrand){
+        productStore.setBrand({name: newBrand.brand, urlSlug: newBrand.urlSlug })
+      }
+    }, {immediate: true})
+    watch(currentProductLine, (newProductLine) => {
+      console.log("newProductLine", toRaw(newProductLine))
+      console.log("currentProductLine", toRaw(currentProductLine))
+      if(newProductLine){
+        productStore.setProductLine({name: newProductLine.name, urlSlug: newProductLine.urlSlug })
+      }
+    }, {immediate: true})
+    watch(currentFlavour, (newFlavour) => {
+      console.log("newFlavour", toRaw(newFlavour))
+      if(newFlavour){
+        productStore.setFlavour({name: newFlavour.name, urlSlug: newFlavour.urlSlug })
+      }
+    }, {immediate: true})
+    
     function selectProductLine(productLine) {
       if (productLine !== currentProductLine.value.name) {
+        console.log("Changing productLine Value", productLine)
         currentProductLine.value = brandProductLines.value[productLine];
       } else 
       return
@@ -271,17 +292,17 @@ export default {
     }
 
     function calculateLineWidths(edgeCoordinates){
+      console.log("Got EdgeDistance", edgeCoordinates.leftEdge, edgeCoordinates.rightEdge)
       if (productViewer.value) {
 
-        const circleDetraction = 40; // Account for circle width, and imprecision in calculation
+        const circleDetraction = 30; // Account for circle width, and imprecision in calculation
         const productViewerWidth = productViewer.value.offsetWidth;
         const productViewerPositionalData = productViewer.value.getBoundingClientRect()
-        
         //Distances
-        let leftLineFromCanvas = productViewerPositionalData.left  - seriesItem.value[0].getBoundingClientRect().right
-        let rightLineFromCanvas = blendItem.value[0].getBoundingClientRect().left - productViewerPositionalData.right
-        let leftLineDistance = leftLineFromCanvas + edgeCoordinates.leftEdge - circleDetraction
-        let rightLineDistance = rightLineFromCanvas + (productViewerWidth - edgeCoordinates.rightEdge - circleDetraction)
+        let leftElementToCanvas = productViewerPositionalData.left  - seriesItem.value[0].getBoundingClientRect().right
+        let rightElementToCanvas = blendItem.value[0].getBoundingClientRect().left - productViewerPositionalData.right
+        let leftLineDistance = leftElementToCanvas + edgeCoordinates.leftEdge - circleDetraction
+        let rightLineDistance = rightElementToCanvas + edgeCoordinates.rightEdge - circleDetraction
 
         //Set variable value to calculated distance
         document.documentElement.style.setProperty('--pointer-line-width', `${leftLineDistance}px`);
@@ -298,7 +319,7 @@ export default {
       productViewer,
       blendItem,
       seriesItem,
-      selectedBrand,
+      selectedBrand: selectedBrand,
       brandProductLines,
       productLineFlavours,
       currentFlavour,

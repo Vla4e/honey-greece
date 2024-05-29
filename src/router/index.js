@@ -57,16 +57,16 @@ const router = createRouter({
 })
 
 function processRouteTransition(to, next) {
-  console.log("Going to", to.name, to.params, to.query);
+  // console.log("Going to", to.name, to.params, to.query);
 
   // Set default query if not already set
   if (!to.query.line) {
-    to.query.line = 'Blends';
+    to.query.line = 'Monoflorals';
   }
 
   // Check if the line query is allowed
   if (!allowedLines.includes(to.query.line)) {
-    next({ name: to.name, params: to.params, query: { ...to.query, line: 'Blends' } });
+    next({ name: to.name, params: to.params, query: { ...to.query, line: 'Monoflorals' } });
     return;
   }
 
