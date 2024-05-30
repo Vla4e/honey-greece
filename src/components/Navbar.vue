@@ -12,12 +12,10 @@
           Inquire
         </span>
       </div>
-    </div>
-    <!-- <div class="logo-container">
       <router-link class="logo-link" to="/">
-        <img :src="logo" class="navbar-logo" />
+        <img :src="homeIcon" class="navbar-logo" />
       </router-link>
-    </div> -->
+    </div>
   </nav>
 </template>
 
@@ -25,6 +23,7 @@
 import { inject, ref } from 'vue'
 import logoUrl from '@/assets/images/main-logo.png'
 import burgerIcon from '@/assets/images/burger-icon.svg'
+import homeIcon from '@/assets/images/home-icon.svg'
 
 import brandConfigs from "@/assets/brand-information/index.js"
 
@@ -39,6 +38,7 @@ export default {
       let tempBrand = brandConfigs[brand]
       brands.push({
         name: tempBrand.fullBrandName,
+        urlSlug: tempBrand.brand,
         linkTo: `/product/${tempBrand.brand}?line=${tempBrand.productLines[0]}`,
         disabled: false,
         lines: tempBrand.productLines.map((productLine) => {
@@ -86,6 +86,7 @@ export default {
     }
     return { 
       logo: logoUrl,
+      homeIcon,
       sidebar: burgerIcon,
       brands,
       toggleContactForm
@@ -118,6 +119,14 @@ export default {
   text-transform: uppercase;
   cursor: pointer;
 } 
+.logo-link{
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  img{
+    width: 26px;
+  }
+}
 .logo-container{
   display: flex;
   justify-content: flex-start;
@@ -125,9 +134,6 @@ export default {
   width: 25%;
   position: relative;
   // margin-top: 3%;
-  .logo-link{
-    width: 15%;
-  }
   .navbar-logo{
     width: 100%;
   }

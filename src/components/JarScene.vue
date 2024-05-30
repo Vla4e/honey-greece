@@ -10,29 +10,32 @@
   </div>
 </template>
 <script>
-import { OrbitControls } from "three/addons/controls/OrbitControls.js";
 import { watch, onMounted, ref, computed } from "vue";
 import { useWindowSize } from "@vueuse/core";
+
+import Stats from "stats.js";
+
+import { OrbitControls } from "three/addons/controls/OrbitControls.js";
 import { DRACOLoader } from "three/addons/loaders/DRACOLoader.js";
 import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
 import { RGBELoader } from "three/addons/loaders/RGBELoader.js";
-import Stats from "stats.js";
 import {
   Scene,
   PerspectiveCamera,
   WebGLRenderer,
   PMREMGenerator,
+  AxesHelper,
   Mesh,
   MeshBasicMaterial,
   MeshStandardMaterial,
-  AxesHelper,
 } from "three";
+
 export default {
   setup() {
     let stats = new Stats();
     //ref to canvas, window size
     stats.showPanel(0);
-    // document.body.appendChild(stats.dom)
+    document.body.appendChild(stats.dom)
     const webGl = ref();
     const { width: windowWidth, height: windowHeight } = useWindowSize();
     // console.log("Window size and width from useWindowSize", windowWidth, windowHeight);
@@ -53,9 +56,19 @@ export default {
     });
 
     //Scene variable definition
-    let scene = Scene;
-    let camera = PerspectiveCamera;
-    let renderer = WebGLRenderer;
+    /**
+     * @type {THREE.Scene | null}
+     */
+    let scene = null;
+    /**
+     * @type {THREE.PerspectiveCamera | null}
+     */
+    let camera = null;
+    let orbitControls = null;
+    /**
+     * @type {THREE.WebGLRenderer | null}
+     */
+    let renderer = null;
     let modelReady = ref(false);
 
     //Loaders + configuration of loaders
@@ -65,8 +78,8 @@ export default {
     draco.setDecoderConfig({ type: "js" });
     draco.setDecoderPath("https://www.gstatic.com/draco/v1/decoders/");
     draco.preload();
-    loader.setDRACOLoader = draco;
-    backgroundLoader.setDRACOLoader = draco;
+    loader.setDRACOLoader(draco);
+    backgroundLoader.setDRACOLoader(draco);
 
     async function setLighting(renderer) {
       // console.log("calling set lighting");
@@ -85,53 +98,55 @@ export default {
       scene = new Scene();
       //XYZ axes
       // scene.add(new AxesHelper(5))
-      let loaderPromise = await loader.loadAsync("assets/glb/home-jar-scene.glb");
-      let backgroundLoaderPromise = await backgroundLoader.loadAsync(
-        "assets/glb/background.glb"
-      );
-      // console.log("BLP", backgroundLoaderPromise);
+      let loaderPromise = await loader.loadAsync("assets/glb/home-v2.glb");
+      console.log("loaderPromise", loaderPromise)
+      // let backgroundLoaderPromise = await backgroundLoader.loadAsync(
+      //   "assets/glb/background.glb"
+      // );
+      scene.add(loaderPromise.scene)
+      const axesHelper = new AxesHelper(5)
+      axesHelper.setColors('red', 'green', 'blue')
+      scene.add(axesHelper)
+      // console.log("loaderPromise", loaderPromise);
       // // console.log("BLPCHILDREN", backgroundLoaderPromise.scene.children)
       // // console.log('loader', loaderPromise)
       // // console.log("loader.scene.children", loaderPromise.scene.children)
       //Load Camera from GLB and add to scene
       try {
         camera = loaderPromise.cameras[0];
-        // camera = new PerspectiveCamera(40, width.value / height.value, 1, 1000)
-        camera.position.set(0, 17.5, 0);
+        camera.aspect = windowWidth.value / windowHeight.value
+        console.log("CAMPOS", camera.position.x, camera.position.y, camera.position.z )
+        // camera = new PerspectiveCamera(40, windowWidth.value / windowHeight.value, 0.2, 10)
+        // camera.position.set(0, 0.2, -0.8);
         camera.lookAt(0, 0, 0);
         scene.add(camera);
       } catch (e) {
         console.error("Camera not loaded yet");
       }
-      //Load preconfigured meshes from GLB and add to scene
-      // backgroundLoaderPromise.scene.traverse((node) => {
-      //   // console.log("traversing", node)
-      //   if(node instanceof Mesh){
-      //     scene.add(node)
-      //   }
-      //   // scene.add(child)
-      // })
-      const [mesh4, mesh5, mesh6, mesh7] = backgroundLoaderPromise.scene.children;
-      // console.log("child0", mesh4);
-      // console.log("child1", mesh5);
-      // console.log("child2", mesh6);
-      // console.log("child2", mesh7);
-      // scene.add(mesh4);
-      // scene.add(mesh5);
-      // scene.add(mesh6);
-      // scene.add(mesh7);
-      const [mesh1, mesh2, mesh3] = loaderPromise.scene.children;
-      // console.log("child0", mesh1);
-      // console.log("child1", mesh2);
-      // console.log("child2", mesh3);
-      scene.add(mesh1);
-      scene.add(mesh2);
-      scene.add(mesh3);
+
       // Renderer
       const canvas = webGl.value;
       renderer = new WebGLRenderer({ canvas, antialias: true, alpha: true });
       renderer.setClearColor(0x000000, 0);
       renderer.setSize(windowWidth.value, windowHeight.value);
+      
+      orbitControls = new OrbitControls(camera, canvas);
+      // globalOrbitControls.position.set(0, 0.02, 0)
+      orbitControls.target.set(0, 0.02, 0)
+      orbitControls.update();
+
+      //Zoom Distances - Max (zoom out) distance is equal to camera x starting position
+      orbitControls.maxDistance = 1.5;
+      orbitControls.minDistance = 0.18;
+
+      // controls.enableZoom = false;
+
+      //Vertical Rotation Limiting Angles
+      orbitControls.minPolarAngle = (30 * Math.PI)/180;
+      orbitControls.maxPolarAngle = (90 * Math.PI)/180;
+
+      orbitControls.enablePan = true;
+      orbitControls.enableDamping = true;
       await setLighting(renderer);
       modelReady.value = true;
     };
@@ -153,8 +168,8 @@ export default {
       stats.begin();
       if (modelReady.value) {
         //set values of rotation object and position vector when scene meshes are added to scene
-        jarRotationObj = scene.children[3].rotation;
-        treesPositionVector = scene.children[2].position;
+        // jarRotationObj = scene.children[3].rotation;
+        // treesPositionVector = scene.children[2].position;
         requestAnimationFrame(animate);
         renderer.render(scene, camera);
       }

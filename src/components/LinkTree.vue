@@ -1,6 +1,6 @@
 <template>
   <div :class="brand.disabled ? 'disabled' : ''" class="link-tree">
-    <span @click="goToPage(typedBrands.name)" class="tree-route" :class="currentBrandPage ? 'active': ''">
+    <span @click="goToPage(typedBrands.urlSlug)" class="tree-route" :class="currentBrandPage ? 'active': ''">
       {{typedBrands.name}}
     </span>
     <div v-if="renderDropdownTree" class="dropdown-tree">
@@ -23,7 +23,7 @@ import treeNode from "@/assets/components/link-tree/tree-node.svg"
 import treeLeftmost from "@/assets/components/link-tree/tree-leftmost.svg"
 import treeRightmost from "@/assets/components/link-tree/tree-rightmost.svg"
 
-import { ref, watch } from 'vue'
+import { ref, watch, toRaw } from 'vue'
 import router from '@/router/index.js'
 import { useRoute } from 'vue-router';
 
@@ -52,6 +52,7 @@ export default {
       })
       typedBrands.name = props.brand.name
       typedBrands.link = props.brand.linkto
+      typedBrands.urlSlug = props.brand.urlSlug
       if(!props.brand.lines.length){
         renderDropdownTree.value = false
       } else renderDropdownTree.value = true

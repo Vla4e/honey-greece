@@ -71,7 +71,7 @@
           {{ flavour.name }}
         </span>
         <div
-          class="stylish-pointer-left"
+          class="stylish-pointer-to-left"
           :style="
           flavour.name === currentFlavour.name
               ? 'display: flex;'
@@ -237,7 +237,7 @@ export default {
     });
 
     watch(selectedBrand, (newBrand) => {
-      console.log("newBrand", toRaw(newBrand))
+      // console.log("newBrand", toRaw(newBrand))
       brandProductLines.value = newBrand.brandProductLines
       currentProductLine.value = brandProductLines.value[route.query?.line ? route.query.line : 'Monoflorals']
       if(newBrand){
@@ -245,14 +245,14 @@ export default {
       }
     }, {immediate: true})
     watch(currentProductLine, (newProductLine) => {
-      console.log("newProductLine", toRaw(newProductLine))
-      console.log("currentProductLine", toRaw(currentProductLine))
+      // console.log("newProductLine", toRaw(newProductLine))
+      // console.log("currentProductLine", toRaw(currentProductLine))
       if(newProductLine){
         productStore.setProductLine({name: newProductLine.name, urlSlug: newProductLine.urlSlug })
       }
     }, {immediate: true})
     watch(currentFlavour, (newFlavour) => {
-      console.log("newFlavour", toRaw(newFlavour))
+      // console.log("newFlavour", toRaw(newFlavour))
       if(newFlavour){
         productStore.setFlavour({name: newFlavour.name, urlSlug: newFlavour.urlSlug })
       }
@@ -295,7 +295,7 @@ export default {
       console.log("Got EdgeDistance", edgeCoordinates.leftEdge, edgeCoordinates.rightEdge)
       if (productViewer.value) {
 
-        const circleDetraction = 30; // Account for circle width, and imprecision in calculation
+        const circleDetraction = 40; // Account for circle width, and imprecision in calculation
         const productViewerWidth = productViewer.value.offsetWidth;
         const productViewerPositionalData = productViewer.value.getBoundingClientRect()
         //Distances
@@ -395,7 +395,7 @@ export default {
       width: 100%;
       margin-bottom: 15px;
       width: 80%;
-      .stylish-pointer-left {
+      .stylish-pointer-to-left {
         position: absolute;
         right: 100%;
         top: 50%;
@@ -550,13 +550,84 @@ export default {
   }
 }
 
-@keyframes fadeIn {
-  0% {
-    opacity: 0;
-  }
-  100% {
-    opacity: 1;
-  }
+
+
+// @keyframes fadeInMaskRight {
+//     0% {
+//         mask-image: linear-gradient(to right, transparent 0%, black 100%);
+//     }
+//     50% {
+//         mask-image: linear-gradient(to right, transparent 50%, black 100%);
+//     }
+//     100% {
+//         mask-image: none;  // This ensures the mask is completely removed at the end.
+//     }
+// }
+// @keyframes fadeInMaskLeft {
+//     0% {
+//         mask-image: linear-gradient(to left, transparent 0%, black 100%);
+//     }
+//     50% {
+//         mask-image: linear-gradient(to left, transparent 50%, black 100%);
+//     }
+//     100% {
+//         mask-image: none;  // This ensures the mask is completely removed at the end.
+//     }
+// }
+// .stylish-pointer {
+//     display: flex;
+//     mask-image: none;
+//     animation: fadeInMaskRight 3s forwards;
+//     /* Additional styling for pointer-line and pointer-circle if needed */
+// }
+
+// .stylish-pointer-to-left {
+//     display: flex;
+//     mask-image: none;
+//     animation: fadeInMaskLeft 3s forwards;
+//     /* Additional styling for pointer-line and pointer-circle if needed */
+// }
+.stylish-pointer, .stylish-pointer-to-left {
+    position: relative;
+    overflow: hidden;
+    display: flex;
+}
+
+.stylish-pointer::before{
+    content: "";
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    background: linear-gradient(to right, white 0%, white 100%);
+    animation: fadeEffectLeftToRight 1s 2s forwards; // delay for switch animation to play out
+}
+.stylish-pointer-to-left::before{
+  content: "";
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  background: linear-gradient(to right, white 0%, white 100%);
+  animation: fadeEffectRightToLeft 1s 2s forwards; // delay for switch animation to play out
+}
+@keyframes fadeEffectLeftToRight {
+    0% {
+        left: -100%;
+    }
+    100% {
+        left: 100%;
+    }
+}
+@keyframes fadeEffectRightToLeft {
+    0% {
+        right: -100%;
+    }
+    100% {
+        right: 100%;
+    }
 }
 .brand-selection {
   height: 30%;

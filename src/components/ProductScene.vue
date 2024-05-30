@@ -9,14 +9,14 @@
       <button @click="selectJarSize('medium')" :class="currentJarSize === 'medium' ? 'selected': ''" class="medium-jar">
         300g
       </button>
-      <button @click="selectJarSize('small')" :class="currentJarSize === 'small' ? 'selected': ''" class="small-jar">
+      <button v-if="currentBrand !== 'okto'" @click="selectJarSize('small')" :class="currentJarSize === 'small' ? 'selected': ''" class="small-jar">
         150g
       </button>
     </div>
   </div>
 </template>
 
-<script lang="ts">
+<script>
 import {
   Scene,
   SphereGeometry,
@@ -39,7 +39,7 @@ import {
   Box3Helper,
   AxesHelper,
   CameraHelper,
-  BoxHelper
+  BoxHelper,
 } from "three";
 
 
@@ -60,9 +60,21 @@ import TWEEN, { update } from '@tweenjs/tween.js';
 /* "ENUMS" */
 // IMPORTANT: JAR HEIGHTS and WIDTHS are 0.3 < n < 1 in World Scale //
 const jarConfigs = Object.freeze({
-  small:   { name: "small", source: "/assets/glb/jar-150g-v8.glb" },
-  medium:  { name: "medium", source: "/assets/glb/jar-300g-v4.glb" },
-  large: { name: "large", source: "/assets/glb/jar-450g-v4.glb" }
+  small:   { name: "small", source: "/assets/glb/jar-150g-v8.glb", position: {
+    x: 0,
+    y: 0.02,
+    z: 0
+  } },
+  medium:  { name: "medium", source: "/assets/glb/jar-300g-v4.glb", position: {
+    x: 0,
+    y: 0,
+    z: 0
+  } },
+  large: { name: "large", source: "/assets/glb/jar-450g-v4.glb", position: {
+    x: 0,
+    y: 0,
+    z: 0
+  }  }
 });
 const cameraConfigs = Object.freeze({
   x: 0.28,
@@ -96,21 +108,71 @@ export default {
       return containerWidth.value / containerHeight.value;
     });
     
-    let globalCamera: PerspectiveCamera;
-    let globalRenderer: WebGLRenderer;
-    let globalScene: Scene;
-    let globalOrbitControls: OrbitControls;
-    let globalPointLight: PointLight;
-    let cameraHelper: CameraHelper;
-    let axesHelper: AxesHelper;
-    let initialLeftWorld: Vector3;
-    let initialRightWorld: Vector3;
-    let globalQuaternion: Quaternion;
+    //Loaders + configuration of loaders
+    const loader = new GLTFLoader();
+    const globalTextureLoader = new TextureLoader();
+    // Draco compression loader.
+    // const draco = new DRACOLoader();
+    // draco.setDecoderConfig({ type: 'js' });
+    // draco.setDecoderPath('https://www.gstatic.com/draco/versioned/decoders/1.5.7/');
+    // draco.preload();
+    // loader.setDRACOLoader(draco);
+
+    /**
+     * @type {THREE.PerspectiveCamera | null}
+     */
+    let globalCamera = null;
+
+    /**
+     * @type {THREE.WebGLRenderer | null}
+     */
+    let globalRenderer = null;
+
+    /**
+     * @type {THREE.Scene | null}
+     */
+    let globalScene = null;
+
+    /**
+     * @type {THREE.OrbitControls | null}
+     */
+    let globalOrbitControls = null;
+
+    /**
+     * @type {THREE.PointLight | null}
+     */
+    let globalPointLight = null;
+
+    /**
+     * @type {THREE.CameraHelper | null}
+     */
+    let cameraHelper = null;
+
+    /**
+     * @type {THREE.AxesHelper | null}
+     */
+    let axesHelper = null;
+
+    /**
+     * @type {THREE.Vector3 | null}
+     */
+    let initialLeftWorld = null;
+
+    /**
+     * @type {THREE.Vector3 | null}
+     */
+    let initialRightWorld = null;
+
+    /**
+     * @type {THREE.Quaternion | null}
+     */
+    let globalQuaternion = null;
     let initialMeshQuaternion;
     let initialMeshRotation;
     let initialCameraPosition;
     let initialCameraQuaternion;
     let initialZoom;
+    
     let LOGTIMER = 0;
     let animationDONE = false;
     let isLoadingTexture = false;
@@ -119,20 +181,14 @@ export default {
     let isResettingRotation = false;
     let resetStartTime = 0;
     const resetDuration = 1000;
-    //Loaders + configuration of loaders
-    const loader = new GLTFLoader();
-    const globalTextureLoader = new TextureLoader();
-    // Draco compression loader.
-    // const draco = new DRACOLoader();
-    // draco.setDecoderConfig({ type: 'js' });
-    // draco.setDecoderPath('https://www.gstatic.com/draco/v1/decoders/');
-    // draco.preload();
-    // loader.setDRACOLoader = ( draco )
 
+    /**
+     * @type {THREE.Scene | null}
+     */
+    let currentJarScene = null;
+    let upcomingJarScene = null;
     let currentJarSize = ref(jarConfigs.medium.name);
-    let currentJarScene: Scene;
     let upcomingJarSize = ref('');
-    let upcomingJarScene: Scene;
     let jarScenes = {}; // store loaded model to avoid reloading
     
     const setCanvas = async () => {
@@ -144,6 +200,7 @@ export default {
       
 
       currentJarScene = jarPromise.scene; //Scene to be loaded
+      console.log("assigned value to jar scene", currentJarScene)
       jarScenes[currentJarSize.value] = currentJarScene; 
 
       let meshes = currentJarScene.children;
@@ -151,7 +208,7 @@ export default {
 
       //Add jar scene to global scene
       globalScene.add(currentJarScene)
-      // updateTexture();
+
       // Lights (added to camera below)
       globalPointLight = new PointLight(0xffffff, 1);
       globalPointLight.position.set(targetMesh.position.x, targetMesh.position.y, targetMesh.position.z + 0.5);
@@ -181,6 +238,7 @@ export default {
       globalRenderer.setSize(containerWidth.value, containerHeight.value);
       globalRenderer.setClearColor(0x000000, 0)
       globalRenderer.setPixelRatio(window.devicePixelRatio);
+      globalRenderer.shadowMap.enabled = false;
       globalRenderer.render(globalScene, globalCamera);
 
       // Orbit Controls
@@ -247,16 +305,15 @@ export default {
 
       // check if texture exists, return it
       if (jarTextures[slugs.brand][slugs.productLine][slugs.size][slugs.flavour]) {
-        console.log("EXISTING TEXTURE !!!!!!!!!!")
           return jarTextures[slugs.brand][slugs.productLine][slugs.size][slugs.flavour];
       }
 
       // load if not
       let textureUrl = `${baseTextureUrl}/${slugs.brand}/${slugs.productLine}/${slugs.size}/${slugs.flavour}.png`;
+      console.log("URL:", textureUrl)
       let texture = await globalTextureLoader.loadAsync(textureUrl);
       texture.flipY = false;
       jarTextures[slugs.brand][slugs.productLine][slugs.size][slugs.flavour] = texture;
-      console.log("JAR TEXTURES", jarTextures);
 
       return texture;
     }
@@ -318,8 +375,9 @@ export default {
       }
 
       // Zoom in to account for smaller jar
-      if(globalCamera.zoom !== 1){
-        let zoomFactor = 1;
+      if(size === 'small'){
+        let zoomFactor = 1.15
+        // upcomingJarScene.position.y + 0.2
         new TWEEN.Tween({ zoom: globalCamera.zoom })
           .to({ zoom: zoomFactor }, 1000)
           .easing(TWEEN.Easing.Quadratic.InOut)
@@ -333,11 +391,23 @@ export default {
           .start();
             globalOrbitControls.maxDistance = cameraConfigs.x; //camera zoom apparently does not change positional coordinates.
             globalOrbitControls.update();
-      }
-
-      // Zoom out to account for larger jar
-      if (size === 'large') {
-        let zoomFactor = 0.7
+      } else if (size === 'large'){
+        let zoomFactor = 0.8
+        new TWEEN.Tween({ zoom: globalCamera.zoom })
+          .to({ zoom: zoomFactor }, 1000)
+          .easing(TWEEN.Easing.Quadratic.InOut)
+          .onUpdate(function (event) {
+            globalCamera.zoom = event.zoom;
+            globalCamera.updateProjectionMatrix();
+          })
+          .onComplete(() => {
+            console.log("Zoom animation completed.");
+          })
+          .start();
+            globalOrbitControls.maxDistance = cameraConfigs.x; //camera zoom apparently does not change positional coordinates.
+            globalOrbitControls.update();
+      } else if (globalCamera.zoom !== 1){
+        let zoomFactor = 1;
         new TWEEN.Tween({ zoom: globalCamera.zoom })
           .to({ zoom: zoomFactor }, 1000)
           .easing(TWEEN.Easing.Quadratic.InOut)
@@ -356,13 +426,16 @@ export default {
       globalScene.add(upcomingJarScene);
     };
 
+    let cameraDirection = new Vector3();
+    let cameraUp = new Vector3();
+    let cameraRight = new Vector3();
+    let cameraLeft = new Vector3();
     function getCameraDirections() {
-      let cameraDirection = new Vector3();
       globalCamera.getWorldDirection(cameraDirection);
-      let cameraUp = globalCamera.up.clone();
+      cameraUp.copy(globalCamera.up);
 
-      let cameraRight = new Vector3().crossVectors(cameraDirection, cameraUp).normalize();
-      let cameraLeft = cameraRight.clone().negate();
+      cameraRight.crossVectors(cameraDirection, cameraUp).normalize();
+      cameraLeft.copy(cameraRight).negate();
 
       return { left: cameraLeft, right: cameraRight };
     }
@@ -391,10 +464,15 @@ export default {
     }
 
 
-    const animateJarIn = (jar) => {
+    const animateJarIn = (jar, durationIn = 1200) => {
       jar.visible = true;
+      console.log("JARCONFIGS", jarConfigs[currentJarSize.value].position.y)
       new TWEEN.Tween(jar.position)
-        .to({ x: 0, y: 0, z: 0 }, 1000)
+        .to({ 
+          x: jarConfigs[currentJarSize.value].position.x, 
+          y: jarConfigs[currentJarSize.value].position.y, 
+          z: jarConfigs[currentJarSize.value].position.z } 
+          , durationIn)
         .easing(TWEEN.Easing.Back.Out)
         .onComplete(() => {
           console.log("AnimateJarIn completed")
@@ -423,8 +501,10 @@ export default {
             await nextTick();
             console.log("will animateJarIn")
             setTimeout( () => { // Delay transition for renderer to update.
-              animateJarIn(currentJarScene) 
-            }, 1000)
+              let durationIn = 1200
+              if(currentJarSize.value === 'large') durationIn = 2000
+              animateJarIn(currentJarScene, durationIn) 
+            }, 800)
           });
         })
         .start();
@@ -435,8 +515,8 @@ export default {
       jar.visible = true;
       jar.position.y = 0.15;
       new TWEEN.Tween(jar.position)
-        .to({ y: 0 }, 600)
-        .easing(TWEEN.Easing.Linear.Out)
+        .to({ y: jarConfigs[currentJarSize.value].position.y }, 900)
+        .easing(TWEEN.Easing.Back.Out)
         .onComplete(() => {
           console.log("AnimateJarIn completed")
           console.log("end of process", globalOrbitControls.autoRotate)
@@ -454,21 +534,21 @@ export default {
         .to({ 
           y: -0.15,
          }, 600) // Move out of view - Very sensitive to X value (use 1 decimal point values)
-        .easing(TWEEN.Easing.Linear.In)
+        .easing(TWEEN.Easing.Back.In)
         .onComplete( async () => {
           updateTexture().then(async ()=>{
             await nextTick();
             console.log("will animateJarIn")
             setTimeout( () => { // Delay transition for renderer to update.
               animateJarInY(currentJarScene) 
-            }, 1000)
+            }, 800)
           });
         })
         .start();
     };
 
     const selectJarSize = async (size) => {
-      console.log("Attempting to selectJarSize", size, currentJarSize.value)
+      // console.log("Attempting to selectJarSize", size, currentJarSize.value)
       if(size === currentJarSize.value){
         return
       } else {
@@ -609,23 +689,6 @@ export default {
         LOGTIMER++
       }
     };
-    
-    function initializeEdges(target) {
-        const bbox = new Box3().setFromObject(target);
-        const center = bbox.getCenter(new Vector3());
-        const size = bbox.getSize(new Vector3());
-        const jarWidthHalf = size.x / 2;
-
-        // Store initial world coordinates
-        initialMeshQuaternion = target.quaternion.clone();
-        initialMeshRotation = target.rotation.clone()
-        initialCameraPosition = globalCamera.position.clone();
-        initialCameraQuaternion = globalCamera.quaternion.clone();
-        initialZoom = globalCamera.zoom;
-
-        initialLeftWorld = new Vector3(center.x - jarWidthHalf, center.y, center.z);
-        initialRightWorld = new Vector3(center.x + jarWidthHalf, center.y, center.z);
-    }
 
     function getDistanceFromCanvas(target) {
       const distanceToOrigin = globalCamera.position.distanceTo(target.position);
@@ -680,38 +743,7 @@ export default {
       window.removeEventListener('resize', updateContainerSize); // Clean up
     });
 
-    // watch(() => productStore.getProductLineSlug, (slug) => {
-    //   slugs.productLine = slug
-    //   console.log(`PRODUCTLINE`, slug);
-    // }, { immediate: true })
-
-    // watch(() => productStore.getFlavourSlug, (slug) => {
-    //   console.log(`FLAVOUR SLUGS ===>`, slug, slugs.flavour, !!currentJarScene);
-    //   if(slug !== slugs.flavour){
-    //     slugs.flavour = slug
-    //     if(currentJarScene){
-    //       updateTexture()
-    //     } else {
-    //       let interval = setInterval(() => {
-    //         console.log("interval CALLED", !!currentJarScene)
-    //         if(currentJarScene){
-    //           updateTexture()
-    //           clearInterval(interval)
-    //         }
-    //       }, 250)
-    //     }
-    //   }
-    // }, { immediate: true })
-
-    // watch(() => productStore.getBrandSlug, (slug) => {
-    //   slugs.brand = slug
-    //   currentBrand.value = slug
-    //   console.log(`BRAND`, slug);
-    // }, { immediate: true })
-
-    // watch(currentJarSize, (newJarSize) => {
-    //   console.log("JAR SIZE CHANGED", newJarSize)
-    // })
+    
     watch(() => ({
       flavour: productStore.getFlavourSlug,
       productLine: productStore.getProductLineSlug,
@@ -720,10 +752,10 @@ export default {
     }), (currentValues) => {
       // Update slugs if changed
       let tempSize = currentValues.size === 'large' ? '450g' : currentValues.size === 'medium' ? '300g' : '150g';
-      console.log(currentValues.flavour, slugs.flavour, currentValues.flavour === slugs.flavour)
-      console.log(currentValues.brand, slugs.brand, currentValues.brand === slugs.brand)
-      console.log(currentValues.productLine, slugs.productLine, currentValues.productLine === slugs.productLine)
-      console.log(tempSize, slugs.size, tempSize === slugs.size)
+      // console.log(currentValues.flavour, slugs.flavour, currentValues.flavour === slugs.flavour)
+      // console.log(currentValues.brand, slugs.brand, currentValues.brand === slugs.brand)
+      // console.log(currentValues.productLine, slugs.productLine, currentValues.productLine === slugs.productLine)
+      // console.log(tempSize, slugs.size, tempSize === slugs.size)
       // Check if only the flavour slug has changed
       if (
         currentValues.flavour !== slugs.flavour &&
@@ -732,7 +764,7 @@ export default {
         tempSize === slugs.size &&
         !isFirstLoad
       ) {
-          console.log('Only flavour changed, special function can be called here.');
+          console.log('Only Flavour has Changed');
           slugs.flavour = currentValues.flavour;
           if(currentJarScene){
             animateJarOutY(currentJarScene)
@@ -749,9 +781,28 @@ export default {
           }
         // Call your specific function here if needed
       }
+
+      if (currentValues.productLine !== slugs.productLine) {
+        slugs.productLine = currentValues.productLine;
+        console.log(`WATCHER: productLine`, currentValues.productLine);
+      }
+
+      if (currentValues.brand !== slugs.brand) {
+        slugs.brand = currentValues.brand;
+        currentBrand.value = currentValues.brand;
+        console.log(`WATCHER: brand`, currentValues.brand);
+      }
+
+      if (tempSize !== slugs.size) {
+        console.log("WATCHER: jarSize", tempSize);
+      }
+      
       if (currentValues.flavour !== slugs.flavour) {
+        console.log("WATCHER: flavour")
+        console.log("JarScene before ifs", currentJarScene, !!currentJarScene)
         slugs.flavour = currentValues.flavour;
         console.log(`FLAVOUR SLUGS ===>`, currentValues.flavour, slugs.flavour, !!currentJarScene);
+        console.log(`OTHER SLUGS ===>`, currentValues.flavour, slugs.flavour, !!currentJarScene);
         if (currentJarScene) {
           updateTexture();
         } else {
@@ -763,21 +814,6 @@ export default {
             }
           }, 250);
         }
-      }
-
-      if (currentValues.productLine !== slugs.productLine) {
-        slugs.productLine = currentValues.productLine;
-        console.log(`PRODUCTLINE`, currentValues.productLine);
-      }
-
-      if (currentValues.brand !== slugs.brand) {
-        slugs.brand = currentValues.brand;
-        currentBrand.value = currentValues.brand;
-        console.log(`BRAND`, currentValues.brand);
-      }
-
-      if (tempSize !== slugs.size) {
-        console.log("JAR SIZE CHANGED", tempSize);
       }
 
     }, {

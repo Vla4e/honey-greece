@@ -38,7 +38,7 @@ const router = createRouter({
     },
     {
       path: '/product',
-      redirect: '/product/Okto'
+      redirect: '/product/Okto?line="Monoflorals"'
     },
     {
       path: '/product/:selectedBrand',

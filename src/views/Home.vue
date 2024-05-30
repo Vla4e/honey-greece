@@ -1,11 +1,11 @@
 
 <template>
   <div class="home-container">
-    <JarScene/>
+    <!-- <JarScene/> -->
     <div class="texts-container">
       <div class="home-text-container">
         <span class="home-text">Essence of <br/>Nature</span>
-        <router-link class="route-button small-button" to="/products">Start your journey</router-link>
+        <router-link class="route-button small-button" style="color: #131313;" to="/products">Start your journey</router-link>
       </div>
       <!-- <span class="home-subtext">By Honey Apiary Academy</span> -->
     </div>
@@ -90,7 +90,7 @@ export default{
       font-family: 'DM Serif';
       font-size: 100px;
       font-weight: 600;
-      color: white;
+      color: #131313;
       line-height: 82.6%;
       text-align: left;
       margin-bottom: 15px;
