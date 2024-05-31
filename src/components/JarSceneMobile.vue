@@ -91,10 +91,10 @@ export default {
     // const backgroundLoader = new GLTFLoader();
     const draco = new DRACOLoader();
     const KTX2_LOADER = new KTX2Loader().setTranscoderPath(
-      `libs/basis/`,
+      `node_modules/three/examples/jsm/libs/basis/`,
     );
     draco.setDecoderConfig({ type: "js" });
-    draco.setDecoderPath("libs/draco/gltf/");
+    draco.setDecoderPath("node_modules/three/examples/jsm/libs/draco/gltf/");
     // draco.preload();
     loader.setDRACOLoader(draco)
     //	.setMeshoptDecoder(MeshoptDecoder);
@@ -182,7 +182,7 @@ export default {
       //no_compression.glb
       //low_res_no_compression.glb
       //low_res_10_compression.glb
-      let loaderPromise = await loadGlb("assets/glb/jarscene-v5.glb");
+      let loaderPromise = await loadGlb("assets/glb/jarscene-mobile-v1.glb");
       console.log("Loaded glb: ", loaderPromise)
       scene.add(loaderPromise.scene)
       const axesHelper = new AxesHelper(5)
