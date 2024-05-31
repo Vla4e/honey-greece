@@ -4,6 +4,7 @@ import { useGlobalStore } from '@/store/global.js';
 import brandConfigs from '@/assets/brand-information/index.js'
 import Home from '@/views/Home.vue';
 import Tabs from '@/views/Tabs.vue';
+import History from '@/views/History.vue';
 import ProductPage from '@/views/ProductPage.vue';
 
 const transitionDelay = 500; // Page transition delay to ensure animations plays out before transitioning.
@@ -25,6 +26,16 @@ const router = createRouter({
       meta: {
         hasNavbar: true, 
         playAnimationOnEnter: false
+      }
+    },
+    {
+      path: '/history',
+      name: 'History',
+      component: History,
+      meta: {
+        hasNavbar: true,
+        navbarFloating: true,
+        playAnimationOnEnter: true
       }
     },
     {
@@ -88,11 +99,16 @@ function processRouteTransition(to, next) {
 router.beforeEach((to, from, next) => {
   const navbarStore = useNavbarStore();
   const globalStore = useGlobalStore();
-
+  console.log("BEFORE HSITORY", to.meta.navbarFloating)
   if (to.meta.hasNavbar) {
     navbarStore.changeNavbarStatus(true);
   } else {
     navbarStore.changeNavbarStatus(false);
+  }
+  if (to.meta.navbarFloating){
+    navbarStore.changeNavbarFloating(true)
+  } else {
+    navbarStore.changeNavbarFloating(false)
   }
 
   if (to.meta.playAnimationOnEnter) {

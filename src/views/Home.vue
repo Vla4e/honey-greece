@@ -1,26 +1,43 @@
 
 <template>
   <div class="home-container">
-    <!-- <JarScene/> -->
-    <div class="texts-container">
+    <JarScene v-if="!showVideo"/>
+    <div v-else class="video-container">
+      <!-- Add video tag here -->
+      <!-- <img :src="bgNew" class="background-video"/> -->
+      <video class="background-video" autoplay muted loop playsinline>
+        <source :src="homeVideoHQ" type="video/mp4">
+        Your browser does not support the video tag.
+      </video>
+    </div>
+    <button class="show-vid-button" @click="showBg()">switch to video/scene</button>
+    <!-- <div class="texts-container">
       <div class="home-text-container">
         <span class="home-text">Essence of <br/>Nature</span>
         <router-link class="route-button small-button" style="color: #131313;" to="/products">Start your journey</router-link>
       </div>
-      <!-- <span class="home-subtext">By Honey Apiary Academy</span> -->
-    </div>
+      <span class="home-subtext">By Honey Apiary Academy</span>
+    </div> -->
   </div>
 </template>
 
 <script>
 import { ref } from 'vue';
-import homeVideo from '@/assets/pages/home/bg-vid.mp4'
+import homeVideo from '@/assets/pages/home/background-vid.mp4'
+import homeVideoHQ from '@/assets/pages/home/background-video-hq.mp4'
+import bgNew from '@/assets/pages/home/bg-new.png'
 import JarScene from '../components/JarScene.vue'
+import WebGL from 'three/addons/capabilities/WebGL.js';
 export default{
   name: 'Home',
   components: { JarScene },
   setup(){
-    return { homeVideo }
+    console.log("WebGL AVAILABLE", WebGL.isWebGLAvailable())
+    let showVideo = ref(false)
+    function showBg(){
+      showVideo.value = !showVideo.value
+    }
+    return { homeVideo, homeVideoHQ, bgNew, showVideo, showBg}
   }
 }
 </script>
@@ -39,6 +56,12 @@ export default{
     top: 0;
     left: 0;
   }
+}
+.show-vid-button{
+  position: absolute;
+  bottom: 0%;
+  left: 25%;
+  z-index: 20000;
 }
 .read-the-docs {
   color: #888;
@@ -96,5 +119,20 @@ export default{
       margin-bottom: 15px;
     }
   }
+}
+.video-container {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  z-index: 1; /* Ensure it's behind everything else but above the jar scene if needed */
+}
+
+.background-video {
+  width: 100%;
+  height: 100%;
+  object-fit: cover; /* This will cover the entire area without stretching the video */
 }
 </style>

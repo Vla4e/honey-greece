@@ -31,6 +31,7 @@ import {
   PerspectiveCamera,
   WebGLRenderer,
   TextureLoader,
+  Cache,
   HemisphereLight,
   Vector2,
   Vector3,
@@ -49,12 +50,16 @@ import { useProductStore } from '@/store/product.js';
 
 import { OrbitControls } from "three/addons/controls/OrbitControls.js";
 import { DRACOLoader } from 'three/addons/loaders/DRACOLoader.js';
+import { KTX2Loader } from 'three/addons/loaders/KTX2Loader.js';
+import { MeshoptDecoder } from 'three/addons/libs/meshopt_decoder.module.js';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { RGBELoader } from 'three/addons/loaders/RGBELoader.js'
 
 import { debounce } from '@/helpers/globalFunctions.js'
 import TWEEN, { update } from '@tweenjs/tween.js';
 
+
+import Stats from "stats.js";
 
 
 /* "ENUMS" */
@@ -72,7 +77,7 @@ const jarConfigs = Object.freeze({
   } },
   large: { name: "large", source: "/assets/glb/jar-450g-v4.glb", position: {
     x: 0,
-    y: 0,
+    y: -0.01,
     z: 0
   }  }
 });
@@ -81,9 +86,13 @@ const cameraConfigs = Object.freeze({
   y: 0.04,
   z: 0
 })
-
+Cache.enabled = true;
 export default {
   setup() {
+    let stats = new Stats();
+    //ref to canvas, window size
+    stats.showPanel(0);
+    document.body.appendChild(stats.dom)
     let emitter = inject('emitter')
     const webGl = ref();
     const sceneContainer = ref();
@@ -108,15 +117,19 @@ export default {
       return containerWidth.value / containerHeight.value;
     });
     
-    //Loaders + configuration of loaders
+    /*Loaders + configuration of loaders*/
     const loader = new GLTFLoader();
     const globalTextureLoader = new TextureLoader();
     // Draco compression loader.
-    // const draco = new DRACOLoader();
-    // draco.setDecoderConfig({ type: 'js' });
-    // draco.setDecoderPath('https://www.gstatic.com/draco/versioned/decoders/1.5.7/');
-    // draco.preload();
-    // loader.setDRACOLoader(draco);
+    const draco = new DRACOLoader();
+    draco.setDecoderConfig({ type: "js" });
+    draco.setDecoderPath("/node_modules/three/examples/jsm/libs/draco/gltf/");
+    draco.preload();
+    // KTX2 texture compression
+    const KTX2_LOADER = new KTX2Loader().setTranscoderPath(
+      `/node_modules/three/examples/jsm/libs/basis/`,
+    );
+    loader.setDRACOLoader(draco).setKTX2Loader(KTX2_LOADER).setMeshoptDecoder(MeshoptDecoder)
 
     /**
      * @type {THREE.PerspectiveCamera | null}
@@ -247,9 +260,9 @@ export default {
       globalOrbitControls.target.set(0, cameraConfigs.y, 0)
       globalOrbitControls.update();
 
-      //Zoom Distances - Max (zoom out) distance is equal to camera x starting position
+      // Zoom Distances - Max (zoom out) distance is equal to camera x starting position
       globalOrbitControls.maxDistance = cameraConfigs.x;
-      globalOrbitControls.minDistance = 0.18;
+      globalOrbitControls.minDistance = cameraConfigs.x;
 
       // controls.enableZoom = false;
 
@@ -312,7 +325,10 @@ export default {
       let textureUrl = `${baseTextureUrl}/${slugs.brand}/${slugs.productLine}/${slugs.size}/${slugs.flavour}.png`;
       console.log("URL:", textureUrl)
       let texture = await globalTextureLoader.loadAsync(textureUrl);
+      console.log("Texture MIPMAP:", texture)
       texture.flipY = false;
+      texture.generateMipMaps = true
+      texture.needsUpdate = true;
       jarTextures[slugs.brand][slugs.productLine][slugs.size][slugs.flavour] = texture;
 
       return texture;
@@ -441,6 +457,9 @@ export default {
     }
 
     function calculateJarMovement(target) {
+      
+      globalOrbitControls.autoRotate = false;
+      globalOrbitControls.update();
       const cameraDirections = getCameraDirections();
       console.log("Camera Directions", cameraDirections);
 
@@ -502,9 +521,9 @@ export default {
             console.log("will animateJarIn")
             setTimeout( () => { // Delay transition for renderer to update.
               let durationIn = 1200
-              if(currentJarSize.value === 'large') durationIn = 2000
+              if(currentJarSize.value === 'large') durationIn = 1200
               animateJarIn(currentJarScene, durationIn) 
-            }, 800)
+            }, 0)
           });
         })
         .start();
@@ -532,7 +551,7 @@ export default {
 
       new TWEEN.Tween(jar.position)
         .to({ 
-          y: -0.15,
+          y: -0.18,
          }, 600) // Move out of view - Very sensitive to X value (use 1 decimal point values)
         .easing(TWEEN.Easing.Back.In)
         .onComplete( async () => {
@@ -541,7 +560,7 @@ export default {
             console.log("will animateJarIn")
             setTimeout( () => { // Delay transition for renderer to update.
               animateJarInY(currentJarScene) 
-            }, 800)
+            }, 1100)
           });
         })
         .start();
@@ -552,7 +571,6 @@ export default {
       if(size === currentJarSize.value){
         return
       } else {
-        globalOrbitControls.autoRotate = false;
         globalOrbitControls.update()
         console.log("Beginning process", globalOrbitControls.autoRotate)
         slugs.size = size === 'small' ? '150g' : size === 'medium' ? '300g' : '450g'
@@ -642,43 +660,46 @@ export default {
       // await setCanvas();
       // animate();
       // console.log("scene:", globalScene)
-      let tempPos;
-      // const meshAxes = new AxesHelper(5);
-      // scene.add(meshAxes)
-      let iterations = 0;
-      globalScene.traverse((obj) => {
-        if(obj.isMesh){
-          let tempAxes = new AxesHelper(5)
-          if(iterations === 0){
-            // console.log("AXESCOLOR 0")
-            tempAxes.setColors('red', 'green', 'blue')
-          }else if(iterations === 1){
-            // console.log("AXESCOLOR 1")
-            tempAxes.setColors('purple', 'yellow', 'blue')
-          }else if(iterations === 2){
-            // console.log("AXESCOLOR 2")
-            tempAxes.setColors('pink', 'brown', 'blue')
-            tempPos = obj.position
-          }else if(iterations === 3){
-            // console.log("AXESCOLOR 3")
-            tempAxes.setColors('black', 'skyblue', 'blue')
-          }
-          // console.log("OBJ ", obj.name, "is positioned at:", obj.position.x, obj.position.y, obj.position.z, "iteration:", iterations)
-          obj.add(tempAxes)
-          iterations++
-          // // console.log("OBJ POS:")
-        }
-      })
-      // console.log("Scene pos:", globalScene.position.x, globalScene.position.y, globalScene.position.z)
-      // console.log("Cam pos:", globalCamera.position.x, globalCamera.position.y, globalCamera.position.z)
-      globalCamera.position.set(0, 0, 0.6)
-      globalCamera.lookAt(tempPos)
-      globalCamera.updateProjectionMatrix();
-      // console.log("Cam LOOKAT:", globalCamera)
+      // let tempPos;
+      // // const meshAxes = new AxesHelper(5);
+      // // scene.add(meshAxes)
+      // let iterations = 0;
+      // globalScene.traverse((obj) => {
+      //   if(obj.isMesh){
+      //     let tempAxes = new AxesHelper(5)
+      //     if(iterations === 0){
+      //       // console.log("AXESCOLOR 0")
+      //       tempAxes.setColors('red', 'green', 'blue')
+      //     }else if(iterations === 1){
+      //       // console.log("AXESCOLOR 1")
+      //       tempAxes.setColors('purple', 'yellow', 'blue')
+      //     }else if(iterations === 2){
+      //       // console.log("AXESCOLOR 2")
+      //       tempAxes.setColors('pink', 'brown', 'blue')
+      //       tempPos = obj.position
+      //     }else if(iterations === 3){
+      //       // console.log("AXESCOLOR 3")
+      //       tempAxes.setColors('black', 'skyblue', 'blue')
+      //     }
+      //     // console.log("OBJ ", obj.name, "is positioned at:", obj.position.x, obj.position.y, obj.position.z, "iteration:", iterations)
+      //     obj.add(tempAxes)
+      //     iterations++
+      //     // // console.log("OBJ POS:")
+      //   }
+      // })
+      // // console.log("Scene pos:", globalScene.position.x, globalScene.position.y, globalScene.position.z)
+      // // console.log("Cam pos:", globalCamera.position.x, globalCamera.position.y, globalCamera.position.z)
+      // globalCamera.position.set(0, 0, 0.6)
+      // globalCamera.lookAt(tempPos)
+      // globalCamera.updateProjectionMatrix();
+      // // console.log("Cam LOOKAT:", globalCamera)
+      globalOrbitControls.reset();
     }
 
 
     const animate = () => {
+      
+      stats.begin();
       globalOrbitControls.update();
       globalRenderer.render(globalScene, globalCamera);
       requestAnimationFrame(animate);
@@ -688,6 +709,7 @@ export default {
         // // console.log("controls:", controls.target.x, controls.target.y, controls.target.z)
         LOGTIMER++
       }
+      stats.end()
     };
 
     function getDistanceFromCanvas(target) {
@@ -740,7 +762,47 @@ export default {
     });
 
     onUnmounted(() => {
-      window.removeEventListener('resize', updateContainerSize); // Clean up
+      // Remove resize event listener
+      window.removeEventListener('resize', debouncedUpdateSize);
+
+      if (globalRenderer) {
+        globalRenderer.dispose();
+      }
+
+      // Dispose all materials, geometries, textures, etc.
+      if (globalScene) {
+        globalScene.traverse(function (object) {
+          if (object.isMesh) {
+            if (object.geometry) {
+              object.geometry.dispose();
+            }
+            if (object.material) {
+              if (Array.isArray(object.material)) {
+                object.material.forEach(material => material.dispose());
+              } else {
+                object.material.dispose();
+              }
+            }
+            if (object.material && object.material.map) {
+              object.material.map.dispose();
+            }
+          }
+          if (object.isLight && object.shadow && object.shadow.map) {
+            object.shadow.map.dispose();
+          }
+        });
+      }
+
+      // Dispose Controls
+      if (globalOrbitControls) {
+        globalOrbitControls.dispose();
+      }
+
+      // Clear the internal three.js caches
+      Cache.clear();
+      if (stats.dom) {
+        document.body.removeChild(stats.dom);
+      }
     });
 
     

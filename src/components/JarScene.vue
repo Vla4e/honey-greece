@@ -8,28 +8,43 @@
   >
     <canvas ref="webGl" class="webGl jar-sc-canvas" />
   </div>
+  <button class="hdr-switch" @click="switchLighting()">Switch HDR/EXR</button>
+  <div class="ratio-container">
+    <button class="ratio-switch-0" @click="setPixelRatio(0)"> &lt; pixel ratio</button>
+    <span class="ratio-label">current: {{ currentPixelRatio.toFixed(2) }}</span>
+    <button class="ratio-switch-1" @click="setPixelRatio(1)"> pixel ratio ></button>
+  </div>
 </template>
 <script>
-import { watch, onMounted, ref, computed } from "vue";
+import { watch, onMounted, onUnmounted, ref, computed } from "vue";
 import { useWindowSize } from "@vueuse/core";
 
 import Stats from "stats.js";
 
 import { OrbitControls } from "three/addons/controls/OrbitControls.js";
 import { DRACOLoader } from "three/addons/loaders/DRACOLoader.js";
+import { KTX2Loader } from 'three/addons/loaders/KTX2Loader.js';
+import { MeshoptDecoder } from 'three/addons/libs/meshopt_decoder.module.js';
 import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
 import { RGBELoader } from "three/addons/loaders/RGBELoader.js";
+import { EXRLoader } from 'three/addons/loaders/EXRLoader.js';
 import {
   Scene,
   PerspectiveCamera,
   WebGLRenderer,
   PMREMGenerator,
   AxesHelper,
+  Cache,
+  Fog,
+  PointLight,
   Mesh,
   MeshBasicMaterial,
   MeshStandardMaterial,
+  LinearMipmapLinearFilter,
 } from "three";
 
+Cache.enabled = true;
+let textureUrl = "assets/exr/lw.exr"
 export default {
   setup() {
     let stats = new Stats();
@@ -73,92 +88,173 @@ export default {
 
     //Loaders + configuration of loaders
     const loader = new GLTFLoader();
-    const backgroundLoader = new GLTFLoader();
+    // const backgroundLoader = new GLTFLoader();
     const draco = new DRACOLoader();
+    const KTX2_LOADER = new KTX2Loader().setTranscoderPath(
+      `node_modules/three/examples/jsm/libs/basis/`,
+    );
     draco.setDecoderConfig({ type: "js" });
-    draco.setDecoderPath("https://www.gstatic.com/draco/v1/decoders/");
-    draco.preload();
-    loader.setDRACOLoader(draco);
-    backgroundLoader.setDRACOLoader(draco);
+    draco.setDecoderPath("node_modules/three/examples/jsm/libs/draco/gltf/");
+    // draco.preload();
+    loader.setDRACOLoader(draco)
+    //	.setMeshoptDecoder(MeshoptDecoder);
+    // backgroundLoader.setDRACOLoader(draco);
+    
+    //Canvas / Renderer
+    let canvas = null;
 
     async function setLighting(renderer) {
       // console.log("calling set lighting");
       var pmremGenerator = new PMREMGenerator(renderer);
-      let rgbeTexture = await new RGBELoader().loadAsync("assets/HDR/test-hdr.hdr");
-      // console.log("loader texture", rgbeTexture);
-      var envMap = pmremGenerator.fromEquirectangular(rgbeTexture).texture;
-      scene.background = null;
+      let exrTexture = await new EXRLoader().loadAsync(textureUrl)
+      console.log("EXRTEXTURE", exrTexture) 
+      // let rgbeTexture = await new RGBELoader().loadAsync("assets/HDR/test-hdr.hdr");
+      // // console.log("loader texture", rgbeTexture);
+      let envMap = pmremGenerator.fromEquirectangular(exrTexture).texture;
+      // pmremGenerator.compileEquirectangularShader();
+      scene.background = envMap;
       scene.environment = envMap;
-      rgbeTexture.dispose();
-      pmremGenerator.dispose();
-      pmremGenerator.compileEquirectangularShader();
+      pmremGenerator.dispose()
+      exrTexture.dispose();
+      // rgbeTexture.dispose();
+      // pmremGenerator.dispose();
+      // pmremGenerator.compileEquirectangularShader();
+    }
+    function enableMipmaps(texture) {
+      console.log("Enabling mipmaps")
+      texture.minFilter = LinearMipmapLinearFilter;  // Set minFilter to use mipmaps
+      texture.needsUpdate = true;  // Important to update the texture
+    }
+    async function loadGlb(source) {
+      loader.setKTX2Loader(KTX2_LOADER.detectSupport(renderer)).setMeshoptDecoder(MeshoptDecoder);
+      let loaderPromise = await loader.loadAsync(source)
+      console.log("LP", loaderPromise.scene)
+      // loaderPromise.scene.traverse((obj) => {
+      //   if(obj.isMesh){
+      //     console.log("Obj material", obj.material.transparent)
+      //     if(obj.material.transparent){
+      //       console.log("Before update", obj.material.transparent);
+      //       obj.material.transparent = false;
+      //       obj.material.opacity = 1;
+      //       obj.material.needsUpdate = true;
+      //       console.log("After update", obj.material.transparent);
+      //     }
+      //     // obj.material.transparent = false
+      //     // if (obj.material.map) {  // Check if the mesh has a texture mapped
+      //     //   enableMipmaps(obj.material.map);
+      //     // }
+      //     // // Also check other textures like bumpMap, normalMap, etc. if needed
+      //     // if (obj.material.bumpMap) {
+      //     //   enableMipmaps(obj.material.bumpMap);
+      //     // }
+      //     // if (obj.material.normalMap) {
+      //     //   enableMipmaps(obj.material.normalMap);
+      //     // }
+      //   }
+      // })
+      console.log("finished traversal")
+      return loaderPromise
+      console.log("promise", loaderPromise.scene )
+      if(loaderPromise){
+        loaderPromise.scene.name = source
+        let scene = loaderPromise.scene;
+        scene.position.set(0, 0, 0)
+        // const axesHelperNew = new AxesHelper(5)
+        // scene.add(axesHelperNew)
+        let meshes = scene.children;
+        let targetMesh = meshes[0];
+        const meshNames = meshes.map((mesh) => {
+          // // console.log("MESHNAME", mesh.name)
+          return mesh.name
+        })
+        // // console.log('meshNames', meshNames)
+  
+        return { gltf: loaderPromise, scene, meshes, targetMesh, meshNames, loaded: true }
+      } else return {loaded: false}
     }
     const setCanvas = async () => {
-      // console.log("calledSetCanvas");
+      console.log("calledSetCanvas");
       scene = new Scene();
       //XYZ axes
       // scene.add(new AxesHelper(5))
-      let loaderPromise = await loader.loadAsync("assets/glb/home-v2.glb");
-      console.log("loaderPromise", loaderPromise)
-      // let backgroundLoaderPromise = await backgroundLoader.loadAsync(
-      //   "assets/glb/background.glb"
-      // );
+
+      //jarscene.glb
+      //no_compression.glb
+      //low_res_no_compression.glb
+      //low_res_10_compression.glb
+      let loaderPromise = await loadGlb("assets/glb/jarscene-v5.glb");
+      console.log("Loaded glb: ", loaderPromise)
       scene.add(loaderPromise.scene)
       const axesHelper = new AxesHelper(5)
       axesHelper.setColors('red', 'green', 'blue')
       scene.add(axesHelper)
-      // console.log("loaderPromise", loaderPromise);
-      // // console.log("BLPCHILDREN", backgroundLoaderPromise.scene.children)
-      // // console.log('loader', loaderPromise)
-      // // console.log("loader.scene.children", loaderPromise.scene.children)
+
       //Load Camera from GLB and add to scene
       try {
-        camera = loaderPromise.cameras[0];
+        // camera = loaderPromise.cameras[0].clone();
+        console.log("camera: ", camera)
+        camera = new PerspectiveCamera(40, windowWidth.value / windowHeight.value, 0.01, 3)
+        camera.far = 2;
+        camera.near = 0.01;
         camera.aspect = windowWidth.value / windowHeight.value
-        console.log("CAMPOS", camera.position.x, camera.position.y, camera.position.z )
-        // camera = new PerspectiveCamera(40, windowWidth.value / windowHeight.value, 0.2, 10)
-        // camera.position.set(0, 0.2, -0.8);
-        camera.lookAt(0, 0, 0);
+        // // console.log("CAMPOS", camera.position.x, camera.position.y, camera.position.z )
+        camera.position.set(-0.18599549214422342, -0.03974181830952136, -0.4301602440654409);
+        camera.lookAt(-0.05, -0.03974181830952136, 0);
+        // camera.position.set( 5, 2, 8 );
         scene.add(camera);
       } catch (e) {
         console.error("Camera not loaded yet");
       }
 
-      // Renderer
-      const canvas = webGl.value;
-      renderer = new WebGLRenderer({ canvas, antialias: true, alpha: true });
-      renderer.setClearColor(0x000000, 0);
-      renderer.setSize(windowWidth.value, windowHeight.value);
-      
+      //Orbit Controls
       orbitControls = new OrbitControls(camera, canvas);
-      // globalOrbitControls.position.set(0, 0.02, 0)
-      orbitControls.target.set(0, 0.02, 0)
       orbitControls.update();
 
       //Zoom Distances - Max (zoom out) distance is equal to camera x starting position
-      orbitControls.maxDistance = 1.5;
+      orbitControls.maxDistance = 25;
       orbitControls.minDistance = 0.18;
-
       // controls.enableZoom = false;
-
       //Vertical Rotation Limiting Angles
-      orbitControls.minPolarAngle = (30 * Math.PI)/180;
+      orbitControls.minPolarAngle = (60 * Math.PI)/180;
       orbitControls.maxPolarAngle = (90 * Math.PI)/180;
-
       orbitControls.enablePan = true;
-      orbitControls.enableDamping = true;
+      orbitControls.enableDamping = false;
+
       await setLighting(renderer);
       modelReady.value = true;
     };
 
-    watch(modelReady, (val) => {
-      // console.log("VAL CHANGE", val);
-      if (val) {
-      }
-    });
+    // watch(modelReady, (val) => {
+    //   // console.log("VAL CHANGE", val);
+    //   if (val) {
+    //   }
+    // });
+    function switchLighting() {
+      if(textureUrl.includes('lw.exr')){
+        textureUrl = 'assets/exr/bright.exr'
+      } else textureUrl = "assets/exr/lw.exr"
+      destroyEverything()
+      firstAnimate()
+    }
 
-    const firstAnimate = async () => {
-      await setCanvas().then(() => {
+    let currentPixelRatio = ref(window.devicePixelRatio)
+    function setPixelRatio(flag){
+      if(flag) {
+        currentPixelRatio.value += 0.1
+      } else {
+        currentPixelRatio.value -= 0.1
+      }
+      renderer.setPixelRatio(currentPixelRatio.value)
+    }
+    const firstAnimate = async (textureUrl) => {
+      // webGl should be mounted at this point
+      canvas = webGl.value;
+      renderer = new WebGLRenderer({ canvas, antialias: true, alpha: false });
+      // renderer.setClearColor(0x000000, 0);
+      renderer.setSize(windowWidth.value, windowHeight.value);
+      renderer.setPixelRatio(window.devicePixelRatio);
+      console.log("Got canvas and renderer before?", !!canvas, !!renderer)
+      await setCanvas(textureUrl).then(() => {
         // startTrackingMouseMovement();
         window.addEventListener("resize", onWindowResize, false);
         animate();
@@ -172,6 +268,7 @@ export default {
         // treesPositionVector = scene.children[2].position;
         requestAnimationFrame(animate);
         renderer.render(scene, camera);
+        // console.log("CAMPOS:", camera.position.x,camera.position.y,camera.position.z,)
       }
       stats.end();
     };
@@ -188,6 +285,53 @@ export default {
       // animate();
       // // console.log('animation:', animation)
     });
+    function destroyEverything(){
+      console.log("Destroying EVERYTHING")
+      modelReady.value = false;
+
+      // Dispose renderer and its resources
+      if (renderer) {
+        renderer.dispose();
+      }
+
+      // Dispose scene objects
+      if (scene) {
+        scene.traverse(function (object) {
+          if (object.isMesh) {
+            if (object.geometry) {
+              object.geometry.dispose();
+            }
+            if (object.material) {
+              if (Array.isArray(object.material)) {
+                object.material.forEach(material => material.dispose());
+              } else {
+                object.material.dispose();
+              }
+            }
+          }
+        });
+      }
+
+      // Dispose controls
+      if (orbitControls) {
+        orbitControls.dispose();
+      }
+
+      // Remove event listeners
+      window.removeEventListener("resize", onWindowResize);
+
+      // Clear three.js caches
+      Cache.clear();
+
+      // Remove stats from DOM if it exists
+      if (stats.dom) {
+        document.body.removeChild(stats.dom);
+      }
+    }
+
+    onUnmounted(()=> {
+      destroyEverything()
+    })
     function onWindowResize() {
       camera.aspect = windowWidth.value / windowHeight.value;
       camera.updateProjectionMatrix();
@@ -219,7 +363,7 @@ export default {
       camera.position.x = newX;
       camera.position.z = newY;
     }
-    return { webGl, firstAnimate, eventCounter, modelReady };
+    return { webGl, firstAnimate, eventCounter, modelReady, switchLighting, setPixelRatio, currentPixelRatio };
   },
 };
 </script>
@@ -262,5 +406,33 @@ export default {
   font-size: 64px;
   text-align: center;
   z-index: 100;
+}
+.hdr-switch{
+  position: absolute;
+  bottom: 0%;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 200000
+}
+
+.ratio-container{
+  display: flex;
+  justify-content: space-around;
+  position: absolute;
+  bottom: 0%;
+  left: 65%;
+  z-index: 200000
+}
+.ratio-switch{
+  &-0{
+    margin-right: 10px;
+  }
+  &-1{
+  }
+}
+.ratio-label{
+  color: white;
+  font-size: 20px;
+    margin-right: 25px;
 }
 </style>

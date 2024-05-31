@@ -601,7 +601,7 @@ export default {
     left: 0;
     right: 0;
     background: linear-gradient(to right, white 0%, white 100%);
-    animation: fadeEffectLeftToRight 1s 2s forwards; // delay for switch animation to play out
+    animation: fadeEffectLeftToRight 0.5s 2.2s forwards; // delay for switch animation to play out
 }
 .stylish-pointer-to-left::before{
   content: "";
@@ -611,7 +611,7 @@ export default {
   left: 0;
   right: 0;
   background: linear-gradient(to right, white 0%, white 100%);
-  animation: fadeEffectRightToLeft 1s 2s forwards; // delay for switch animation to play out
+  animation: fadeEffectRightToLeft 0.5s 2.2s forwards; // delay for switch animation to play out
 }
 @keyframes fadeEffectLeftToRight {
     0% {

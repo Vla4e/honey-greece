@@ -7,6 +7,7 @@ import ProductScene from './ProductScene.vue'
 import LinkTree from './LinkTree.vue'
 import PageTransition from './Transitions/PageTransition.vue'
 import BurgerMenuIcon from './Navbar/BurgerMenuIcon.vue'
+import Carousel from './Carousel.vue'
 export default [
     NavbarComponent,
     Sidebar,
@@ -16,5 +17,6 @@ export default [
     ProductScene,
     LinkTree,
     PageTransition,
-    BurgerMenuIcon
+    BurgerMenuIcon,
+    Carousel
 ]

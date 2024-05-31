@@ -1,5 +1,5 @@
 <template>
-  <nav class="navbar">
+  <nav class="navbar" :class="navbarFloating ? 'floating': ''">
     <div class="links-container">
       <div class="burger-icon-container">
         <!-- <img :src="sidebar" @click="toggleSidebar" class="burger-icon"/> -->
@@ -20,7 +20,9 @@
 </template>
 
 <script>
-import { inject, ref } from 'vue'
+import { inject, ref, computed } from 'vue'
+import { useNavbarStore } from '@/store/navbar.js'
+
 import logoUrl from '@/assets/images/main-logo.png'
 import burgerIcon from '@/assets/images/burger-icon.svg'
 import homeIcon from '@/assets/images/home-icon.svg'
@@ -32,6 +34,9 @@ export default {
   setup() {
     let emitter = inject('emitter')
     let brands = []
+    
+    const navbarStore = useNavbarStore();
+    let navbarFloating = computed(() => navbarStore.getNavbarFloating)
 
     //"Map" brandConfigs to brands variable
     Object.keys(brandConfigs).forEach((brand) => {
@@ -89,6 +94,7 @@ export default {
       homeIcon,
       sidebar: burgerIcon,
       brands,
+      navbarFloating,
       toggleContactForm
     };
   },
@@ -106,6 +112,12 @@ export default {
   position: relative;
   // margin-bottom: 2%;
   z-index: 2;
+  background: linear-gradient(to top, transparent 0%, #13131310 100%);
+  &.floating{
+    position: absolute;
+    top: 0;
+    left: 0;
+  }
 }
 .blend-link{
   color: #000;
