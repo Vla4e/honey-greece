@@ -1,5 +1,5 @@
 <template>
-  <nav class="navbar" :class="navbarFloating ? 'floating': ''">
+  <nav v-if="!isMobile" class="navbar" :class="navbarFloating ? 'floating': ''">
     <div class="links-container">
       <div class="burger-icon-container">
         <!-- <img :src="sidebar" @click="toggleSidebar" class="burger-icon"/> -->
@@ -22,7 +22,7 @@
 <script>
 import { inject, ref, computed } from 'vue'
 import { useNavbarStore } from '@/store/navbar.js'
-
+import { useWindowSize } from '@vueuse/core'
 import logoUrl from '@/assets/images/main-logo.png'
 import burgerIcon from '@/assets/images/burger-icon.svg'
 import homeIcon from '@/assets/images/home-icon.svg'
@@ -32,6 +32,11 @@ import brandConfigs from "@/assets/brand-information/index.js"
 export default {
   name: 'NavbarComponent',
   setup() {
+    const { width: windowWidth, height: windowHeight } = useWindowSize();
+    let isMobile = ref(false);
+    if(windowWidth.value < 764){
+      isMobile.value = true;
+    } else isMobile.value = false
     let emitter = inject('emitter')
     let brands = []
     
@@ -95,7 +100,8 @@ export default {
       sidebar: burgerIcon,
       brands,
       navbarFloating,
-      toggleContactForm
+      toggleContactForm,
+      isMobile
     };
   },
 };

@@ -1,8 +1,8 @@
 
 <template>
   <div class="home-container">
-    <JarScene v-if="!showVideo"/>
-    <div v-else class="video-container">
+    <JarScene v-if="!showVideo && !isMobile"/>
+    <div v-else-if="!isMobile" class="video-container">
       <!-- Add video tag here -->
       <!-- <img :src="bgNew" class="background-video"/> -->
       <video class="background-video" autoplay muted loop playsinline>
@@ -10,7 +10,8 @@
         Your browser does not support the video tag.
       </video>
     </div>
-    <button class="show-vid-button" @click="showBg()">switch to video/scene</button>
+    <button v-if="!isMobile" class="show-vid-button" @click="showBg()">switch to video/scene</button>
+    <JarSceneMobile v-if="isMobile"/>
     <!-- <div class="texts-container">
       <div class="home-text-container">
         <span class="home-text">Essence of <br/>Nature</span>
@@ -23,21 +24,29 @@
 
 <script>
 import { ref } from 'vue';
+import { useWindowSize } from "@vueuse/core";
 import homeVideo from '@/assets/pages/home/background-vid.mp4'
 import homeVideoHQ from '@/assets/pages/home/background-video-hq.mp4'
 import bgNew from '@/assets/pages/home/bg-new.png'
 import JarScene from '../components/JarScene.vue'
+import JarSceneMobile from '../components/JarSceneMobile.vue'
 import WebGL from 'three/addons/capabilities/WebGL.js';
 export default{
   name: 'Home',
-  components: { JarScene },
+  components: { JarScene, JarSceneMobile },
   setup(){
+    const { width: windowWidth, height: windowHeight } = useWindowSize();
+    let isMobile = ref(false);
+    if(windowWidth.value < 764){
+      isMobile.value = true;
+    } else isMobile.value = false
     console.log("WebGL AVAILABLE", WebGL.isWebGLAvailable())
+    console.log("Is mobile:", isMobile.value)
     let showVideo = ref(false)
     function showBg(){
       showVideo.value = !showVideo.value
     }
-    return { homeVideo, homeVideoHQ, bgNew, showVideo, showBg}
+    return { homeVideo, homeVideoHQ, bgNew, showVideo, showBg, isMobile}
   }
 }
 </script>

@@ -8,12 +8,6 @@
   >
     <canvas ref="webGl" class="webGl jar-sc-canvas" />
   </div>
-  <button class="hdr-switch" @click="switchLighting()">Switch HDR/EXR</button>
-  <div class="ratio-container">
-    <button class="ratio-switch-0" @click="setPixelRatio(0)"> &lt; pixel ratio</button>
-    <span class="ratio-label">current: {{ currentPixelRatio.toFixed(2) }}</span>
-    <button class="ratio-switch-1" @click="setPixelRatio(1)"> pixel ratio ></button>
-  </div>
 </template>
 <script>
 import { watch, onMounted, onUnmounted, ref, computed } from "vue";
@@ -47,13 +41,10 @@ Cache.enabled = true;
 let textureUrl = "assets/exr/lw.exr"
 export default {
   setup() {
-    let stats = new Stats();
+    console.log("MOBILE LOADER")
     //ref to canvas, window size
-    stats.showPanel(0);
-    document.body.appendChild(stats.dom)
     const webGl = ref();
     const { width: windowWidth, height: windowHeight } = useWindowSize();
-    // console.log("Window size and width from useWindowSize", windowWidth, windowHeight);
 
     //panScene() settings
     let rotationDegrees = 1;
@@ -261,7 +252,6 @@ export default {
       });
     };
     const animate = () => {
-      stats.begin();
       if (modelReady.value) {
         //set values of rotation object and position vector when scene meshes are added to scene
         // jarRotationObj = scene.children[3].rotation;
@@ -270,7 +260,6 @@ export default {
         renderer.render(scene, camera);
         // console.log("CAMPOS:", camera.position.x,camera.position.y,camera.position.z,)
       }
-      stats.end();
     };
 
     onMounted(async () => {
@@ -406,33 +395,5 @@ export default {
   font-size: 64px;
   text-align: center;
   z-index: 100;
-}
-.hdr-switch{
-  position: absolute;
-  bottom: 0%;
-  left: 50%;
-  transform: translateX(-50%);
-  z-index: 200000
-}
-
-.ratio-container{
-  display: flex;
-  justify-content: space-around;
-  position: absolute;
-  bottom: 0%;
-  left: 65%;
-  z-index: 200000
-}
-.ratio-switch{
-  &-0{
-    margin-right: 10px;
-  }
-  &-1{
-  }
-}
-.ratio-label{
-  color: white;
-  font-size: 20px;
-    margin-right: 25px;
 }
 </style>
