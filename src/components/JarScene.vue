@@ -540,11 +540,11 @@ export default {
       }
 
       //Remove postprocessing 
-      if(postprocessing){
-        if (postprocessing.materialBokeh) postprocessing.materialBokeh.dispose();
-        if (postprocessing.rtTextureColor) postprocessing.rtTextureColor.dispose();
-        if (postprocessing.rtTextureDepth) postprocessing.rtTextureDepth.dispose();
-      }
+      // if(postprocessing){
+      //   if (postprocessing.materialBokeh) postprocessing.materialBokeh.dispose();
+      //   if (postprocessing.rtTextureColor) postprocessing.rtTextureColor.dispose();
+      //   if (postprocessing.rtTextureDepth) postprocessing.rtTextureDepth.dispose();
+      // }
     }
 
     onUnmounted(()=> {
