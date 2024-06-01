@@ -1,11 +1,13 @@
 
 <template>
   <div :class="`current-tab-${currentTabId}`" class="history-page-container">
-    <keep-alive>
-      <Transition name="slide-1">
-        <component class="tab" :is="currentTabComponent" :currentPhase="currentPhase"></component>
-      </Transition>
-    </keep-alive>
+    <div class="tab-container">
+        <keep-alive>
+          <Transition name="slide-1">
+            <component class="tab" :is="currentTabComponent" :key="currentTabId" :currentPhase="currentPhase"></component>
+          </Transition>
+        </keep-alive>
+    </div>
     <div class="change-tabs">
       <button class="slide-changer" @click="previousTab()" > &lt; prev tab</button>
       <button class="slide-changer" @click="nextTab()">next tab > </button>
@@ -60,22 +62,28 @@ const previousPhase = () => {
 
 </script>
 
-<style lang="scss">
+<style lang="scss" scoped>
 .history-page-container{
   width: 100%;
   height: 100%;
   max-width: 100% !important;
   display: flex;
   flex-direction: column;
-  .tab{
-    display: flex;
+  flex-grow: 0;
+  margin: 0;
+  .tab-container{
     width: 100%;
     height: 100%;
-    overflow: hidden;
-  }
-  &.current-tab-1{
-    background-image: none;
-    background-color: white;
+    .tab{
+      display: flex;
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+    }
+    &.current-tab-1{
+      background-image: none;
+      background-color: white;
+    }
   }
 }
 

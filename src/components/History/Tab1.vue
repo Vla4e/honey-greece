@@ -51,8 +51,8 @@ watch(() => props.currentPhase, (newPhase) => {
 .tab-1{
   position: relative;
   background-image: url('@/assets/pages/history/tab-1-background.png');
-  background-size:cover;
-  background-position:center;
+  background-size: cover;
+  background-position: center;
   background-repeat: no-repeat;
   .heading-container{
     display: flex;

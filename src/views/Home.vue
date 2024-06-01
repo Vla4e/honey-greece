@@ -25,8 +25,7 @@
 <script>
 import { ref } from 'vue';
 import { useWindowSize } from "@vueuse/core";
-import homeVideo from '@/assets/pages/home/background-vid.mp4'
-import homeVideoHQ from '@/assets/pages/home/background-video-hq.mp4'
+import homeVideoHQ from '@/assets/pages/home/0001_1.mp4'
 import bgNew from '@/assets/pages/home/bg-new.png'
 import JarScene from '../components/JarScene.vue'
 import JarSceneMobile from '../components/JarSceneMobile.vue'
@@ -46,7 +45,7 @@ export default{
     function showBg(){
       showVideo.value = !showVideo.value
     }
-    return { homeVideo, homeVideoHQ, bgNew, showVideo, showBg, isMobile}
+    return { homeVideoHQ, bgNew, showVideo, showBg, isMobile}
   }
 }
 </script>
