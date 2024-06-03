@@ -61,5 +61,6 @@ import {
   
   export function updateFocusCoords(postprocessing, x, y) {
     postprocessing.bokeh_uniforms['focusCoords'].value.set(x, y);
+    // postprocessing.bokeh_uniforms['fstop'] = 0.1;
   }
   

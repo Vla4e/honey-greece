@@ -120,12 +120,12 @@ export default {
     //   updateShaderUniforms();
     // }, { deep: true });
 
-    // const depthShader = BokehDepthShader;
-    // let materialDepth = new ShaderMaterial({
-    //   uniforms: depthShader.uniforms,
-    //   vertexShader: depthShader.vertexShader,
-    //   fragmentShader: depthShader.fragmentShader
-    // });
+    const depthShader = BokehDepthShader;
+    let materialDepth = new ShaderMaterial({
+      uniforms: depthShader.uniforms,
+      vertexShader: depthShader.vertexShader,
+      fragmentShader: depthShader.fragmentShader
+    });
 
     // function initPostprocessing() {
     const mouse = reactive({
@@ -172,7 +172,8 @@ export default {
       
       postprocessing.bokeh_uniforms['focalDepth'].value = ldistance;
     }
-    // let postprocessing = initPostprocessing(windowWidth.value, windowHeight.value)
+
+    let postprocessing = initPostprocessing(windowWidth.value, windowHeight.value)
 
     //   const rtWidth = windowWidth.value;
     //   const rtHeight = windowHeight.value;
@@ -330,7 +331,9 @@ export default {
       //no_compression.glb
       //low_res_no_compression.glb
       //low_res_10_compression.glb
-      let loaderPromise = await loadGlb("assets/glb/huge.glb");
+      // let loaderPromise = await loadGlb("assets/glb/huge.glb");
+      // let loaderPromise = await loadGlb("assets/glb/jarscene-v6.glb");
+      let loaderPromise = await loadGlb("assets/glb/jarscene-test-2.glb");
       scene.add(loaderPromise.scene)
 
       const axesHelper = new AxesHelper(5)
@@ -418,13 +421,13 @@ export default {
       renderer = new WebGLRenderer({ canvas, antialias: true, alpha: false });
       // renderer.setClearColor(0x000000, 0);
       renderer.setSize(windowWidth.value, windowHeight.value);
-      renderer.setPixelRatio(window.devicePixelRatio*0.95);
+      renderer.setPixelRatio(window.devicePixelRatio);
       console.log("Got canvas and renderer before?", !!canvas, !!renderer)
       await setCanvas(textureUrl).then(() => {
         // startTrackingMouseMovement();
         // initPostprocessing();
-        // materialDepth.uniforms[ 'mNear' ].value = camera.near;
-        // materialDepth.uniforms[ 'mFar' ].value = camera.far;
+        materialDepth.uniforms[ 'mNear' ].value = camera.near;
+        materialDepth.uniforms[ 'mFar' ].value = camera.far;
         window.addEventListener("resize", onWindowResize, false);
         // updateShaderUniforms()
         animate();
@@ -449,6 +452,9 @@ export default {
               stats.end();
           }
         }
+        // stats.begin();
+        //       renderer.render(scene, camera);
+        //       stats.end();
         // stats.begin()
         // // calculateDepthOfField();
         // renderer.setRenderTarget(postprocessing.rtTextureColor);
@@ -473,7 +479,7 @@ export default {
     onMounted(async () => {
       await nextTick();
       firstAnimate();
-      // webGl.value.addEventListener( 'pointermove', debouncePointerMove );
+      webGl.value.addEventListener( 'pointermove', debouncePointerMove );
     });
 
     function onPointerMove(event) {
