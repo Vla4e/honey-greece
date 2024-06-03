@@ -444,18 +444,18 @@ export default {
         //set values of rotation object and position vector when scene meshes are added to scene
         // jarRotationObj = scene.children[3].rotation;
         // treesPositionVector = scene.children[2].position;
-        if(cameraMoved()){
-          if (delta  > interval) { //should render every 33ms.
-              stats.begin();
-              delta = delta % interval;
-              renderer.render(scene, camera);
-              stats.end();
-          }
-        }
-        // stats.begin();
+        // if(cameraMoved()){
+        //   if (delta  > interval) { //should render every 33ms.
+        //       stats.begin();
+        //       delta = delta % interval;
         //       renderer.render(scene, camera);
         //       stats.end();
-        // stats.begin()
+        //   }
+        // }
+        stats.begin();
+              renderer.render(scene, camera);
+              stats.end();
+        stats.begin()
         // // calculateDepthOfField();
         // renderer.setRenderTarget(postprocessing.rtTextureColor);
         // renderer.clear();
