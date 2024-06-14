@@ -38,7 +38,7 @@ import { ref, computed, toRaw } from 'vue';
 // ];
 
 let currentPhase = ref(0)
-let currentTabId = ref(2)
+let currentTabId = ref(0)
 let currentTabComponent = computed(() => Tabs[currentTabId.value])
 const nextTab = () => {
   console.log("Current Tab", currentTabId.value)
