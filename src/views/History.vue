@@ -3,14 +3,16 @@
   <div :class="`current-tab-${currentTabId}`" class="history-page-container">
     <div class="tab-container">
         <keep-alive>
-          <Transition name="slide-1">
+          <Transition name="slide-1" mode="out-in"> 
+            <!-- History slide-->
             <component class="tab" :is="currentTabComponent" :key="currentTabId" :currentPhase="currentPhase"></component>
           </Transition>
         </keep-alive>
     </div>
     <div class="change-tabs">
       <button class="slide-changer" @click="previousTab()" > &lt; prev tab</button>
-      <button class="slide-changer" @click="nextTab()">next tab > </button>
+      <button class="slide-changer" @click="nextTab()">next tab >  
+        {{ currentTabId }}</button>
     </div>
     <div class="change-phases">
       <button class="slide-changer" @click="previousPhase()" > &lt; prev phase</button>
@@ -36,7 +38,7 @@ import { ref, computed, toRaw } from 'vue';
 // ];
 
 let currentPhase = ref(0)
-let currentTabId = ref(1)
+let currentTabId = ref(2)
 let currentTabComponent = computed(() => Tabs[currentTabId.value])
 const nextTab = () => {
   console.log("Current Tab", currentTabId.value)
@@ -71,6 +73,7 @@ const previousPhase = () => {
   flex-direction: column;
   flex-grow: 0;
   margin: 0;
+  overflow: hidden;
   .tab-container{
     width: 100%;
     height: 100%;
@@ -80,9 +83,15 @@ const previousPhase = () => {
       height: 100%;
       overflow: hidden;
     }
-    &.current-tab-1{
-      background-image: none;
-      background-color: white;
+  }
+  &.current-tab-1{
+    background-image: none;
+    background-color: white;
+  }
+  &.current-tab-2{
+    .tab-container{
+      display: flex;
+      justify-content: center;
     }
   }
 }
@@ -90,48 +99,34 @@ const previousPhase = () => {
 .slide-1-enter-active, .slide-1-leave-active{
   transition: transform 0.5s ease-out;
 }
-.slide-2-enter-active, .slide-2-leave-active {
-  transition: transform 0.5s ease-out;
-}
 
 .slide-1-enter-from {
   transform: translateX(100%);
-  // opacity: 0;
-}
-.slide-2-enter-from {
-  transform: translateX(100%);
-  // opacity: 0;
 }
 
-.slide-1-enter-to, .slide-1-leave-from {
+.slide-1-enter-to{
   transform: translateX(0%);
-  // opacity: 1;
-}
-.slide-2-enter-to, .slide-2-leave-from {
-  transform: translateX(0%);
-  // opacity: 1;
 }
 
+.slide-1-leave-from {
+  transform: translateX(0%);
+}
 .slide-1-leave-to {
   transform: translateX(-100%);
-  // opacity: 0;
 }
- .slide-2-leave-to {
-  transform: translateX(-100%);
-  // opacity: 0;
-}
-
 
 .change-tabs{
   position: absolute;
   bottom: 0%;
   left: 60%;
   transform: translateX(-50%);
+  z-index: 3;
 }
 .change-phases{
   position: absolute;
   bottom: 0%;
   left: 40%;
   transform: translateX(-50%);
+  z-index: 3;
 }
 </style>

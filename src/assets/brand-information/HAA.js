@@ -1,6 +1,7 @@
 const HAAConfig = {
   brand: "HAA",
   urlSlug: "haa",
+  jarSizes: ['300g', '150g'],
   fullBrandName: "Honey Apiary Academy",
   tagline: "Ultra Premium Greek Honey",
   productLines: ['Blends', 'Monoflorals'],

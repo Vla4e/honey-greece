@@ -102,8 +102,9 @@ export default {
       text-transform: uppercase;
       &:hover{
         &:not(.disabled){
-        transform: scale(1.01);
-          transition: all ease-in-out 0.3s;
+        // transform: scale(1.01);
+        font-weight:700;
+        // transition: all ease-in 0.3s;
         }
       }
     }

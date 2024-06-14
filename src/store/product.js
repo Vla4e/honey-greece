@@ -31,6 +31,9 @@ export const useProductStore = defineStore('productStore', {
       // console.log("brand getter", state.selectedBrand.urlSlug)
       return state.selectedBrand.urlSlug
     },
+    getBrandObject: (state) => {
+      return state.selectedBrand
+    }
   },
   actions: {
     setProductLine(productLine) {

@@ -51,7 +51,7 @@
     </div>
 
     <div class="product-viewer" ref="productViewer">
-      <div class="pushdown" style="height: 15%; width: 100%;"></div>
+      <!-- <div class="pushdown" style="height: 15%; width: 100%;"></div> -->
       <ProductScene />
     </div>
 
@@ -295,7 +295,7 @@ export default {
       console.log("Got EdgeDistance", edgeCoordinates.leftEdge, edgeCoordinates.rightEdge)
       if (productViewer.value) {
 
-        const circleDetraction = 40; // Account for circle width, and imprecision in calculation
+        const circleDetraction = 45; // Account for circle width, and imprecision in calculation
         const productViewerWidth = productViewer.value.offsetWidth;
         const productViewerPositionalData = productViewer.value.getBoundingClientRect()
         //Distances
@@ -303,7 +303,8 @@ export default {
         let rightElementToCanvas = blendItem.value[0].getBoundingClientRect().left - productViewerPositionalData.right
         let leftLineDistance = leftElementToCanvas + edgeCoordinates.leftEdge - circleDetraction
         let rightLineDistance = rightElementToCanvas + edgeCoordinates.rightEdge - circleDetraction
-
+        console.log("DISTANCE LEFT", leftLineDistance)
+        console.log("DISTANCE RIGHT", rightLineDistance)
         //Set variable value to calculated distance
         document.documentElement.style.setProperty('--pointer-line-width', `${leftLineDistance}px`);
         document.documentElement.style.setProperty('--pointer-line-right-width', `${rightLineDistance}px`);
@@ -342,7 +343,7 @@ export default {
   // justify-content: space-between;
   display: grid;
   grid-template-rows: 1fr;
-  grid-template-columns: 30% 40% 30%;
+  grid-template-columns: 25% 50% 25%;
   flex-grow: 1 !important;
 
   .floating-text {

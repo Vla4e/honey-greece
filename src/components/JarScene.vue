@@ -8,7 +8,11 @@
   >
     <canvas ref="webGl" class="webGl jar-sc-canvas" />
   </div>
-  <button class="hdr-switch" @click="switchLighting()">Switch HDR/EXR</button>
+  <div class="lighting-switch-container">
+    <button class="lighting-switch" @click="switchLighting(false)">prev</button>
+    <span class="current-lighting" style="margin: 0px 5px 0px 5px;">{{ textureUrl }}</span>
+    <button class="hdr-switch" @click="switchLighting(true)">next</button>
+  </div>
   <div class="ratio-container">
     <button class="ratio-switch-0" @click="setPixelRatio(0)"> &lt; pixel ratio</button>
     <span class="ratio-label">current: {{ currentPixelRatio.toFixed(2) }}</span>
@@ -41,6 +45,9 @@ import {
   Mesh,
   Vector3,
   Quaternion,
+  NoBlending,
+  PointLight,
+  PointLightHelper
 } from "three";
 
 //DOF Postprocessing imports:
@@ -62,7 +69,18 @@ import { initPostprocessing, updateFocusCoords } from '@/helpers/DOFPostProcessi
 import Stats from "stats.js";
 
 Cache.enabled = true;
-let textureUrl = "assets/exr/lw.exr"
+const textureUrls = [
+  'assets/exr/bright.exr',
+  "assets/exr/lw.exr",
+  'assets/exr/little_paris.exr',
+  'assets/exr/river_walk.exr',
+  'assets/exr/reinforced.exr',
+  'assets/exr/syfer.exr',
+  'assets/exr/mealie.exr',
+  'assets/exr/railway.exr',
+  'assets/exr/lonely.exr',
+  'assets/exr/sunrise.exr',
+]
 
 export default {
   setup() {
@@ -74,6 +92,10 @@ export default {
       return windowWidth.value / windowHeight.value;
     });
 
+    
+    let currentTextureId = ref(0);
+    let textureUrl = ref(textureUrls[currentTextureId.value]);
+    console.log("TexutreURL:")
     //Postprocessing
     // let postprocessing = {
     //   scene: null,
@@ -104,18 +126,18 @@ export default {
       pentagon: false,
       dithering: 0.0001
     });
-    // function updateShaderUniforms() {
-    //   let uniforms = postprocessing.bokeh_uniforms;
-    //   for (const key in effectController) {
-    //     if (key in uniforms) {
-    //       if(key === 'focalDepth'){
-    //         console.log("FD not updated")
-    //       } else {
-    //         uniforms[key].value = effectController[key];
-    //       }
-    //     }
-    //   }
-    // }
+    function updateShaderUniforms() {
+      let uniforms = postprocessing.bokeh_uniforms;
+      for (const key in effectController) {
+        if (key in uniforms) {
+          if(key === 'focalDepth'){
+            console.log("FD not updated")
+          } else {
+            uniforms[key].value = effectController[key];
+          }
+        }
+      }
+    }
     // watch(effectController, () => {
     //   updateShaderUniforms();
     // }, { deep: true });
@@ -273,9 +295,10 @@ export default {
     draco.setDecoderPath("libs/draco/gltf/");
 
     async function setLighting(renderer) {
-      // console.log("calling set lighting");
+      console.log("calling set lighting");
+      console.log("CURRENT TEXURL", textureUrl.value)
       var pmremGenerator = new PMREMGenerator(renderer);
-      let exrTexture = await new EXRLoader().loadAsync(textureUrl)
+      let exrTexture = await new EXRLoader().loadAsync(textureUrl.value)
       console.log("EXRTEXTURE", exrTexture) 
       // let rgbeTexture = await new RGBELoader().loadAsync("assets/HDR/test-hdr.hdr");
       // // console.log("loader texture", rgbeTexture);
@@ -285,6 +308,16 @@ export default {
       scene.environment = envMap;
       pmremGenerator.dispose()
       exrTexture.dispose();
+      // const pointLight = new PointLight(0xf2b104, 2, 100); // color, intensity, distance#F2B104
+      // const pointLight2 = new PointLight(0xffff, 2, 100); // color, intensity, distance#F2B104
+      // pointLight.position.set(0.5, 0.5, 0.5); // Position the light slightly above the scene
+      // pointLight2.position.set(0.5,0.5,0.5)
+      // scene.add(pointLight);
+      // scene.add(pointLight2)
+
+      // // Optionally add a helper to visualize the position and extent of the point light
+      // const pointLightHelper = new PointLightHelper(pointLight, 1); // size of helper
+      // scene.add(pointLightHelper);
       // rgbeTexture.dispose();
       // pmremGenerator.dispose();
       // pmremGenerator.compileEquirectangularShader();
@@ -299,14 +332,26 @@ export default {
     async function loadGlb(source) {
       loader
       .setDRACOLoader(draco)
-      .setKTX2Loader(KTX2_LOADER.detectSupport(renderer))
-      .setMeshoptDecoder(MeshoptDecoder);
+      // .setKTX2Loader(KTX2_LOADER.detectSupport(renderer))
+      // .setMeshoptDecoder(MeshoptDecoder);
 
       let loaderPromise = await loader.loadAsync(source)
       console.log("scene", loaderPromise.scene)
 
       loaderPromise.scene.traverse((obj) => {
         if(obj.isMesh){
+          // console.log("For obj name", obj.name, "===========================")
+          // console.log("TRANSMISSION:", obj.material.transmission)
+          // console.log("BLENDING:", obj.material.blending)
+          // obj.material.blending = NoBlending;
+          if(obj.name.includes("honey")){
+            console.log("name", obj.name)  
+            // if(obj.name === 'honey_object_150g003'){
+            //   obj.material.opacity = 0.6;
+            //   obj.material.transparent = true;
+            // }
+          }
+          obj.material.transmission = 0;
           if (obj.material.map) { 
             enableMipmaps(obj.material.map);
           }
@@ -333,7 +378,8 @@ export default {
       //low_res_10_compression.glb
       // let loaderPromise = await loadGlb("assets/glb/huge.glb");
       // let loaderPromise = await loadGlb("assets/glb/jarscene-v6.glb");
-      let loaderPromise = await loadGlb("assets/glb/jarscene-test-2.glb");
+      // let loaderPromise = await loadGlb("assets/glb/jarscene-realtime.glb");
+      let loaderPromise = await loadGlb("assets/glb/newJars/jarscene-render.glb");
       scene.add(loaderPromise.scene)
 
       const axesHelper = new AxesHelper(5)
@@ -378,10 +424,17 @@ export default {
       modelReady.value = true;
     };
 
-    function switchLighting() {
-      if(textureUrl.includes('lw.exr')){
-        textureUrl = 'assets/exr/bright.exr'
-      } else textureUrl = "assets/exr/lw.exr"
+    function switchLighting(cycle) {
+      if(cycle){
+        currentTextureId.value++
+      } else {
+        currentTextureId.value--
+      }
+      textureUrl.value = textureUrls[currentTextureId.value]
+      console.log("TEXURL VALUE CHANGED:")
+      // if(textureUrl.includes('lw.exr')){
+      //   textureUrl = 'assets/exr/bright.exr'
+      // } else textureUrl = "assets/exr/lw.exr"
       destroyEverything()
       firstAnimate()
     }
@@ -415,7 +468,7 @@ export default {
       renderer.setSize(windowWidth.value, windowHeight.value);
     }
 
-    const firstAnimate = async (textureUrl) => {
+    const firstAnimate = async (texture) => {
       // webGl should be mounted at this point
       canvas = webGl.value;
       renderer = new WebGLRenderer({ canvas, antialias: true, alpha: false });
@@ -423,7 +476,7 @@ export default {
       renderer.setSize(windowWidth.value, windowHeight.value);
       renderer.setPixelRatio(window.devicePixelRatio);
       console.log("Got canvas and renderer before?", !!canvas, !!renderer)
-      await setCanvas(textureUrl).then(() => {
+      await setCanvas(texture).then(() => {
         // startTrackingMouseMovement();
         // initPostprocessing();
         materialDepth.uniforms[ 'mNear' ].value = camera.near;
@@ -455,7 +508,7 @@ export default {
         stats.begin();
               renderer.render(scene, camera);
               stats.end();
-        stats.begin()
+        // stats.begin()
         // // calculateDepthOfField();
         // renderer.setRenderTarget(postprocessing.rtTextureColor);
         // renderer.clear();
@@ -498,7 +551,7 @@ export default {
       updateFocusCoords(postprocessing, x, y);
     }
     const debouncePointerMove = debounce(function(event) {
-      console.log("got event")
+      // console.log("got event")
       onPointerMove(event)
     }, 0);
 
@@ -541,9 +594,9 @@ export default {
       Cache.clear();
 
       // Remove stats from DOM if it exists
-      if (stats.dom) {
-        document.body.removeChild(stats.dom);
-      }
+      // if (stats.dom) {
+      //   document.body.removeChild(stats.dom);
+      // }
 
       //Remove postprocessing 
       // if(postprocessing){
@@ -593,7 +646,8 @@ export default {
       modelReady, 
       switchLighting, 
       setPixelRatio, 
-      currentPixelRatio 
+      currentPixelRatio,
+      textureUrl
     };
   },
 };
@@ -638,7 +692,7 @@ export default {
   text-align: center;
   z-index: 100;
 }
-.hdr-switch{
+.lighting-switch-container{
   position: absolute;
   bottom: 0%;
   left: 50%;

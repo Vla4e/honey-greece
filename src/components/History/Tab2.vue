@@ -1,208 +1,259 @@
 <template>
   <div class="tab-2" :class="`tab-2-phase-${currentPhase}`">
-    <h1 class="floating-heading">A Tradition of Excellence</h1>
-    <img :src="image1" class="image image-1"/>
-    <img :src="image2" class="image image-2"/>
-    <p class="floating-text"></p>
-    <div class="journey-text-container">
-      <span class="heading">
-      </span>
-      <span class="text">
-      </span>
+    <!-- <div class="background-container">
+    </div> -->
+    <img class="background" :src="background"/>
+    <div v-if="currentPhase >= 1" class="background-cover"></div>
+    <div class="text-container">
+      <h1 class="heading">
+        Greece,
+        <br/>our beloved home
+      </h1>
+      <Transition name="slide-in" mode="out-in">
+        <p v-if="currentPhase > 0" class="text">
+          A long-standing tradition of producing high-quality honey with an intense aroma. 
+          From the blossoms of the Peloponnesian orchards to the wild herbs of Crete, our bees are nature's gifted artisans, 
+          capturing the essence of the Greek landscape in every jar.
+          <br/>
+          <br/>
+          As we celebrate our heritage and our honey's journey from our hives to your homes, 
+          we invite you to savor the magic of honey in all its glory. Not only is honey a delectable natural sweetener, 
+          but it also offers a plethora of health benefits. Packed with antioxidants, vitamins, and minerals, honey is a true elixir of wellness, 
+          enhancing both the palate and the body.
+        </p>
+      </Transition>
     </div>
+    <div v-if="currentPhase > 1" class="quote-container">
+        <div class="pushdown" style="height: 30%; width: 30%;">
+        </div>
+        <span class="honey-heading">
+          Antonios Montouris Honey
+        </span>
+        <p class="quote">
+          <img class="quote quote-start" :src="quoteStart"/>
+          where tradition, innovation, 
+          <br/>and the purest honey meet
+          <img class="quote quote-end" :src="quoteEnd"/>
+        </p>
+      </div>
   </div>
 </template>
 
 <script>
 export default {
   name: 'Tab2',
-  phases: 5,
+  phases: 2,
 }
 </script>
 <script setup>
-import { ref, watch, onMounted } from 'vue';
+import {ref, computed, inject, defineProps } from 'vue';
 import router from '@/router/index.js'
-import image1 from '@/assets/pages/history/tab-2-1.png'
-import image2 from '@/assets/pages/history/tab-2-2.png'
+import { stringifyQuery } from 'vue-router';
+import quoteStart from '@/assets/pages/history/quote-start.png'
+import quoteEnd from '@/assets/pages/history/quote-end.png'
+import background from '@/assets/pages/history/16-9.jpg';
+
+
 let props = defineProps({
   currentPhase: Number
 })
-const currentContent = ref(['A', 'B', ''])
-const isSliding = ref([false, false, false]);
 
-watch(() => props.currentPhase, (newPhase) => {
-  console.log("phase change", newPhase)
-})
-const updateContent = (newContent, indices, delay) => {
-  setTimeout(() => {
-    indices.forEach(index => {
-      isSliding.value[index] = true;
-    });
-    setTimeout(() => {
-      newContent.forEach((content, i) => {
-        currentContent.value[indices[i]] = content;
-        isSliding.value[indices[i]] = false;
-      });
-    }, 300); // Corresponds to CSS transition time
-  }, delay);
-};
-
-onMounted(() => {
-  updateContent(['A', 'C', 'B'], [1, 2], 1000); // Step 2
-  updateContent(['C', 'C', 'D'], [0, 1, 2], 2000); // Step 3
-  updateContent(['E', 'F', 'G'], [0, 1, 2], 3000); // Step 4
-});
-
+const maxPhases = 2 //3 counted from 0
 </script>
 
 <style lang="scss" scoped>
 .tab-2{
-  display: block !important;
-  // justify-content: flex-start;
-  background-color: white;
-  .floating-heading{
-    position: absolute;
-    top: 15%;
-    left: 50%;
-    transform: translateX(-50%);
-    font-family: "DMSans";
-    font-size: 150px;
-    font-weight: 700;
-    letter-spacing: 0.03em;
-    text-align: center;
-    color: #0000000D;
-    margin: 0;
+  // background-image: url('@/assets/pages/history/16-9.jpg');
+  // background-size: cover;
+  // background-position: center;
+  // background-repeat: no-repeat;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  position: relative;
+  overflow: hidden;
+  .background-container{
     width: 100%;
-    text-transform: uppercase;
+    height: 100%;
+    overflow: hidden;
+    position: relative;
+    top: 0;
+    right: 0;
+  }
+  .background, .background-cover{
+    width: 100%;
+    height: 100%;
+    position: absolute;
+    z-index: 1;
+    top: 0;
+    right: 0;
   }
 
-  .image{
-    &-1{
-      
-    }
-    &-2{
-
-    }
+  .background-cover{
+    background: linear-gradient(125.77deg, transparent 39.63%, #14141480 69.84%);
+    // background-blend-mode: multiply;
+    // opacity: 0.2;
+    z-index:2;
   }
-  .floating-text{
+
+  .text-container{
+    z-index: 3;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    height: 100%;
+    width: 100%;
+    transition: transform 1s ease, width 1s ease;
+    .heading{
+      font-family: 'DM Serif';
+      font-style: normal;
+      font-size: 150px;
+      font-weight: 400;
+      color: white;
+      text-align: center;
+      text-shadow: 4px 4px 4px rgba(0, 0, 0, 0.5);
+      margin: 0;
+      // transform: translate(0%, 0%);
+      transition: font-size 0.5s ease;
+    }
+
+    .text{
+      font-family: "DMSans";
+      font-size: 20px;
+      font-weight: 400;
+      text-align: left;
+      color: white;
+      width: 40%;
+    }
   }
   
-  .journey-text-container{
-    .heading{
+  .quote-container{
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    z-index: 3;
+    position: relative;
+    height: 100%;
+    .honey-heading{
+      font-family: "DMSans";
+      font-size: 150px;
+      font-weight: 700;
+      line-height: 150px;
+      letter-spacing: 0.03em;
+      text-align: left;
+      text-transform: uppercase;
+      position:absolute;
+      top: 15%;
+      left: 5%;
+      z-index: 2;
+      color: #0000000D;
+      @media(max-width: 1440px){
+        font-size: 100px;
+        line-height: 100px;
+      }
     }
-    .subheading{
+    .quote{
+      font-family: "Alex Brush";
+      font-size: 64px;
+      font-weight: 400;
+      line-height: 80px;
+      text-align: center;
+      color: #000000;
+      // position:absolute;
+      z-index: 2;
+      .quotes{
+        font-family: "AbyssinicaSIL";
+        font-size: 70px;
+        font-weight: 400;
+        text-align: center;
+      }
+    }
+  }
+
+  &-phase-0{
+    // width: 95% !important;
+    .text-container{
+      // width: 80%;
+    }
+  }
+
+  &-phase-1{
+    // width: 95% !important;
+    // justify-content: flex-end;
+    .text-container{
+      // width: 80%;
+      transform: translateX(30%);
+      .heading{
+        font-size: 64px;
+        font-weight: 400;
+        text-align: center;
+      }
+    }
+    .quote-container{
+      width: 55%;
+    }
+    .background{
+      // width: 120%;
+      // height: 120%;
+    }
+  }
+
+  &-phase-2{
+    width: 100% !important;
+    justify-content: flex-start;
+    .text-container{
+      width: 50%;
+      padding-left: 5%;
+      padding-right: 5%;
+      .heading{
+        font-size: 64px;
+        font-weight: 400;
+        text-align: center;
+      }
+    }
+    .quote-container{
+      width: 50%;
+      padding-left: 5%;
+      padding-right: 5%;
+    }
+    .background{
+      width: 120%;
+      height: 120%;
+      right: 50%;
+    }
+    .background-cover{
+      right: 50%;
+      width: 50%;
+      background: linear-gradient(125.77deg, #14141440 35.84%,  #14141480 69.84%);
     }
   }
 }
 
-//Phase 1
-.tab-2-phase-0{
-  .floating-heading{
-  }
-
-  .image{
-    &-1{
-      position: absoulte;
-      width: 35%;
-    }
-    &-2{}
-  }
-  .floating-text{
-  }
-  
-  .journey-text-container{
-    .heading{
-    }
-    .subheading{
-    }
-  }
+.slide-in-enter-active, .slide-in-leave-active{
+  transition: all 0.5s 1.5s ease-out;
 }
 
-//Phase 2
-.tab-2-phase-1{
-  .floating-heading{
-
-  }
-
-  .image{
-    &-1{
-      
-    }
-
-    &-2{
-
-    }
-  }
-  .floating-text{
-
-  }
-  
-  .journey-text-container{
-    .heading{
-
-    }
-    .subheading{
-
-    }
-  }
+.slide-in-enter-from {
+  transform: translateX(100%);
+  opacity: 0;
 }
 
-//Phase 3
-.tab-2-phase-2{
-  .floating-heading{
-
-  }
-
-  .image{
-    &-1{
-      
-    }
-
-    &-2{
-      
-    }
-  }
-  .floating-text{
-
-  }
-  
-  .journey-text-container{
-    .heading{
-
-    }
-    .subheading{
-
-    }
-  }
+.slide-in-enter-to{
+  transform: translateX(0%);
+  opacity: 1;
 }
 
-//Phase 4
-.tab-2-phase-3{
-  .floating-heading{
-
-  }
-
-  .image{
-    &-1{
-
-    }
-
-    &-2{
-
-    }
-  }
-  .floating-text{
-
-  }
-  
-  .journey-text-container{
-    .heading{
-
-    }
-
-    .subheading{
-
-    }
-  }
+.slide-in-leave-from {
+  transform: translateX(0%);
+  opacity: 0;
+}
+.slide-in-leave-to {
+  transform: translateX(-100%);
+  opacity: 0;
+}
+.slide-in-leave-active {
+  position: absolute;
 }
 </style>

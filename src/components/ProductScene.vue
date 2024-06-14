@@ -41,21 +41,40 @@ import {
   AxesHelper,
   CameraHelper,
   BoxHelper,
+Clock,
 } from "three";
 
+import {
+  AnimationMixer,
+  LoopOnce,
+} from "three";
 
 import { watch, onMounted, onUnmounted,  ref, computed, nextTick, inject, toRaw  } from "vue";
 import { get, objectEntries, useWindowSize } from "@vueuse/core";
 import { useProductStore } from '@/store/product.js';
 
 import { OrbitControls } from "three/addons/controls/OrbitControls.js";
-import { DRACOLoader } from 'three/addons/loaders/DRACOLoader.js';
-import { KTX2Loader } from 'three/addons/loaders/KTX2Loader.js';
-import { MeshoptDecoder } from 'three/addons/libs/meshopt_decoder.module.js';
-import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
-import { RGBELoader } from 'three/addons/loaders/RGBELoader.js'
 
-import { debounce } from '@/helpers/globalFunctions.js'
+import brandConfigs from "@/assets/brand-information/index.js"
+// let brandSizes = {}
+
+//Loader imports
+import {
+  initializeGLTFLoader,
+  loadGlb,
+  loadGlbReturnParts,
+  loadTexture,
+  loadEnvironment
+} from '@/helpers/loaders.js'
+
+//Animation imports
+import {
+  initializeMixer,
+  setupAnimations
+} from '@/helpers/AnimationControls.js'
+
+import { debounce, parabolicPathCoordinate } from '@/helpers/globalFunctions.js'
+import { initiateObjectRotation } from '@/helpers/3DObjectPan.js'
 import TWEEN, { update } from '@tweenjs/tween.js';
 
 
@@ -67,26 +86,29 @@ import Stats from "stats.js";
 const jarConfigs = Object.freeze({
   small:   { name: "small", source: "/assets/glb/jar-150g-v8.glb", position: {
     x: 0,
-    y: 0.02,
-    z: 0
+    y: 0,
+    z: 0.02,
   } },
   medium:  { name: "medium", source: "/assets/glb/jar-300g-v4.glb", position: {
     x: 0,
     y: 0,
-    z: 0
+    z: 0.02,
   } },
   large: { name: "large", source: "/assets/glb/jar-450g-v4.glb", position: {
     x: 0,
-    y: -0.01,
-    z: 0
+    y: 0,
+    z: 0.02,
   }  }
 });
+
 const cameraConfigs = Object.freeze({
-  x: 0.28,
-  y: 0.04,
+  x: 0.35,
+  y: 0.06,
   z: 0
 })
+
 Cache.enabled = true;
+
 export default {
   setup() {
     let stats = new Stats();
@@ -97,7 +119,6 @@ export default {
     const webGl = ref();
     const sceneContainer = ref();
 
-    const img = "../assets/images/earth.jpg";
     const productStore = useProductStore();
     let slugs = {
       brand: 'haa',
@@ -118,18 +139,7 @@ export default {
     });
     
     /*Loaders + configuration of loaders*/
-    const loader = new GLTFLoader();
-    const globalTextureLoader = new TextureLoader();
-    // Draco compression loader.
-    const draco = new DRACOLoader();
-    draco.setDecoderConfig({ type: "js" });
-    draco.setDecoderPath("/node_modules/three/examples/jsm/libs/draco/gltf/");
-    draco.preload();
-    // KTX2 texture compression
-    const KTX2_LOADER = new KTX2Loader().setTranscoderPath(
-      `/node_modules/three/examples/jsm/libs/basis/`,
-    );
-    loader.setDRACOLoader(draco).setKTX2Loader(KTX2_LOADER).setMeshoptDecoder(MeshoptDecoder)
+    const loader = initializeGLTFLoader(true, true, true) //args: draco, ktx2, meshopt decoder
 
     /**
      * @type {THREE.PerspectiveCamera | null}
@@ -145,11 +155,6 @@ export default {
      * @type {THREE.Scene | null}
      */
     let globalScene = null;
-
-    /**
-     * @type {THREE.OrbitControls | null}
-     */
-    let globalOrbitControls = null;
 
     /**
      * @type {THREE.PointLight | null}
@@ -203,24 +208,55 @@ export default {
     let currentJarSize = ref(jarConfigs.medium.name);
     let upcomingJarSize = ref('');
     let jarScenes = {}; // store loaded model to avoid reloading
+
+    let currentJarLabel = null;
+    let upcomingJarLabel = null;
     
+
+    let mouseX = 0;
+    let mouseY = 0;
+
+    let mixer;
+    let clipActions = [];
+    let animationState = new Map();
+
     const setCanvas = async () => {
       // Create Scene
       globalScene = new Scene();
 
-      let jarPromise = await loadGlb(jarConfigs.medium.source)
-      // console.log("JarPromise: ", jarPromise)
+      let jarPromise = await loadGlbReturnParts(loader, jarConfigs.medium.source)
+      let mediumSmallScene = await loadGlbReturnParts(loader, '/assets/glb/newJars/300-150-animation-choppy-v1.glb')
+      let largeMediumScene = await loadGlbReturnParts(loader, '/assets/glb/newJars/450-300-animation-choppy-v1.glb')
+      // console.log(jarAnimation1)
+      // console.log(jarAnimation2)
+      // console.log(jarAnimation3)
+      // console.log(jarAnimation4)
+      mixer = initializeMixer(largeMediumScene.scene)
+      globalScene.add(largeMediumScene.scene)
+      let setupAnimationProps = setupAnimations(mixer, largeMediumScene.gltf.animations)
+      // destructuring makes globalScene.add throw error?
+      // ({ clipActions, animationState } = setupAnimations(mixer, jarAnimation3.gltf.animations))
+      clipActions = setupAnimationProps.clipActions
+      animationState = setupAnimationProps.animationState
       
 
-      currentJarScene = jarPromise.scene; //Scene to be loaded
+      currentJarScene = largeMediumScene.scene; //Scene to be loaded
       console.log("assigned value to jar scene", currentJarScene)
+      // currentJarScene.position.set(0, 0, 0.02)
       jarScenes[currentJarSize.value] = currentJarScene; 
 
+      // let behindJarScene = await loadGlbReturnParts(loader, jarConfigs.large.source)
+      // behindJarScene.scene.position.set(-0.8, 0, -0.1)
+      // // await updateTexture()
+      // // globalScene.add(behindJarScene.scene)
+      // // setTimeout(()=>{
+      // //   jarBackToFront(behindJarScene.scene, 1200, 800)
+      // // }, 2000)
       let meshes = currentJarScene.children;
       let targetMesh = meshes[1]
 
       //Add jar scene to global scene
-      globalScene.add(currentJarScene)
+      // globalScene.add(currentJarScene)
 
       // Lights (added to camera below)
       globalPointLight = new PointLight(0xffffff, 1);
@@ -230,7 +266,7 @@ export default {
       globalCamera = new PerspectiveCamera(25, aspectRatio.value, 0.001, 5);
       let axesHelper2 = new AxesHelper(5);
       axesHelper2.setColors('blue', 'green', 'red')
-      // targetMesh.add(axesHelper2)
+      targetMesh.add(axesHelper2)
       globalCamera.position.set(cameraConfigs.x, cameraConfigs.y, cameraConfigs.z); // Position the camera in front of the mesh
       globalCamera.lookAt(0, cameraConfigs.y , 0)
       globalCamera.add(globalPointLight); //add pointlight to camera
@@ -242,7 +278,7 @@ export default {
       axesHelper.setColors('red', 'blue', 'green')
       cameraHelper = new CameraHelper(globalCamera);
       // globalScene.add(cameraHelper)
-      // globalScene.add(axesHelper)
+      globalScene.add(axesHelper)
 
       // Renderer
       const canvas = webGl.value;
@@ -253,83 +289,62 @@ export default {
       globalRenderer.setPixelRatio(window.devicePixelRatio);
       globalRenderer.shadowMap.enabled = false;
       globalRenderer.render(globalScene, globalCamera);
-
-      // Orbit Controls
-      globalOrbitControls = new OrbitControls(globalCamera, canvas);
-      // globalOrbitControls.position.set(0, 0.02, 0)
-      globalOrbitControls.target.set(0, cameraConfigs.y, 0)
-      globalOrbitControls.update();
-
-      // Zoom Distances - Max (zoom out) distance is equal to camera x starting position
-      globalOrbitControls.maxDistance = cameraConfigs.x;
-      globalOrbitControls.minDistance = cameraConfigs.x;
-
-      // controls.enableZoom = false;
-
-      //Vertical Rotation Limiting Angles
-      globalOrbitControls.minPolarAngle = (60 * Math.PI)/180;
-      globalOrbitControls.maxPolarAngle = (90 * Math.PI)/180;
-
-      globalOrbitControls.enablePan = false;
-      //Account for slide transition - jar is centerd upon first view
-      setTimeout(()=>{
-        globalOrbitControls.autoRotate = true;
-      }, 1000)
-      globalOrbitControls.enableDamping = false;
       
       setLighting(globalRenderer)
     };
 
-    const loadGlb = async (source) => {
-      let loaderPromise = await loader.loadAsync(source)
-      if(loaderPromise){
-        loaderPromise.scene.name = source
-        let scene = loaderPromise.scene;
-        scene.position.set(0, 0, 0)
-        // const axesHelperNew = new AxesHelper(5)
-        // scene.add(axesHelperNew)
-        let meshes = scene.children;
-        let targetMesh = meshes[0];
-        const meshNames = meshes.map((mesh) => {
-          // // console.log("MESHNAME", mesh.name)
-          return mesh.name
-        })
-        // // console.log('meshNames', meshNames)
+    // const loadGlb = async (source) => {
+    //   let loaderPromise = await loader.loadAsync(source)
+    //   if(loaderPromise){
+    //     loaderPromise.scene.name = source
+    //     let scene = loaderPromise.scene;
+    //     scene.position.set(0, 0, 0)
+    //     // const axesHelperNew = new AxesHelper(5)
+    //     // scene.add(axesHelperNew)
+    //     let meshes = scene.children;
+    //     let targetMesh = meshes[0];
+    //     const meshNames = meshes.map((mesh) => {
+    //       // // console.log("MESHNAME", mesh.name)
+    //       return mesh.name
+    //     })
+    //     // // console.log('meshNames', meshNames)
   
-        return { gltf: loaderPromise, scene, meshes, targetMesh, meshNames, loaded: true }
-      } else return {loaded: false}
-    }
+    //     return { gltf: loaderPromise, scene, meshes, targetMesh, meshNames, loaded: true }
+    //   } else return {loaded: false}
+    // }
 
-    async function loadTexture() {
+    async function computeTexture() {
       isFirstLoad = false;
-      const baseTextureUrl = '/assets/label-textures';
+      const baseTextureUrl = '/assets/label-textures-2';
       isLoadingTexture = true;
 
-      // initialize nested object
-      if (!jarTextures[slugs.brand]) {
-          jarTextures[slugs.brand] = {};
-      }
-      if (!jarTextures[slugs.brand][slugs.productLine]) {
-          jarTextures[slugs.brand][slugs.productLine] = {};
-      }
-      if (!jarTextures[slugs.brand][slugs.productLine][slugs.size]) {
-          jarTextures[slugs.brand][slugs.productLine][slugs.size] = {};
-      }
+      // initialize nested object CACHE IS ENABLED - dont need this unless manual control
+      // if (!jarTextures[slugs.brand]) {
+      //     jarTextures[slugs.brand] = {};
+      // }
+      // if (!jarTextures[slugs.brand][slugs.productLine]) {
+      //     jarTextures[slugs.brand][slugs.productLine] = {};
+      // }
+      // if (!jarTextures[slugs.brand][slugs.productLine][slugs.size]) {
+      //     jarTextures[slugs.brand][slugs.productLine][slugs.size] = {};
+      // }
 
-      // check if texture exists, return it
-      if (jarTextures[slugs.brand][slugs.productLine][slugs.size][slugs.flavour]) {
-          return jarTextures[slugs.brand][slugs.productLine][slugs.size][slugs.flavour];
-      }
+      // // check if texture exists, return it
+      // if (jarTextures[slugs.brand][slugs.productLine][slugs.size][slugs.flavour]) {
+      //     return jarTextures[slugs.brand][slugs.productLine][slugs.size][slugs.flavour];
+      // }
 
       // load if not
+      let textureUrls = productStore.getBrands.jarSizes
+      console.log("TEXTURE SIZES", textureUrls)
       let textureUrl = `${baseTextureUrl}/${slugs.brand}/${slugs.productLine}/${slugs.size}/${slugs.flavour}.png`;
       console.log("URL:", textureUrl)
-      let texture = await globalTextureLoader.loadAsync(textureUrl);
+      let texture = await loadTexture(textureUrl);
       console.log("Texture MIPMAP:", texture)
       texture.flipY = false;
       texture.generateMipMaps = true
       texture.needsUpdate = true;
-      jarTextures[slugs.brand][slugs.productLine][slugs.size][slugs.flavour] = texture;
+      // jarTextures[slugs.brand][slugs.productLine][slugs.size][slugs.flavour] = texture;
 
       return texture;
     }
@@ -339,12 +354,16 @@ export default {
       console.log("CALLED UPDATE TEXTURE", isLoadingTexture, stopLoading)
       if(isLoadingTexture && stopLoading) return
       let labelMesh = null;
+      let labelMeshes = [];
+      console.log("Current selected size:", currentJarSize.value)
 
       currentJarScene.traverse((obj) => {
         if(obj.isMesh){
           if(obj.name.includes('label')){
-            // console.log("MESHOBJ", obj)
+            console.log("LABEL", obj)
+            labelMeshes.push(obj)
             labelMesh = obj
+            currentJarLabel = labelMesh.clone()
           }
         }
       })
@@ -363,7 +382,7 @@ export default {
         labelMesh.material.map = preLoadedTexture;
         labelMesh.material.needsUpdate = true;
       } else {
-        let texture = await loadTexture();
+        let texture = await computeTexture();
         texture.flipY = false;
         labelMesh.material.map = texture;
         labelMesh.material.needsUpdate = true;
@@ -381,7 +400,7 @@ export default {
           upcomingJarScene.visible = false; // Initially invisible, will be shown in animateJarIn
       } else {
           console.log("Loading new model:");
-          let jarPromise = await loadGlb(jarConfigs[size].source);
+          let jarPromise = await loadGlbReturnParts(loader, jarConfigs[size].source);
           jarPromise.scene.position.set(movement.right.x, movement.right.y, movement.right.z);
           jarPromise.scene.visible = false; // Make invisible initially
           globalScene.add(jarPromise.scene); // Add to scene but off-camera
@@ -392,7 +411,7 @@ export default {
 
       // Zoom in to account for smaller jar
       if(size === 'small'){
-        let zoomFactor = 1.15
+        let zoomFactor = 1
         // upcomingJarScene.position.y + 0.2
         new TWEEN.Tween({ zoom: globalCamera.zoom })
           .to({ zoom: zoomFactor }, 1000)
@@ -405,10 +424,8 @@ export default {
             console.log("Zoom animation completed.");
           })
           .start();
-            globalOrbitControls.maxDistance = cameraConfigs.x; //camera zoom apparently does not change positional coordinates.
-            globalOrbitControls.update();
       } else if (size === 'large'){
-        let zoomFactor = 0.8
+        let zoomFactor = 1
         new TWEEN.Tween({ zoom: globalCamera.zoom })
           .to({ zoom: zoomFactor }, 1000)
           .easing(TWEEN.Easing.Quadratic.InOut)
@@ -420,8 +437,6 @@ export default {
             console.log("Zoom animation completed.");
           })
           .start();
-            globalOrbitControls.maxDistance = cameraConfigs.x; //camera zoom apparently does not change positional coordinates.
-            globalOrbitControls.update();
       } else if (globalCamera.zoom !== 1){
         let zoomFactor = 1;
         new TWEEN.Tween({ zoom: globalCamera.zoom })
@@ -435,8 +450,6 @@ export default {
             console.log("Zoom animation completed.");
           })
           .start();
-            globalOrbitControls.maxDistance = cameraConfigs.x; //camera zoom apparently does not change positional coordinates.
-            globalOrbitControls.update();
       }
 
       globalScene.add(upcomingJarScene);
@@ -457,9 +470,6 @@ export default {
     }
 
     function calculateJarMovement(target) {
-      
-      globalOrbitControls.autoRotate = false;
-      globalOrbitControls.update();
       const cameraDirections = getCameraDirections();
       console.log("Camera Directions", cameraDirections);
 
@@ -482,7 +492,50 @@ export default {
       return {right, left}
     }
 
-
+    const jarBackToFront = (jar, duration = 1200, durationZ) => {
+      jar.visible = true;
+      console.log("JARCONFIGS", jarConfigs[currentJarSize.value].position.y)
+      console.log("z :", jar.position.z)
+      console.log("z target:", jarConfigs[currentJarSize.value].position.z)
+      console.log("x :", jar.position.x)
+      console.log("x target:", jarConfigs[currentJarSize.value].position.x)
+      let startCoord = jar.position.z
+      // console.log("STARTCOORD", startCoord)
+      new TWEEN.Tween({ x: jar.position.x })
+        .to({ x: jarConfigs[currentJarSize.value].position.x }, 6000)
+        .easing(TWEEN.Easing.Quadratic.InOut)
+        .onUpdate(({ x }) => {
+          // console.log("x", x)
+          jar.position.x = x;
+          jar.position.y = 0; // Adjust Y if necessary
+          jar.position.z = parabolicPathCoordinate(jar.position.z, startCoord, jarConfigs[currentJarSize.value].position.z);
+        }, 600)
+        .onComplete(() => {
+          console.log("Animation complete");
+        })
+        .start();
+      // new TWEEN.Tween(jar.position)
+      //   .to({ 
+      //     x: jarConfigs[currentJarSize.value].position.x, 
+      //     y: jarConfigs[currentJarSize.value].position.y, 
+      //     // z: jarConfigs[currentJarSize.value].position.z 
+      //   }, duration)
+      //   .easing(TWEEN.Easing.Quadratic.InOut)
+      //   .onComplete(() => {
+      //     console.log("AnimateJarIn completed")
+      //   })
+      //   .start();
+        
+      //   new TWEEN.Tween(jar.position)
+      //     .to({
+      //       z: jarConfigs[currentJarSize.value].position.z
+      //     }, duration)
+      //     .easing(TWEEN.Easing.Quadratic.InOut)
+      //     .onComplete(()=> {
+      //       console.log("Done")
+      //     })
+      //     .start()
+    }
     const animateJarIn = (jar, durationIn = 1200) => {
       jar.visible = true;
       console.log("JARCONFIGS", jarConfigs[currentJarSize.value].position.y)
@@ -495,9 +548,6 @@ export default {
         .easing(TWEEN.Easing.Back.Out)
         .onComplete(() => {
           console.log("AnimateJarIn completed")
-          console.log("end of process", globalOrbitControls.autoRotate)
-          globalOrbitControls.autoRotate = true;
-          globalOrbitControls.update()
         })
         .start();
     };
@@ -538,9 +588,6 @@ export default {
         .easing(TWEEN.Easing.Back.Out)
         .onComplete(() => {
           console.log("AnimateJarIn completed")
-          console.log("end of process", globalOrbitControls.autoRotate)
-          globalOrbitControls.autoRotate = true;
-          globalOrbitControls.update()
           isAnimationYActive = false;
         })
         .start();
@@ -567,22 +614,26 @@ export default {
     };
 
     const selectJarSize = async (size) => {
-      // console.log("Attempting to selectJarSize", size, currentJarSize.value)
+      console.log("Attempting to selectJarSize", size, currentJarSize.value)
       if(size === currentJarSize.value){
         return
       } else {
-        globalOrbitControls.update()
-        console.log("Beginning process", globalOrbitControls.autoRotate)
         slugs.size = size === 'small' ? '150g' : size === 'medium' ? '300g' : '450g'
-        let texture = await loadTexture()
+        // let texture = await loadTexture()
         console.log("loaded texture")
-        let movement = calculateJarMovement(currentJarScene)
+        // let movement = calculateJarMovement(currentJarScene)
         console.log("calculated movement")
-        await prepareSceneForSwitch(size, movement)
+        // await prepareSceneForSwitch(size, movement)
         // console.log("INITIAL ROTATION:", initialMeshQuaternion)
-        // globalOrbitControls.autoRotate = false
         console.log("prepared scene")
-        animateJarOut(currentJarScene, movement, texture)
+        // animateJarOut(currentJarScene, movement, texture)
+        
+        clipActions.forEach((action) => {
+          console.log("Playing action")
+          animationState.get(clipActions[0]).isFinished = false;
+          action.play()
+          currentJarSize.value = size;
+        })
       }
     };
 
@@ -605,10 +656,13 @@ export default {
       if (containerWidth.value && containerHeight.value) {
         updateCamera(containerWidth.value, containerHeight.value);
         updateRenderer(containerWidth.value, containerHeight.value);
-        // globalOrbitControls.update();
         getDistanceFromCanvas(globalScene.children[0].children[0]);
       }
     }, 600);
+
+    // const debouncedJarPan = debounce(function(event) {
+    //   rotateObject(event, currentJarScene)
+    // }, 200)
     function updateContainerSize() {
       // console.log("before UpdateCSize webGl w/h: ", toRaw(webGl.value.clientWidth), toRaw(webGl.value.clientHeight))
       // console.log("before UpdateCSize scene-container w/h: ", toRaw(webGl.value.parentElement.clientWidth), toRaw(webGl.value.parentElement.clientHeight))
@@ -620,7 +674,8 @@ export default {
     async function setLighting(renderer){
       // // // console.log('calling set lighting')
       var pmremGenerator = new PMREMGenerator( renderer );
-      let rgbeTexture = await new RGBELoader().loadAsync('/assets/HDR/garden.hdr')
+      // let rgbeTexture = await new RGBELoader().loadAsync('/assets/HDR/garden.hdr')
+      let rgbeTexture = await loadEnvironment('/assets/HDR/garden.hdr')
       // // // console.log('loader texture', rgbeTexture)
       var envMap = pmremGenerator.fromEquirectangular( rgbeTexture ).texture;
       globalScene.background = null;
@@ -693,23 +748,29 @@ export default {
       // globalCamera.lookAt(tempPos)
       // globalCamera.updateProjectionMatrix();
       // // console.log("Cam LOOKAT:", globalCamera)
-      globalOrbitControls.reset();
     }
 
-
+    const clock = new Clock();
     const animate = () => {
       
       stats.begin();
-      globalOrbitControls.update();
+      // currentJarScene.rotation.y += 0.005
+
+      // currentJarScene.rotation.x += (mouseY - currentJarScene.rotation.x) * 0.005;
+      // currentJarScene.rotation.y += (mouseX - currentJarScene.rotation.y) * 0.005;
       globalRenderer.render(globalScene, globalCamera);
-      requestAnimationFrame(animate);
       TWEEN.update();
+      let delta = clock.getDelta();
+      if(!animationState.get(clipActions[0]).isFinished){
+        mixer.update(delta);
+      }
       if(LOGTIMER === 0 && animationDONE){
         // console.log("scene:", globalScene.position.x, globalScene.position.y, globalScene.position.z )
         // // console.log("controls:", controls.target.x, controls.target.y, controls.target.z)
         LOGTIMER++
       }
       stats.end()
+      requestAnimationFrame(animate);
     };
 
     function getDistanceFromCanvas(target) {
@@ -752,11 +813,14 @@ export default {
 
       updateContainerSize(); // Set initial size
       window.addEventListener('resize', debouncedUpdateSize);
+      // webGl.value.parentElement.addEventListener('mousedown', debouncedJarPan);
+      // webGl.value.parentElement.addEventListener('mousemove', )
 
       await setCanvas();
       // initializeEdges(globalScene.children[0]);
+      initiateObjectRotation(currentJarScene, webGl.value.parentElement)
       await nextTick()
-      getDistanceFromCanvas(globalScene.children[0].children[0])
+      // getDistanceFromCanvas(globalScene.children[0].children[0])
 
       animate();
     });
@@ -793,10 +857,6 @@ export default {
         });
       }
 
-      // Dispose Controls
-      if (globalOrbitControls) {
-        globalOrbitControls.dispose();
-      }
 
       // Clear the internal three.js caches
       Cache.clear();
@@ -901,7 +961,7 @@ export default {
 .scene-container{
   position: relative;
   width: 100%;
-  height: 55%;
+  height: 80%;
 }
 .reset-button{
   position: absolute;
