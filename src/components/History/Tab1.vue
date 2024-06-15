@@ -124,7 +124,7 @@
 <script>
 export default {
   name: 'Tab1',
-  phases: 4,
+  phases: 3,
 }
 </script>
 <script setup>

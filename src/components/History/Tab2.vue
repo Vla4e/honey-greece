@@ -3,7 +3,9 @@
     <!-- <div class="background-container">
     </div> -->
     <img class="background" :src="background"/>
-    <div v-if="currentPhase >= 1" class="background-cover"></div>
+    <Transition name="fade" mode="out-in">
+      <div v-if="currentPhase >= 1" class="background-cover"></div>
+    </Transition>
     <div class="text-container">
       <h1 class="heading">
         Greece,
@@ -23,19 +25,21 @@
         </p>
       </Transition>
     </div>
-    <div v-if="currentPhase > 1" class="quote-container">
-        <div class="pushdown" style="height: 30%; width: 30%;">
-        </div>
-        <span class="honey-heading">
-          Antonios Montouris Honey
-        </span>
-        <p class="quote">
-          <img class="quote quote-start" :src="quoteStart"/>
-          where tradition, innovation, 
-          <br/>and the purest honey meet
-          <img class="quote quote-end" :src="quoteEnd"/>
-        </p>
+    <Transition name="slide-in" mode="out-in">
+      <div v-if="currentPhase > 1" class="quote-container">
+          <div class="pushdown" style="height: 30%; width: 30%;">
+          </div>
+          <span class="honey-heading">
+            Antonios Montouris Honey
+          </span>
+          <p class="quote">
+            <img class="quote quote-start" :src="quoteStart"/>
+            where tradition, innovation, 
+            <br/>and the purest honey meet
+            <img class="quote quote-end" :src="quoteEnd"/>
+          </p>
       </div>
+    </Transition>
   </div>
 </template>
 
@@ -87,6 +91,7 @@ const maxPhases = 2 //3 counted from 0
     z-index: 1;
     top: 0;
     right: 0;
+    transition: all 0.5s ease;
   }
 
   .background-cover{
@@ -104,7 +109,7 @@ const maxPhases = 2 //3 counted from 0
     justify-content: center;
     height: 100%;
     width: 100%;
-    transition: transform 1s ease, width 1s ease;
+    transition: transform 0.7s ease, width 0.7s ease;
     .heading{
       font-family: 'DM Serif';
       font-style: normal;
@@ -125,6 +130,7 @@ const maxPhases = 2 //3 counted from 0
       text-align: left;
       color: white;
       width: 40%;
+      text-shadow: 4px 4px 4px rgba(0, 0, 0, 0.5);
     }
   }
   
@@ -136,6 +142,7 @@ const maxPhases = 2 //3 counted from 0
     z-index: 3;
     position: relative;
     height: 100%;
+    transition: all 1s 0.5s ease;
     .honey-heading{
       font-family: "DMSans";
       font-size: 150px;
@@ -184,7 +191,7 @@ const maxPhases = 2 //3 counted from 0
     // justify-content: flex-end;
     .text-container{
       // width: 80%;
-      transform: translateX(30%);
+      transform: translateX(25%);
       .heading{
         font-size: 64px;
         font-weight: 400;
@@ -212,11 +219,22 @@ const maxPhases = 2 //3 counted from 0
         font-weight: 400;
         text-align: center;
       }
+      .text{
+        width: 100%;
+        @media(max-width: 1440px){
+          font-size: 18px;
+        }
+      }
     }
     .quote-container{
       width: 50%;
       padding-left: 5%;
       padding-right: 5%;
+      .quote{
+        @media(max-width: 1440px){
+          font-size: 56px;
+        }
+      }
     }
     .background{
       width: 120%;
@@ -232,7 +250,7 @@ const maxPhases = 2 //3 counted from 0
 }
 
 .slide-in-enter-active, .slide-in-leave-active{
-  transition: all 0.5s 1.5s ease-out;
+  transition: all 0.5s 0.5s ease-out;
 }
 
 .slide-in-enter-from {
@@ -255,5 +273,14 @@ const maxPhases = 2 //3 counted from 0
 }
 .slide-in-leave-active {
   position: absolute;
+}
+.fade-enter-active,
+.fade-leave-active {
+  transition: opacity 0.5s ease;
+}
+
+.fade-enter-from,
+.fade-leave-to {
+  opacity: 0;
 }
 </style>

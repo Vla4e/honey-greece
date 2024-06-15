@@ -9,7 +9,13 @@
           </Transition>
         </keep-alive>
     </div>
-    <div class="change-tabs">
+    <div class="cycle-container">
+      <button class="cycle" @click="cycleForward()">
+        <img v-if="currentTabId === 1 || (currentTabId === 2 && currentPhase === 2)" :src="chevronRight"/>
+        <img v-else :src="chevronRightWhite"/>
+      </button>
+    </div>
+    <!-- <div class="change-tabs">
       <button class="slide-changer" @click="previousTab()" > &lt; prev tab</button>
       <button class="slide-changer" @click="nextTab()">next tab >  
         {{ currentTabId }}</button>
@@ -17,7 +23,7 @@
     <div class="change-phases">
       <button class="slide-changer" @click="previousPhase()" > &lt; prev phase</button>
       <button class="slide-changer" @click="nextPhase()" >next phase > </button>
-    </div>
+    </div> -->
   </div>
 </template>
 
@@ -30,6 +36,8 @@ export default {
 
 <script setup>
 import { ref, computed, toRaw } from 'vue';
+import chevronRightWhite from '@/assets/images/arrow-white.svg';
+import chevronRight from '@/assets/images/arrow.svg';
 // const carouselItems = [
 //   { id: 1, slotName: 'item1', content: 'First Item: Welcome to the Carousel!' },
 //   { id: 2, slotName: 'item2', content: 'Second Item: Enjoy your ride.' },
@@ -40,6 +48,22 @@ import { ref, computed, toRaw } from 'vue';
 let currentPhase = ref(0)
 let currentTabId = ref(0)
 let currentTabComponent = computed(() => Tabs[currentTabId.value])
+
+function cycleForward() {
+  // Check if there are more phases in the current tab
+  console.log("CurrentTabComponent", currentTabComponent.value)
+  if (currentPhase.value < currentTabComponent.value.phases) {
+    currentPhase.value++;
+  } else {
+    // If not, move to the next tab and reset the phase
+    if (currentTabId.value < Tabs.length - 1) {
+      currentTabId.value++;
+    } else {
+      currentTabId.value = 0; // Loop back to the first tab if on the last tab
+    }
+    currentPhase.value = 0; // Reset the phase for the new tab
+  }
+}
 const nextTab = () => {
   console.log("Current Tab", currentTabId.value)
   if (currentTabId.value < Tabs.length - 1) currentTabId.value++;
@@ -128,5 +152,26 @@ const previousPhase = () => {
   left: 40%;
   transform: translateX(-50%);
   z-index: 3;
+}
+.cycle-container{
+  position: absolute;
+  // width: ;
+  height: 60px;
+  right: 0;
+  top: 50%;
+  z-index: 10000;
+  .cycle{
+    height: 100%;
+    background: transparent;
+    width: 100%;
+    transform: scale(1);
+    transition: transform 0.5s ease-in-out;
+    img{
+      height: 100%;
+      &:focus, &:hover{
+        transform: scale(1.05);
+      }
+    }
+  }
 }
 </style>
