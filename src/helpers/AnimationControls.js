@@ -10,6 +10,7 @@ export function setupAnimations(mixer, animations) {
     const animationState = new Map();
 
     animations.forEach((animation) => {
+        // console.log("Animations:", animation)
         const clipAction = mixer.clipAction(animation);
         clipAction.setLoop(LoopOnce);
         clipAction.clampWhenFinished = true;

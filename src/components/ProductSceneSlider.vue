@@ -1,7 +1,11 @@
 <template>
   <div class="scene-container" ref="sceneContainer">
-    <div id="slider" ref="slider" class="slider"></div>
+    <div class="slider-container">
+      <div id="slider" ref="sliderTexture" class="slider"></div>
+    </div>
+
     <canvas ref="webGl" class="webGl" />
+
     <!-- <button class="reset-button" @click="resetScene">X</button> -->
     <div class="size-selection">
       <button v-if="currentBrand === 'okto'" @click="selectJarSize('large')" :class="currentJarSize === 'large' ? 'selected': ''" class="large-jar">
@@ -15,6 +19,7 @@
       </button>
       <button @click="updateTexture()" style="position:absolute; top: 80%; left: 50%;">TEXTURE</button>
     </div>
+
   </div>
 </template>
 
@@ -44,6 +49,7 @@ import {
   CameraHelper,
   BoxHelper,
 Clock,
+Color,
 } from "three";
 
 import {
@@ -118,31 +124,12 @@ export default {
     stats.showPanel(0);
     document.body.appendChild(stats.dom)
     let emitter = inject('emitter')
+
     const webGl = ref();
     const sceneContainer = ref();
-    const slider = ref();
-    console.log("SLIDER !@!!!!!!!!!!", slider.value)
-    function initSliderInteraction() {
-      if(slider.value){
-        console.log("THERE WAS VALUE")
-        slider.value.addEventListener('pointerdown', (event) => {
-          webGl.value.addEventListener('pointermove', onPointerMove);
-          webGl.value.addEventListener('pointerup', () => {
-            webGl.value.removeEventListener('pointermove', onPointerMove);
-          });
-        });
-      }
-      function onPointerMove(event) {
-        const width = webGl.value.innerWidth;
-        const sliderPosition = Math.max(0, Math.min(width, event.pageX));
-        const transitionPoint = sliderPosition / width; // Normalize to [0, 1]
+    const sliderTexture = ref();
 
-        // Use transitionPoint to blend between the current and upcoming labels
-        currentLabelMesh.material.opacity = 1 - transitionPoint;
-        upcomingLabelMesh.material.opacity = transitionPoint;
-        upcomingLabelMesh.visible = true;
-      }
-    }
+    // console.log("SLIDER !@!!!!!!!!!!", sliderTexture.value)
     const productStore = useProductStore();
     let slugs = {
       brand: 'haa',
@@ -179,6 +166,8 @@ export default {
      * @type {THREE.Scene | null}
      */
     let globalScene = null;
+    let labelSceneL = null;
+    let labelSceneR = null;
 
     /**
      * @type {THREE.PointLight | null}
@@ -245,14 +234,30 @@ export default {
     let animationState = new Map();
 
     let jarSizes = [];
+    let sliderPos = null;
 
     const setCanvas = async () => {
       // Create Scene
       globalScene = new Scene();
+      labelSceneL = new Scene();
+      labelSceneL.background = null;
+      // labelSceneL.background = new Color(0x008000);
+      labelSceneR = new Scene();
+      labelSceneR.background = null
+      // labelSceneR.background = new Color(0x0000FF);
 
       // let jarPromise = await loadGlbReturnParts(loader, jarConfigs.medium.source)
       let mediumSmallScene = await loadGlbReturnParts(loader, '/assets/glb/newJars/300-150-animation-choppy-v1.glb')
       // let largeMediumScene = await loadGlbReturnParts(loader, '/assets/glb/newJars/450-300-animation-choppy-v1.glb')
+      console.log("mediumsmallscene", mediumSmallScene)
+      for (let mesh of mediumSmallScene.meshes){
+          globalScene.add(mesh)
+      }
+      for (let labelMesh of mediumSmallScene.labelMeshes){
+        labelSceneL.add(labelMesh)
+        let labelClone = labelMesh.clone()
+        labelSceneR.add(labelClone)
+      }
       if(mediumSmallScene.jarSizes){
         jarSizes = mediumSmallScene.jarSizes
       }
@@ -261,7 +266,7 @@ export default {
       // console.log(jarAnimation3)
       // console.log(jarAnimation4)
       mixer = initializeMixer(mediumSmallScene.scene)
-      globalScene.add(mediumSmallScene.scene)
+      // globalScene.add(mediumSmallScene.scene)
       let setupAnimationProps = setupAnimations(mixer, mediumSmallScene.gltf.animations)
       // destructuring makes globalScene.add throw error?
       // ({ clipActions, animationState } = setupAnimations(mixer, jarAnimation3.gltf.animations))
@@ -313,10 +318,11 @@ export default {
       // Renderer
       const canvas = webGl.value;
       // console.log("Canvas dimensions beofe attaching WebGLRenderer:", canvas.clientWidth, canvas.clientHeight)
-      globalRenderer = new WebGLRenderer({ canvas, antialias: true });
+      globalRenderer = new WebGLRenderer({ canvas, antialias: true, alpha: true });
       globalRenderer.setSize(containerWidth.value, containerHeight.value);
       globalRenderer.setClearColor(0x000000, 0)
       globalRenderer.setPixelRatio(window.devicePixelRatio);
+      // globalRenderer.setScissorTest( true );
       globalRenderer.shadowMap.enabled = false;
       globalRenderer.render(globalScene, globalCamera);
       
@@ -503,6 +509,7 @@ export default {
       if (webGl.value && webGl.value.parentElement) {
         containerWidth.value = webGl.value.parentElement.clientWidth;
         containerHeight.value = webGl.value.parentElement.clientHeight;
+        sliderPos = containerWidth.value / 2
       }
     }
     async function setLighting(renderer){
@@ -572,7 +579,24 @@ export default {
 
       // currentJarScene.rotation.x += (mouseY - currentJarScene.rotation.x) * 0.005;
       // currentJarScene.rotation.y += (mouseX - currentJarScene.rotation.y) * 0.005;
+
+      // globalRenderer.setClearColor(0x000000, 0);
+      globalScene.background = new Color(0xff0000);
+      // globalRenderer.clear();
+      // globalRenderer.setScissorTest(false);
+      // globalRenderer.setViewport(0, 0, containerWidth.value, containerHeight.value);
       globalRenderer.render(globalScene, globalCamera);
+
+      // globalRenderer.setScissorTest(false);
+      // globalRenderer.setViewport(0, 0, sliderPos, containerHeight.value);
+      // globalRenderer.setScissor(0, 0, sliderPos, containerHeight.value);
+      // globalRenderer.clear(false, true, false); // Clear depth and stencil for labelSceneL
+      globalRenderer.render(labelSceneL, globalCamera);
+      
+      // globalRenderer.setViewport(sliderPos, 0, containerWidth.value - sliderPos, containerHeight.value);
+      // globalRenderer.setScissor(sliderPos, 0, containerWidth.value - sliderPos, containerHeight.value);
+      // globalRenderer.clear(false, true, false); // Clear depth and stencil for labelSceneR
+      globalRenderer.render(labelSceneR, globalCamera);
       TWEEN.update();
       let delta = clock.getDelta();
       if(!animationState.get(clipActions[0]).isFinished){
@@ -625,6 +649,9 @@ export default {
     onMounted( async () => {
       await nextTick();
 
+      console.log("WebGL Canvas:", webGl.value);
+      console.log("Scene container", sceneContainer.value)
+      console.log("Slider Element:", sliderTexture.value);
       updateContainerSize(); // Set initial size
       window.addEventListener('resize', debouncedUpdateSize);
       // webGl.value.parentElement.addEventListener('mousedown', debouncedJarPan);
@@ -635,11 +662,39 @@ export default {
       initiateObjectRotation(currentJarScene, webGl.value.parentElement)
       await nextTick()
       // getDistanceFromCanvas(globalScene.children[0].children[0])
-      console.log("BEFORE INTERACTION INIT", slider.value, webGl.value)
-      initSliderInteraction();
+      // console.log("BEFORE INTERACTION INIT", slider.value, webGl.value)
+      // initSliderInteraction();
+      initSlider()
       animate();
     });
+    function initSlider() {
+      console.log("SLIDER INIT", sliderTexture.value)
+      console.log("window", window)
+      function onPointerDown(e) {
+          console.log("pointerDown", e.isPrimary)
+          if (e.isPrimary === false) return;
+          // controls.enabled = false;
+          window.addEventListener('pointermove', onPointerMove);
+          window.addEventListener('pointerup', onPointerUp);
+      }
 
+      function onPointerUp() {
+          console.log("POINTER UP")
+          // controls.enabled = true;
+          window.removeEventListener('pointermove', onPointerMove);
+          window.removeEventListener('pointerup', onPointerUp);
+      }
+
+      function onPointerMove(e) {
+        console.log("pointerMove")
+        if (e.isPrimary === false) return;
+        sliderPos = Math.max(0, Math.min(window.innerWidth, e.pageX));
+        sliderTexture.value.style.left = sliderPos - (sliderTexture.value.offsetWidth / 2) + 'px';
+      }
+
+      // sliderTexture.style.touchAction = 'none';
+      sliderTexture.value.addEventListener('pointerdown', onPointerDown);
+  }
     onUnmounted(() => {
       // Remove resize event listener
       window.removeEventListener('resize', debouncedUpdateSize);
@@ -761,7 +816,8 @@ export default {
 
     return { 
       webGl, 
-      sceneContainer, 
+      sceneContainer,
+      sliderTexture,
       currentJarSize,
       currentBrand,
       resetScene,
@@ -826,16 +882,21 @@ export default {
   width: 100%;
   height: 100%;
 }
-.slider{
+.slider-container{
+  width: 100%;
+  height: 100%;
   position: absolute;
-				cursor: ew-resize;
-				width: 40px;
-				height: 40px;
-				background-color: #F32196;
-				opacity: 0.7;
-				border-radius: 50%;
-				top: calc(50% - 20px);
-				left: calc(50% - 20px);
-        z-index: 20000;
+  .slider{
+    position: absolute;
+    cursor: ew-resize;
+    width: 40px;
+    height: 40px;
+    background-color: #F32196;
+    opacity: 0.7;
+    border-radius: 50%;
+    top: calc(50% - 20px);
+    left: calc(50% - 20px);
+    z-index: 20000;
+  }
 }
 </style>

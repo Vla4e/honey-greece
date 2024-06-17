@@ -7,6 +7,8 @@ import Tabs from '@/views/Tabs.vue';
 import History from '@/views/History.vue';
 import ProductPage from '@/views/ProductPage.vue';
 
+import emitter from '@/helpers/emitter.js';
+
 const transitionDelay = 500; // Page transition delay to ensure animations plays out before transitioning.
 const allowedSelectedBrands = ['Okto', 'HAA', 'Melculum']
 
@@ -97,6 +99,7 @@ function processRouteTransition(to, next) {
 }
 
 router.beforeEach((to, from, next) => {
+  emitter.emit('toggleSidebarRoute')
   const navbarStore = useNavbarStore();
   const globalStore = useGlobalStore();
   console.log("BEFORE HSITORY", to.meta.navbarFloating)

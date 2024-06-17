@@ -13,19 +13,21 @@
         </span>
       </div>
       <router-link class="logo-link" to="/">
-        <img :src="homeIcon" class="navbar-logo" />
+        <img v-if="currentNavbarColor === 'white'" :src="homeIconWhite" class="home-icon"/>
+        <img v-else :src="homeIcon" class="home-icon" />
       </router-link>
     </div>
   </nav>
 </template>
 
 <script>
-import { inject, ref, computed } from 'vue'
+import { inject, ref, computed, onMounted, onUnmounted } from 'vue'
 import { useNavbarStore } from '@/store/navbar.js'
 import { useWindowSize } from '@vueuse/core'
 import logoUrl from '@/assets/images/main-logo.png'
 import burgerIcon from '@/assets/images/burger-icon.svg'
 import homeIcon from '@/assets/images/home-icon.svg'
+import homeIconWhite from '@/assets/images/home-icon-white.svg'
 
 import brandConfigs from "@/assets/brand-information/index.js"
 
@@ -37,13 +39,15 @@ export default {
     if(windowWidth.value < 764){
       isMobile.value = true;
     } else isMobile.value = false
+
     let emitter = inject('emitter')
-    let brands = []
     
     const navbarStore = useNavbarStore();
     let navbarFloating = computed(() => navbarStore.getNavbarFloating)
-
+    
+    let currentNavbarColor = ref('white')
     //"Map" brandConfigs to brands variable
+    let brands = []
     Object.keys(brandConfigs).forEach((brand) => {
       let tempBrand = brandConfigs[brand]
       brands.push({
@@ -94,9 +98,25 @@ export default {
       console.log("TOGGLING")
       emitter.emit('toggleContactForm')
     }
+
+    function switchTextColor(colorString = 'black'){
+      console.log("Switching color")
+      document.documentElement.style.setProperty('--navbar-color', `${colorString}`);
+      currentNavbarColor.value = colorString === 'black' ? 'black' : 'white'
+    }
+
+    onMounted(() => {
+      emitter.on('switchTextColor', switchTextColor)
+    })
+
+    onUnmounted(() => {
+      emitter.off('switchTextColor')
+    })
     return { 
       logo: logoUrl,
       homeIcon,
+      homeIconWhite,
+      currentNavbarColor,
       sidebar: burgerIcon,
       brands,
       navbarFloating,
@@ -126,7 +146,7 @@ export default {
   }
 }
 .blend-link{
-  color: #000;
+  color: var(--navbar-color);
   text-align: center;
   font-family: "DMSans";
   font-size: 15px;
@@ -152,7 +172,7 @@ export default {
   width: 25%;
   position: relative;
   // margin-top: 3%;
-  .navbar-logo{
+  .home-icon{
     width: 100%;
   }
 }

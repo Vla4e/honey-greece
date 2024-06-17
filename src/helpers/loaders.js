@@ -42,15 +42,32 @@ export async function loadGlbReturnParts(loader, url){
     scene.position.set(0, 0, 0)
     // const axesHelperNew = new AxesHelper(5)
     // scene.add(axesHelperNew)
-    let meshes = scene.children;
+    let meshes = [];
+    let labelMeshes = [];
+    scene.traverse((obj)=>{
+      if(obj.isMesh){
+        if(obj.name.includes('label')){
+          labelMeshes.push(obj.clone())
+        } else {
+          meshes.push(obj.clone())
+        }
+      }
+    });
     let targetMesh = meshes[0];
+    let jarSizes = []
     const meshNames = meshes.map((mesh) => {
       // // console.log("MESHNAME", mesh.name)
+      // console.log("mesh ss", mesh.name.substring(mesh.name.length-4, mesh.name.length))
+      if(mesh.name.includes('label')){
+        jarSizes.push(mesh.name.substring(mesh.name.length-4, mesh.name.length))
+        mesh.jarSize = mesh.name.substring(mesh.name.length-4, mesh.name.length)
+      }
       return mesh.name
     })
+    console.log("SIZES", jarSizes)
     // // console.log('meshNames', meshNames)
 
-    return { gltf: loaderPromise, scene, meshes, targetMesh, meshNames, loaded: true }
+    return { gltf: loaderPromise, scene, meshes, labelMeshes, targetMesh, meshNames, jarSizes, loaded: true }
   } else return { loaded: false }
 }
 

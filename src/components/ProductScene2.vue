@@ -1,6 +1,6 @@
 <template>
   <div class="scene-container" ref="sceneContainer">
-    <div id="slider" ref="slider" class="slider"></div>
+    <!-- <div id="slider" ref="slider" class="slider"></div> -->
     <canvas ref="webGl" class="webGl" />
     <!-- <button class="reset-button" @click="resetScene">X</button> -->
     <div class="size-selection">
@@ -13,7 +13,7 @@
       <button v-if="currentBrand !== 'okto'" @click="selectJarSize('small')" :class="currentJarSize === 'small' ? 'selected': ''" class="small-jar">
         150g
       </button>
-      <button @click="updateTexture()" style="position:absolute; top: 80%; left: 50%;">TEXTURE</button>
+      <!-- <button @click="updateTexture()" style="position:absolute; top: 80%; left: 50%;">TEXTURE</button> -->
     </div>
   </div>
 </template>
@@ -44,6 +44,10 @@ import {
   CameraHelper,
   BoxHelper,
 Clock,
+LinearFilter,
+RGBAFormat,
+VideoTexture,
+sRGBEncoding
 } from "three";
 
 import {
@@ -77,6 +81,7 @@ import {
 
 import { debounce, parabolicPathCoordinate } from '@/helpers/globalFunctions.js'
 import { initiateObjectRotation } from '@/helpers/3DObjectPan.js'
+import { initiateVideoControl } from '@/helpers/VideoPlayback.js'
 import TWEEN, { update } from '@tweenjs/tween.js';
 
 
@@ -113,6 +118,7 @@ Cache.enabled = true;
 
 export default {
   setup() {
+    console.log("SETUP")
     let stats = new Stats();
     //ref to canvas, window size
     stats.showPanel(0);
@@ -246,30 +252,74 @@ export default {
 
     let jarSizes = [];
 
+    function loadVideoTexture(videoSrc, playVideo, mesh, callback) {
+      const video = document.createElement('video');
+      video.src = videoSrc;
+      video.defaultPlaybackRate = 0.4;
+      video.loop = true;
+      video.muted = true; // Optional: mute the video
+
+      const videoTexture = new VideoTexture(video);
+      videoTexture.flipY = false;
+      videoTexture.encoding = sRGBEncoding;
+      // console.log("VideoTexture", videoTexture)
+      video.addEventListener('canplaythrough', () => {
+          videoTexture.minFilter = LinearFilter;
+          videoTexture.magFilter = LinearFilter;
+          videoTexture.format = RGBAFormat;
+          if(playVideo)
+          video.play(); // Start playing the video
+          // video.play(); // Start playing the video
+        }, false);
+        video.load(); // Load the video
+        applyVideoTextureToMesh(mesh, videoTexture)    
+        // initiateVideoControl(video, webGl.value.parentElement)
+    }
+
+    function applyVideoTextureToMesh(mesh, videoTexture) {
+      console.log("Attempting to apply video texture", videoTexture)
+      mesh.material = new MeshBasicMaterial({
+        map: videoTexture,
+        transparent: false, // Ensure no transparency
+        opacity: 1.0 // Set full opacity
+      });
+    }
     const setCanvas = async () => {
       // Create Scene
       globalScene = new Scene();
 
-      // let jarPromise = await loadGlbReturnParts(loader, jarConfigs.medium.source)
-      let mediumSmallScene = await loadGlbReturnParts(loader, '/assets/glb/newJars/300-150-animation-choppy-v1.glb')
-      // let largeMediumScene = await loadGlbReturnParts(loader, '/assets/glb/newJars/450-300-animation-choppy-v1.glb')
-      if(mediumSmallScene.jarSizes){
-        jarSizes = mediumSmallScene.jarSizes
+      let mediumSmallScene = await loadGlbReturnParts(loader, '/assets/glb/newMethod/150-300.glb')
+      let largeMediumScene = await loadGlbReturnParts(loader, '/assets/glb/newMethod/300-450.glb')
+      console.log("Med", mediumSmallScene)
+      console.log("Large", largeMediumScene)
+      if(largeMediumScene.jarSizes){
+        jarSizes = largeMediumScene.jarSizes
       }
-      // console.log(jarAnimation1)
-      // console.log(jarAnimation2)
-      // console.log(jarAnimation3)
-      // console.log(jarAnimation4)
-      mixer = initializeMixer(mediumSmallScene.scene)
-      globalScene.add(mediumSmallScene.scene)
-      let setupAnimationProps = setupAnimations(mixer, mediumSmallScene.gltf.animations)
+      largeMediumScene.scene.traverse((obj)=>{
+        if(obj.isMesh){
+          if(obj.name.includes('Plane')){
+            obj.material.transparent = true;
+            obj.material.opacity = 0;
+          }
+        }
+      })
+      loadVideoTexture('/assets/videos/okto-300-cotton.mp4', true, largeMediumScene.scene.children[3], ()=>{
+        console.log("300")
+      })
+      
+      loadVideoTexture('/assets/videos/okto-450-cotton.mp4', true, largeMediumScene.scene.children[0], ()=>{
+        console.log("450")
+      })
+      mixer = initializeMixer(largeMediumScene.scene)
+      globalScene.add(largeMediumScene.scene)
+      let setupAnimationProps = setupAnimations(mixer, largeMediumScene.gltf.animations)
       // destructuring makes globalScene.add throw error?
       // ({ clipActions, animationState } = setupAnimations(mixer, jarAnimation3.gltf.animations))
       clipActions = setupAnimationProps.clipActions
       animationState = setupAnimationProps.animationState
       
 
-      currentJarScene = mediumSmallScene.scene; //Scene to be loaded
+      currentJarScene = largeMediumScene.scene; //Scene to be loaded
       console.log("assigned value to jar scene", currentJarScene)
       // currentJarScene.position.set(0, 0, 0.02)
       jarScenes[currentJarSize.value] = currentJarScene; 
@@ -292,14 +342,15 @@ export default {
       globalPointLight.position.set(targetMesh.position.x, targetMesh.position.y, targetMesh.position.z + 0.5);
 
       // Camera
-      globalCamera = new PerspectiveCamera(25, aspectRatio.value, 0.001, 5);
+      globalCamera = mediumSmallScene.gltf.cameras[0]
+      // globalCamera = new PerspectiveCamera(25, aspectRatio.value, 0.001, 5);
       // globalCamera.zoomFactor = 10;
       let axesHelper2 = new AxesHelper(5);
       axesHelper2.setColors('blue', 'green', 'red')
-      targetMesh.add(axesHelper2)
-      globalCamera.position.set(cameraConfigs.x, cameraConfigs.y, cameraConfigs.z); // Position the camera in front of the mesh
-      globalCamera.lookAt(0, cameraConfigs.y , 0)
-      globalCamera.add(globalPointLight); //add pointlight to camera
+      // targetMesh.add(axesHelper2)
+      // globalCamera.position.set(cameraConfigs.x, cameraConfigs.y, cameraConfigs.z); // Position the camera in front of the mesh
+      // globalCamera.lookAt(0, cameraConfigs.y , 0)
+      // globalCamera.add(globalPointLight); //add pointlight to camera
       globalScene.add(globalCamera);
 
 
@@ -308,19 +359,19 @@ export default {
       axesHelper.setColors('red', 'blue', 'green')
       cameraHelper = new CameraHelper(globalCamera);
       // globalScene.add(cameraHelper)
-      globalScene.add(axesHelper)
+      // globalScene.add(axesHelper)
 
       // Renderer
       const canvas = webGl.value;
       // console.log("Canvas dimensions beofe attaching WebGLRenderer:", canvas.clientWidth, canvas.clientHeight)
-      globalRenderer = new WebGLRenderer({ canvas, antialias: true });
+      globalRenderer = new WebGLRenderer({ canvas, antialias: true, alpha: true });
       globalRenderer.setSize(containerWidth.value, containerHeight.value);
       globalRenderer.setClearColor(0x000000, 0)
       globalRenderer.setPixelRatio(window.devicePixelRatio);
       globalRenderer.shadowMap.enabled = false;
       globalRenderer.render(globalScene, globalCamera);
       
-      setLighting(globalRenderer)
+      // setLighting(globalRenderer)
     };
 
     async function computeTexture() {
@@ -463,7 +514,13 @@ export default {
         // animateJarOut(currentJarScene, movement, texture)
         
         clipActions.forEach((action) => {
-          console.log("Playing action")
+          console.log("Action NAME:", action._clip.name)
+          // console.log("Playing action")
+          if(action._clip.name.includes("Plane")){
+
+          } else{
+          }
+          console.log("Cam")
           animationState.get(clipActions[0]).isFinished = false;
           action.play()
           currentJarSize.value = size;
@@ -623,6 +680,7 @@ export default {
 
   
     onMounted( async () => {
+      console.log("MOUNTED")
       await nextTick();
 
       updateContainerSize(); // Set initial size
@@ -632,11 +690,11 @@ export default {
 
       await setCanvas();
       // initializeEdges(globalScene.children[0]);
-      initiateObjectRotation(currentJarScene, webGl.value.parentElement)
+      // initiateObjectRotation(currentJarScene, webGl.value.parentElement)
       await nextTick()
       // getDistanceFromCanvas(globalScene.children[0].children[0])
       console.log("BEFORE INTERACTION INIT", slider.value, webGl.value)
-      initSliderInteraction();
+      // initSliderInteraction();
       animate();
     });
 

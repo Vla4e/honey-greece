@@ -11,13 +11,21 @@ export default {
 }
 </script>
 <script setup>
-import { ref } from 'vue';
-
+import { ref, inject, onMounted, onUnmounted } from 'vue';
+let emitter = inject('emitter')
 let menuOpened = ref(false)
 function toggleMenu() {
   console.log("TOGGLING")
   menuOpened.value = !menuOpened.value
 }
+onMounted(()=>{
+  emitter.on('toggleSidebarRoute', ()=>{
+    menuOpened.value = false;
+  })
+})
+onUnmounted(()=>{
+  emitter.off('toggleSidebarRoute')
+})
 </script>
 
 <style lang="scss" scoped>
@@ -34,7 +42,7 @@ function toggleMenu() {
 .bar {
     height: 2px;
     width: 100%;
-    background-color: black;
+    background-color: var(--navbar-color);
     transition: transform 0.4s ease, opacity 0.4s ease, width 0.4s ease;
     &:nth-child(1), &:nth-child(3){
       width: 80%;

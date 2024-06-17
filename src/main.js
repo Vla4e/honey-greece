@@ -5,9 +5,8 @@ import '@/assets/styles/fonts.scss'
 import App from './App.vue'
 import router from './router'
 import components from './components'
-import mitt from 'mitt';
+import emitter from './helpers/emitter.js'; 
 
-const emitter = mitt();
 const app = createApp(App)
 const pinia  = createPinia();
 app.use(router)

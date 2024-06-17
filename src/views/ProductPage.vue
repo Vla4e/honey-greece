@@ -52,7 +52,10 @@
 
     <div class="product-viewer" ref="productViewer">
       <!-- <div class="pushdown" style="height: 15%; width: 100%;"></div> -->
-      <ProductScene />
+      <!-- <ProductScene /> -->
+      <!-- <ProductScene2/> -->
+      <!-- <ProductSceneSlider/> -->
+      <ProductSceneFinal/>
     </div>
 
     <div class="blend-selection">
@@ -92,17 +95,20 @@ import { useWindowSize } from "@vueuse/core";
 import { useRoute } from 'vue-router';
 
 import ProductScene from "../components/ProductScene.vue";
+import ProductScene2 from "../components/ProductScene2.vue";
 
 import downloadIcon from "@/assets/pages/product-page/download-icon.png";
 import pointerLine from "@/assets/pages/product-page/pointer-line.svg";
 import pointerCircle from "@/assets/pages/product-page/pointer-circle.svg";
-import arrow from "@/assets/pages/product-page/arrow.svg";
+import arrow from "@/assets/images/arrow.svg";
 
 import brandConfigs from "@/assets/brand-information/index.js"
 import { useProductStore } from '@/store/product.js'
+import ProductSceneSlider from "../components/ProductSceneSlider.vue";
+import ProductSceneFinal from "../components/ProductSceneFinal.vue"
 
 export default {
-  components: { ProductScene },
+  components: { ProductScene, ProductScene2, ProductSceneSlider, ProductSceneFinal },
   props: ['line', 'selectedBrand'],
 
   setup(props) {
@@ -602,7 +608,7 @@ export default {
     left: 0;
     right: 0;
     background: linear-gradient(to right, white 0%, white 100%);
-    animation: fadeEffectLeftToRight 0.5s 2.2s forwards; // delay for switch animation to play out
+    animation: fadeEffectLeftToRight 0.5s forwards; // delay for switch animation to play out
 }
 .stylish-pointer-to-left::before{
   content: "";
@@ -612,7 +618,7 @@ export default {
   left: 0;
   right: 0;
   background: linear-gradient(to right, white 0%, white 100%);
-  animation: fadeEffectRightToLeft 0.5s 2.2s forwards; // delay for switch animation to play out
+  animation: fadeEffectRightToLeft 0.5s forwards; // delay for switch animation to play out
 }
 @keyframes fadeEffectLeftToRight {
     0% {

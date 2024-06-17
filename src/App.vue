@@ -55,9 +55,15 @@ export default {
       emitter.on('toggleContactForm', ()=>{
         showContactForm.value = !showContactForm.value
       })
+      emitter.on('toggleSidebarRoute', ()=>{
+        if(showSidebar.value){
+          toggleSidebar();
+        }
+      })
     })
     onUnmounted(()=> {
       emitter.off('toggleContactForm')
+      emitter.off('toggleSidebarRoute')
     })
     return {
       showSidebar, 

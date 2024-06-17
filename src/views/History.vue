@@ -35,7 +35,7 @@ export default {
 </script>
 
 <script setup>
-import { ref, computed, toRaw } from 'vue';
+import { ref, computed, toRaw, inject, onMounted } from 'vue';
 import chevronRightWhite from '@/assets/images/arrow-white.svg';
 import chevronRight from '@/assets/images/arrow.svg';
 // const carouselItems = [
@@ -44,6 +44,8 @@ import chevronRight from '@/assets/images/arrow.svg';
 //   { id: 3, slotName: 'item3', content: "Third Item: Don't forget to check all our features." },
 //   { id: 4, slotName: 'item4', content: 'Fourth Item: Last one, hope you had fun!' }
 // ];
+
+let emitter = inject('emitter')
 
 let currentPhase = ref(0)
 let currentTabId = ref(0)
@@ -62,6 +64,18 @@ function cycleForward() {
       currentTabId.value = 0; // Loop back to the first tab if on the last tab
     }
     currentPhase.value = 0; // Reset the phase for the new tab
+  }
+
+  if(currentTabId.value === 0 ){
+    emitter.emit('switchTextColor', 'white')
+  } else if(currentTabId.value === 1 ){
+    emitter.emit('switchTextColor', 'black')
+  } else if(currentTabId.value === 2 ){
+    if(currentPhase.value > 1){
+      emitter.emit('switchTextColor', 'black')
+    } else {
+      emitter.emit('switchTextColor', 'white')
+    }
   }
 }
 const nextTab = () => {
@@ -86,6 +100,9 @@ const previousPhase = () => {
   if (currentPhase.value > 0) currentPhase.value--;
 };
 
+onMounted(() => {
+  emitter.emit('switchTextColor', 'white')
+})
 </script>
 
 <style lang="scss" scoped>

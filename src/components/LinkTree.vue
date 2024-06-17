@@ -23,7 +23,7 @@ import treeNode from "@/assets/components/link-tree/tree-node.svg"
 import treeLeftmost from "@/assets/components/link-tree/tree-leftmost.svg"
 import treeRightmost from "@/assets/components/link-tree/tree-rightmost.svg"
 
-import { ref, watch, toRaw } from 'vue'
+import { ref, watch } from 'vue'
 import router from '@/router/index.js'
 import { useRoute } from 'vue-router';
 
@@ -211,7 +211,7 @@ export default {
     }
   }
   .tree-route{
-    color: #000;
+    color: var(--navbar-color);
     text-align: center;
     font-family: "DMSans";
     font-size: 15px;

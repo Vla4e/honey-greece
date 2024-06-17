@@ -6,7 +6,7 @@
       <img :src="closeIcon" @click="toggleSidebar" class="x-icon"/>
     </div> -->
     <div class="left-side">
-        <router-link class="sidebar-link disabled" to="/history">
+        <router-link class="sidebar-link" to="/history">
           <span class="link-heading">History</span>
         </router-link>
         <router-link class="sidebar-link" to="/product/HAA?line=Blends">
@@ -25,7 +25,21 @@
     <div class="right-side">
       <div class="sidebar-link disabled">
         <span class="link-heading">Contact</span>
-        <span class="link-info">Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat.</span>
+        <span class="link-info">
+          Email: <a href="mailto:info@premiumhoney.gr" target="_blank">info@premiumhoney.gr</a>
+          <br/>
+          Phone: +30 22320-22153
+          <br/><br/>
+          Address:
+          <br/>
+          Thavmakos - Domokos
+          <br/>
+          35010 GREECE
+          <br/>
+          Location:
+          <br/>
+          39.14698616699479, 22.28284913351356
+        </span>
       </div>
       <router-link class="sidebar-link disabled" to="/about">
         <span class="link-heading">About</span>
@@ -100,6 +114,7 @@ export default {
       letter-spacing: 9.18px;
       text-align: left;
       text-transform: uppercase;
+      margin-bottom: 15px;
       &:hover{
         &:not(.disabled){
         // transform: scale(1.01);
@@ -123,11 +138,11 @@ export default {
     .link-info{
       color: #000;
       font-family: "DMSans";
-      font-size: 20px;
+      font-size: 18px;
       font-style: normal;
       font-weight: 400;
       line-height: normal;
-      text-transform: capitalize;
+      text-transform: none;
       text-align: left;
       max-width: 60%;
     }
