@@ -41,7 +41,7 @@
           39.14698616699479, 22.28284913351356
         </span>
       </div>
-      <router-link class="sidebar-link disabled" to="/about">
+      <router-link class="sidebar-link disabled" to="/about-us">
         <span class="link-heading">About</span>
       </router-link>
     </div>
