@@ -64,7 +64,19 @@ import {
  } from 'three';
 import { BokehShader, BokehDepthShader } from 'three/addons/shaders/BokehShader2.js';
 
-import { initPostprocessing, updateFocusCoords } from '@/helpers/DOFPostProcessing.js';
+import { 
+  initPostprocessing, 
+  createMaterialDepthShader, 
+  updateMaterialDepthShader,
+  updateShaderUniforms, 
+  debouncePointerMove,
+  onPointerMove,
+  updateFocusCoords,
+  linearize,
+  smoothstep,
+  calculateInitialFocus,
+  calculateDepthOfField
+} from '@/helpers/DOFPostProcessing.js';
 
 import Stats from "stats.js";
 
@@ -96,60 +108,9 @@ export default {
     let currentTextureId = ref(0);
     let textureUrl = ref(textureUrls[currentTextureId.value]);
     console.log("TexutreURL:")
-    //Postprocessing
-    // let postprocessing = {
-    //   scene: null,
-    //   camera: null,
-    //   rtTextureDepth: null,
-    //   rtTextureColor: null,
-    //   materialBokeh: null,
-    //   bokeh_uniforms: null
-    // };
-    
-    const effectController = reactive({
-      enabled: true,
-      jsDepthCalculation: true,
-      shaderFocus: false,
-      fstop: 5,
-      maxblur: 1.0,
-      showFocus: false,
-      focalDepth: 2.8,
-      manualdof: false,
-      vignetting: false,
-      depthblur: false,
-      threshold: 0.5,
-      gain: 2.0,
-      bias: 0.5,
-      fringe: 0.7,
-      focalLength: 35,
-      noise: true,
-      pentagon: false,
-      dithering: 0.0001
-    });
-    function updateShaderUniforms() {
-      let uniforms = postprocessing.bokeh_uniforms;
-      for (const key in effectController) {
-        if (key in uniforms) {
-          if(key === 'focalDepth'){
-            console.log("FD not updated")
-          } else {
-            uniforms[key].value = effectController[key];
-          }
-        }
-      }
-    }
-    // watch(effectController, () => {
-    //   updateShaderUniforms();
-    // }, { deep: true });
 
-    const depthShader = BokehDepthShader;
-    let materialDepth = new ShaderMaterial({
-      uniforms: depthShader.uniforms,
-      vertexShader: depthShader.vertexShader,
-      fragmentShader: depthShader.fragmentShader
-    });
+    let materialDepthShader = createMaterialDepthShader()
 
-    // function initPostprocessing() {
     const mouse = reactive({
       x: 0,
       y: 0,
@@ -197,48 +158,6 @@ export default {
 
     let postprocessing = initPostprocessing(windowWidth.value, windowHeight.value)
 
-    //   const rtWidth = windowWidth.value;
-    //   const rtHeight = windowHeight.value;
-      
-    //   postprocessing.scene = new Scene();
-    //   postprocessing.camera = new OrthographicCamera(-rtWidth / 2, rtWidth / 2, rtHeight / 2, -rtHeight / 2, -10000, 10000);
-    //   postprocessing.camera.position.z = 100;
-
-    //   postprocessing.rtTextureDepth = new WebGLRenderTarget(rtWidth, rtHeight, {
-    //     minFilter: LinearFilter,
-    //     magFilter: LinearFilter,
-    //     format: RGBAFormat,
-    //     type: HalfFloatType
-    //   });
-
-    //   postprocessing.rtTextureColor = new WebGLRenderTarget(rtWidth, rtHeight, {
-    //     minFilter: LinearFilter,
-    //     magFilter: LinearFilter,
-    //     format: RGBAFormat,
-    //     type: HalfFloatType
-    //   });
-
-    //   const bokeh_shader = BokehShader;
-    //   postprocessing.bokeh_uniforms = UniformsUtils.clone(bokeh_shader.uniforms);
-    //   postprocessing.bokeh_uniforms["tColor"].value = postprocessing.rtTextureColor.texture;
-    //   postprocessing.bokeh_uniforms["tDepth"].value = postprocessing.rtTextureDepth.texture;
-		// 		postprocessing.bokeh_uniforms[ 'textureWidth' ].value = windowWidth.value;
-		// 		postprocessing.bokeh_uniforms[ 'textureHeight' ].value = windowHeight.value;
-
-    //   postprocessing.materialBokeh = new ShaderMaterial({
-    //     uniforms: postprocessing.bokeh_uniforms,
-    //     vertexShader: bokeh_shader.vertexShader,
-    //     fragmentShader: bokeh_shader.fragmentShader,
-    //     defines: {
-    //         RINGS: 1,
-    //         SAMPLES: 2
-    //     }
-    //   });
-
-    //   postprocessing.quad = new Mesh( new PlaneGeometry( windowWidth.value, windowHeight.value ), postprocessing.materialBokeh );
-		// 		postprocessing.quad.position.z = - 500;
-    //   postprocessing.scene.add(postprocessing.quad);
-    // }
 
 
 
@@ -479,8 +398,7 @@ export default {
       await setCanvas(texture).then(() => {
         // startTrackingMouseMovement();
         // initPostprocessing();
-        materialDepth.uniforms[ 'mNear' ].value = camera.near;
-        materialDepth.uniforms[ 'mFar' ].value = camera.far;
+        updateMaterialDepthShader(materialDepthShader, camera)
         window.addEventListener("resize", onWindowResize, false);
         // updateShaderUniforms()
         animate();
@@ -515,7 +433,7 @@ export default {
         // renderer.render(scene, camera);
 
         // // Render depth into texture using the depth material
-        // scene.overrideMaterial = materialDepth;
+        // scene.overrideMaterial = materialDepthShader;
         // renderer.setRenderTarget(postprocessing.rtTextureDepth);
         // renderer.clear();
         // renderer.render(scene, camera);

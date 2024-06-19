@@ -6,7 +6,7 @@
       <!-- Add video tag here -->
       <!-- <img :src="bgNew" class="background-video"/> -->
       <video class="background-video" autoplay muted loop playsinline>
-        <source :src="homeVideoHQ" type="video/mp4">
+        <source :src="placeHolder" type="video/mp4">
         Your browser does not support the video tag.
       </video>
     </div>
@@ -26,6 +26,7 @@
 import { ref } from 'vue';
 import { useWindowSize } from "@vueuse/core";
 import homeVideoHQ from '@/assets/pages/home/0001_1.mp4'
+import placeHolder from '@/assets/pages/home/landingpage-placeholder.mp4'
 import bgNew from '@/assets/pages/home/bg-new.png'
 import JarScene from '../components/JarScene.vue'
 import JarSceneMobile from '../components/JarSceneMobile.vue'
@@ -45,7 +46,7 @@ export default{
     function showBg(){
       showVideo.value = !showVideo.value
     }
-    return { homeVideoHQ, bgNew, showVideo, showBg, isMobile}
+    return { homeVideoHQ, placeHolder, bgNew, showVideo, showBg, isMobile}
   }
 }
 </script>

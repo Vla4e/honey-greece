@@ -100,7 +100,7 @@ export default {
     }
 
     function switchTextColor(colorString = 'black'){
-      console.log("Switching color")
+      console.log("Switching color 1111111111111111111111111111111111111111")
       document.documentElement.style.setProperty('--navbar-color', `${colorString}`);
       currentNavbarColor.value = colorString === 'black' ? 'black' : 'white'
     }
@@ -146,7 +146,7 @@ export default {
   }
 }
 .blend-link{
-  color: var(--navbar-color);
+  color: var(--navbar-color, #000);
   text-align: center;
   font-family: "DMSans";
   font-size: 15px;

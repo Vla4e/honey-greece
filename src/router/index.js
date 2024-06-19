@@ -6,6 +6,9 @@ import Home from '@/views/Home.vue';
 import Tabs from '@/views/Tabs.vue';
 import History from '@/views/History.vue';
 import ProductPage from '@/views/ProductPage.vue';
+import AllProducts from '@/views/AllProducts.vue';
+import About from '@/views/About.vue';
+
 
 import emitter from '@/helpers/emitter.js';
 
@@ -65,6 +68,24 @@ const router = createRouter({
         selectedBrand: route.params.selectedBrand,
         selectedLine: route.query.line // You can also derive this value dynamically if needed
       })
+    },
+    {
+      path: '/all-products',
+      name: 'AllProducts',
+      component: AllProducts,
+      meta: {
+        hasNavbar: true, 
+        playAnimationOnEnter: true
+      }
+    },
+    {
+      path: '/about-us',
+      name: 'About',
+      component: About,
+      meta: {
+        hasNavbar: true, 
+        playAnimationOnEnter: true
+      }
     },
   ]
 })

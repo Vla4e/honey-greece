@@ -55,11 +55,9 @@ import {
   LoopOnce,
 } from "three";
 
-import { watch, onMounted, onUnmounted,  ref, computed, nextTick, inject, toRaw  } from "vue";
+import { watch, onMounted, onUnmounted,  ref, computed, nextTick, inject, toRaw, reactive } from "vue";
 import { get, objectEntries, useWindowSize } from "@vueuse/core";
 import { useProductStore } from '@/store/product.js';
-
-import { OrbitControls } from "three/addons/controls/OrbitControls.js";
 
 import brandConfigs from "@/assets/brand-information/index.js"
 // let brandSizes = {}
@@ -82,8 +80,20 @@ import {
 import { debounce, parabolicPathCoordinate } from '@/helpers/globalFunctions.js'
 import { initiateObjectRotation } from '@/helpers/3DObjectPan.js'
 import { initiateVideoControl } from '@/helpers/VideoPlayback.js'
-import TWEEN, { update } from '@tweenjs/tween.js';
 
+import { 
+  initPostprocessing, 
+  createMaterialDepthShader, 
+  updateMaterialDepthShader,
+  updateShaderUniforms, 
+  debouncePointerMove,
+  onPointerMove,
+  updateFocusCoords,
+  linearize,
+  smoothstep,
+  calculateInitialFocus,
+  calculateDepthOfField
+} from '@/helpers/DOFPostProcessing.js';
 
 import Stats from "stats.js";
 
@@ -118,6 +128,19 @@ Cache.enabled = true;
 
 export default {
   setup() {
+
+    
+    const { width: windowWidth, height: windowHeight } = useWindowSize();
+    let postprocessing = initPostprocessing(windowWidth.value, windowHeight.value)
+    let materialDepthShader = createMaterialDepthShader()
+    const mouse = reactive({
+      x: 0,
+      y: 0,
+      distance: 1000,
+      focalDepth: 0
+    });
+
+
     console.log("SETUP")
     let stats = new Stats();
     //ref to canvas, window size
@@ -255,7 +278,7 @@ export default {
     function loadVideoTexture(videoSrc, playVideo, mesh, callback) {
       const video = document.createElement('video');
       video.src = videoSrc;
-      video.defaultPlaybackRate = 0.4;
+      video.defaultPlaybackRate = 1;
       video.loop = true;
       video.muted = true; // Optional: mute the video
 
@@ -288,8 +311,8 @@ export default {
       // Create Scene
       globalScene = new Scene();
 
-      let mediumSmallScene = await loadGlbReturnParts(loader, '/assets/glb/newMethod/150-300.glb')
-      let largeMediumScene = await loadGlbReturnParts(loader, '/assets/glb/newMethod/300-450.glb')
+      let mediumSmallScene = await loadGlbReturnParts(loader, '/assets/glb/newMethod/150-300-new.glb')
+      let largeMediumScene = await loadGlbReturnParts(loader, '/assets/glb/newMethod/300-450-new.glb')
       console.log("Med", mediumSmallScene)
       console.log("Large", largeMediumScene)
       if(largeMediumScene.jarSizes){
@@ -303,7 +326,7 @@ export default {
           }
         }
       })
-      loadVideoTexture('/assets/videos/okto-300-cotton.mp4', true, largeMediumScene.scene.children[3], ()=>{
+      loadVideoTexture('/assets/videos/okto-300-cotton.mp4', true, largeMediumScene.scene.children[2], ()=>{
         console.log("300")
       })
       
@@ -366,7 +389,8 @@ export default {
       // console.log("Canvas dimensions beofe attaching WebGLRenderer:", canvas.clientWidth, canvas.clientHeight)
       globalRenderer = new WebGLRenderer({ canvas, antialias: true, alpha: true });
       globalRenderer.setSize(containerWidth.value, containerHeight.value);
-      globalRenderer.setClearColor(0x000000, 0)
+      globalRenderer.setClearColor(0xffffff, 1)
+      // globalScene.background = null;
       globalRenderer.setPixelRatio(window.devicePixelRatio);
       globalRenderer.shadowMap.enabled = false;
       globalRenderer.render(globalScene, globalCamera);
@@ -625,21 +649,28 @@ export default {
     const animate = () => {
       
       stats.begin();
-      // currentJarScene.rotation.y += 0.005
 
-      // currentJarScene.rotation.x += (mouseY - currentJarScene.rotation.x) * 0.005;
-      // currentJarScene.rotation.y += (mouseX - currentJarScene.rotation.y) * 0.005;
+      calculateDepthOfField(mouse, globalCamera, globalScene, postprocessing);
+      globalRenderer.setRenderTarget(postprocessing.rtTextureColor);
+      globalRenderer.clear(true, true, false);
       globalRenderer.render(globalScene, globalCamera);
-      TWEEN.update();
+
+      // Render depth into texture using the depth material
+      globalScene.overrideMaterial = materialDepthShader;
+      globalRenderer.setRenderTarget(postprocessing.rtTextureDepth);
+      globalRenderer.clear(true, true, false);
+      globalRenderer.render(globalScene, globalCamera);
+      globalScene.overrideMaterial = null;
+
+      // Render postprocessing effect
+      globalRenderer.setRenderTarget(null);
+      globalRenderer.render(postprocessing.scene, postprocessing.camera);
+
       let delta = clock.getDelta();
       if(!animationState.get(clipActions[0]).isFinished){
         mixer.update(delta);
       }
-      if(LOGTIMER === 0 && animationDONE){
-        // console.log("scene:", globalScene.position.x, globalScene.position.y, globalScene.position.z )
-        // // console.log("controls:", controls.target.x, controls.target.y, controls.target.z)
-        LOGTIMER++
-      }
+
       stats.end()
       requestAnimationFrame(animate);
     };
@@ -685,17 +716,21 @@ export default {
 
       updateContainerSize(); // Set initial size
       window.addEventListener('resize', debouncedUpdateSize);
-      // webGl.value.parentElement.addEventListener('mousedown', debouncedJarPan);
-      // webGl.value.parentElement.addEventListener('mousemove', )
 
-      await setCanvas();
+      await setCanvas()
+      updateMaterialDepthShader(materialDepthShader, globalCamera)
       // initializeEdges(globalScene.children[0]);
-      // initiateObjectRotation(currentJarScene, webGl.value.parentElement)
+      initiateObjectRotation(currentJarScene, webGl.value.parentElement)
       await nextTick()
       // getDistanceFromCanvas(globalScene.children[0].children[0])
       console.log("BEFORE INTERACTION INIT", slider.value, webGl.value)
       // initSliderInteraction();
       animate();
+      
+      webGl.value.addEventListener( 'pointermove', (event)=> { 
+        // console.log("Post Processing:", postprocessing)
+        debouncePointerMove(event, webGl.value, postprocessing, windowWidth, windowHeight, mouse)
+      } );
     });
 
     onUnmounted(() => {
@@ -730,7 +765,12 @@ export default {
         });
       }
 
-
+      // Remove postprocessing 
+      if(postprocessing){
+        if (postprocessing.materialBokeh) postprocessing.materialBokeh.dispose();
+        if (postprocessing.rtTextureColor) postprocessing.rtTextureColor.dispose();
+        if (postprocessing.rtTextureDepth) postprocessing.rtTextureDepth.dispose();
+      }
       // Clear the internal three.js caches
       Cache.clear();
       if (stats.dom) {

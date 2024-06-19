@@ -16,7 +16,7 @@
       </button>
       <!-- <button @click="changeMat()" style="position:absolute; top: 80%; left: 50%;">TEXTURE</button> -->
     </div>
-    <div style="position: absolute; bottom: -5%; left: 0%; display: flex; width: 100%;">
+    <div style="position: absolute; top: 15%; left: 10%; display: flex; width: 100%;">
       <button style="margin-right: 10px;" @click="cycleMatcap(0)">prev</button>
       <button style="margin-right: 10px;" @click="toggleShader()">toggle shader: {{ matcapType ? 'keep original color' : 'force honey color' }}</button>
       <button style="margin-right: 10px;" @click="renderMatcap()">RENDER: {{ matcapId }}</button>
@@ -83,6 +83,7 @@ import {
   initializeMixer,
   setupAnimations
 } from '@/helpers/AnimationControls.js'
+import { EXRLoader } from 'three/addons/loaders/EXRLoader.js';
 
 import { debounce, parabolicPathCoordinate } from '@/helpers/globalFunctions.js'
 import { initiateObjectRotation } from '@/helpers/3DObjectPan.js'
@@ -299,7 +300,8 @@ export default {
       const matcapTexture = textureLoader.load(`/assets/matcaps/${matcapId.value}.png`);
 
       // Step 2: Create a Shader Material with Color Adjustment
-      const honeyColor = new Color(0xffc107); // Example color for honey (golden yellow)
+      // const honeyColor = new Color(0xffc107); // Example color for honey (golden yellow)
+      const honeyColor = new Color(0xbf9000)
 
       const matcapMaterial = new ShaderMaterial({
           uniforms: {
@@ -482,7 +484,7 @@ export default {
       // targetMesh.add(axesHelper2)
       globalCamera.position.set(cameraConfigs.x, cameraConfigs.y, cameraConfigs.z); // Position the camera in front of the mesh
       globalCamera.lookAt(0, cameraConfigs.y , 0)
-      globalCamera.add(globalPointLight); //add pointlight to camera
+      // globalCamera.add(globalPointLight); //add pointlight to camera
       globalScene.add(globalCamera);
 
 
@@ -504,7 +506,8 @@ export default {
       globalRenderer.shadowMap.enabled = false;
       globalRenderer.render(globalScene, globalCamera);
       
-      setLighting(globalRenderer)
+      await setLightingEXR(globalRenderer)
+      // await setLighting(globalRenderer)
     };
 
     async function computeTexture() {
@@ -688,9 +691,34 @@ export default {
         containerHeight.value = webGl.value.parentElement.clientHeight;
       }
     }
+    async function setLightingEXR(renderer){
+      
+      let pmremGenerator = new PMREMGenerator(renderer);
+      let exrTexture = await new EXRLoader().loadAsync("/assets/exr/reinforced.exr")
+      
+      // 'assets/exr/bright.exr',
+      // "assets/exr/lw.exr",
+      // 'assets/exr/little_paris.exr',
+      // 'assets/exr/river_walk.exr',
+      // 'assets/exr/reinforced.exr',
+      // 'assets/exr/syfer.exr',
+      // 'assets/exr/mealie.exr',
+      // 'assets/exr/railway.exr',
+      // 'assets/exr/lonely.exr',
+      // 'assets/exr/sunrise.exr',
+      console.log("EXRTEXTURE", exrTexture) 
+      // let rgbeTexture = await new RGBELoader().loadAsync("assets/HDR/test-hdr.hdr");
+      // // console.log("loader texture", rgbeTexture);
+      let envMap = pmremGenerator.fromEquirectangular(exrTexture).texture;
+      // pmremGenerator.compileEquirectangularShader();
+      globalScene.background = null;
+      globalScene.environment = envMap;
+      pmremGenerator.dispose()
+      exrTexture.dispose();
+    }
     async function setLighting(renderer){
       // // // console.log('calling set lighting')
-      var pmremGenerator = new PMREMGenerator( renderer );
+      let pmremGenerator = new PMREMGenerator( renderer );
       // let rgbeTexture = await new RGBELoader().loadAsync('/assets/HDR/garden.hdr')
       let rgbeTexture = await loadEnvironment('/assets/HDR/garden.hdr')
       // // // console.log('loader texture', rgbeTexture)

@@ -3,6 +3,11 @@
     <!-- <span class="floating-text" ">
       {{ currentFlavour.name }}
     </span> -->
+    <button 
+    @click="()=>{videoScene = !videoScene}" 
+    style="position: absolute; top: 10%; left: 90%;">
+      TOGGLE SCENE
+    </button>
     <transition name="fade" mode="out-in">
       <span class="floating-text" :style="{ 'font-size': computedTextLength + 'px' }" :key="currentFlavour.name">
         {{ currentFlavour.name }}
@@ -53,9 +58,9 @@
     <div class="product-viewer" ref="productViewer">
       <!-- <div class="pushdown" style="height: 15%; width: 100%;"></div> -->
       <!-- <ProductScene /> -->
-      <!-- <ProductScene2/> -->
+      <ProductScene2 v-if="videoScene"/>
       <!-- <ProductSceneSlider/> -->
-      <ProductSceneFinal/>
+      <ProductSceneFinal v-else/>
     </div>
 
     <div class="blend-selection">
@@ -115,7 +120,7 @@ export default {
     const route = useRoute();
 
     const { width: windowWidth, height: windowHeight } = useWindowSize();
-    
+    let videoScene = ref(false)
     const productStore = useProductStore()
     //receives distance of Mesh from Canvas ends
     let emitter = inject('emitter')
@@ -338,6 +343,7 @@ export default {
       selectProductLine,
       selectFlavour,
       switchBrand,
+      videoScene
     };
   },
 };

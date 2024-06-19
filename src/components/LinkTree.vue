@@ -211,7 +211,7 @@ export default {
     }
   }
   .tree-route{
-    color: var(--navbar-color);
+    color: var(--navbar-color, #000);
     text-align: center;
     font-family: "DMSans";
     font-size: 15px;
