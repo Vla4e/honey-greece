@@ -1,8 +1,9 @@
 <template>
-  <div class="product-page-container">
+  <div :class="showControls ? 'show' : 'hide'" class="product-page-container">
     <!-- <span class="floating-text" ">
       {{ currentFlavour.name }}
     </span> -->
+    <button style="position: absolute; top: 0%; left: 10%; z-index: 200000;" @click="toggleViews()">Toggle views</button>
     <button 
     @click="()=>{videoScene = !videoScene}" 
     style="position: absolute; top: 10%; left: 90%;">
@@ -58,11 +59,11 @@
     <div class="product-viewer" ref="productViewer">
       <!-- <div class="pushdown" style="height: 15%; width: 100%;"></div> -->
       <!-- <ProductScene /> -->
-      <ProductScene2 v-if="videoScene"/>
+      <!-- <ProductScene2 v-if="videoScene"/> -->
       <!-- <ProductSceneSlider/> -->
-      <ProductSceneFinal v-else/>
+      <ProductSceneFinal />
     </div>
-
+    <ColorPicker class="color-picker target"/>
     <div class="blend-selection">
       <div class="brand-selection">
         <!-- <img @click="switchBrand()" class="brand-image" :src="computedLogo"/> -->
@@ -117,6 +118,12 @@ export default {
   props: ['line', 'selectedBrand'],
 
   setup(props) {
+
+    let showControls = ref(false)
+
+    function toggleViews(){
+      showControls.value = !showControls.value
+    }
     const route = useRoute();
 
     const { width: windowWidth, height: windowHeight } = useWindowSize();
@@ -343,13 +350,21 @@ export default {
       selectProductLine,
       selectFlavour,
       switchBrand,
-      videoScene
+      videoScene,
+      toggleViews,
+      showControls
     };
   },
 };
 </script>
 
-<style lang="scss" scoped>
+<style lang="scss">
+.color-picker{
+  position: absolute;
+  top: 30%;
+  left: 80%;
+  z-index: 10000;
+}
 .product-page-container {
   position: relative;
   // justify-content: space-between;
@@ -357,8 +372,37 @@ export default {
   grid-template-rows: 1fr;
   grid-template-columns: 25% 50% 25%;
   flex-grow: 1 !important;
+  &.hide{
+    .floating-text{
+      opacity: 0;
+    }
+    .blend-selection{
+      opacity: 0;
+    }
+    .series-selection{
+      opacity: 0;
+    }
+    .target{
+      opacity: 1;
+    }
+  }
+  &.show{
+    .floating-text{
+      opacity: 1;
+    }
+    .blend-selection{
+      opacity: 1;
+    }
+    .series-selection{
+      opacity: 1;
+    }
+    .target{
+      opacity: 0;
+    }
+  }
 
   .floating-text {
+    // opacity: 0;
     z-index: 1;
     color: rgba(0, 0, 0, 0.1);
     font-family: "DMSans";
@@ -399,6 +443,7 @@ export default {
     display: flex;
     flex-direction: column;
     align-items: flex-end;
+    // opacity: 0;
     // justify-content: center;
     .blend {
       position: relative;
@@ -434,6 +479,7 @@ export default {
     // justify-content: center;
     // padding-top: 55%;
     width: 85%;
+    // opacity: 0;
     .series-item-container{
       display: flex;
       flex-direction: column;

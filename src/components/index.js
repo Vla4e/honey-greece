@@ -9,6 +9,9 @@ import LinkTree from './LinkTree.vue'
 import PageTransition from './Transitions/PageTransition.vue'
 import BurgerMenuIcon from './Navbar/BurgerMenuIcon.vue'
 import Carousel from './Carousel.vue'
+import ColorPicker from './ColorPicker.vue'
+
+import PositionSliders from './PositionSliders.vue'
 export default [
     NavbarComponent,
     Sidebar,
@@ -20,5 +23,7 @@ export default [
     LinkTree,
     PageTransition,
     BurgerMenuIcon,
-    Carousel
+    Carousel,
+    ColorPicker,
+    PositionSliders
 ]

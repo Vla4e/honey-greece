@@ -16,11 +16,24 @@
       </button>
       <!-- <button @click="changeMat()" style="position:absolute; top: 80%; left: 50%;">TEXTURE</button> -->
     </div>
-    <div style="position: absolute; top: 15%; left: 10%; display: flex; width: 100%;">
+    <div class="target" style="position: absolute; top: 5%; left: 6%; display: flex; width: 100%;">
       <button style="margin-right: 10px;" @click="cycleMatcap(0)">prev</button>
       <button style="margin-right: 10px;" @click="toggleShader()">toggle shader: {{ matcapType ? 'keep original color' : 'force honey color' }}</button>
       <button style="margin-right: 10px;" @click="renderMatcap()">RENDER: {{ matcapId }}</button>
       <button style="margin-right: 10px;" @click="cycleMatcap(1)">next</button>
+    </div>
+    <div style="position: absolute; top: 0%; left: -50%; display: flex; width: 40%;">
+      <PositionSliders  class="target" :jarSmall="jarSmall" :jarMedium="jarMedium"/>
+      <!-- <div class="sliders">
+        <label for="xSlider">X Position:</label>
+        <input type="range" id="xSlider" min="-100" max="100" step="1" v-model="x" @input="updatePosition('x', x)">
+        
+        <label for="ySlider">Y Position:</label>
+        <input type="range" id="ySlider" min="-100" max="100" step="1" v-model="y" @input="updatePosition('y', y)">
+        
+        <label for="zSlider">Z Position:</label>
+        <input type="range" id="zSlider" min="-100" max="100" step="1" v-model="z" @input="updatePosition('z', z)">
+      </div> -->
     </div>
   </div>
 </template>
@@ -91,6 +104,7 @@ import TWEEN, { update } from '@tweenjs/tween.js';
 
 
 import Stats from "stats.js";
+import PositionSliders from "./PositionSliders.vue";
 
 
 /* "ENUMS" */
@@ -123,6 +137,10 @@ Cache.enabled = true;
 
 export default {
   setup() {
+    let jarMedium = ref([]);
+    let jarSmall = ref([]);
+
+    //--------------------------------------------------------- DELETE ABOVE
     let stats = new Stats();
     //ref to canvas, window size
     stats.showPanel(0);
@@ -146,7 +164,6 @@ export default {
     const containerHeight = ref(0);
 
     const aspectRatio = computed(() => {
-      // console.log("computed cWidth, cHeight", toRaw(containerWidth.value), toRaw(containerHeight.value))
       return containerWidth.value / containerHeight.value;
     });
     
@@ -167,6 +184,11 @@ export default {
      * @type {THREE.Scene | null}
      */
     let globalScene = null;
+    let tempScene = ref(new Scene())
+    watch(() => globalScene, (newValue) => {
+      console.log("NEW VALUE", newValue)
+      tempScene.value = globalScene
+    })
     let labelSceneL = null;
     let labelSceneR = null;
 
@@ -244,10 +266,15 @@ export default {
       textureLoad.flipY = false;
       let textureLoad2 = await loadTexture('/assets/label-textures-2/haa/monoflorals/300g/pine_limited.png')
       textureLoad2.flipY = false;
+
       globalScene.traverse((obj)=>{
         if(obj.isMesh){
-          if(obj.name === 'label_object_300g'){ 
-            console.log("Will switch material")
+          if(obj.name.includes('150g')){
+            jarSmall.value.push(obj)
+          } else if (obj.name.includes('300g')){
+            jarMedium.value.push(obj)
+          }
+          if(obj.name === 'label_object_300g'){
             labelTest = obj
             labelTest.material = new ShaderMaterial({
               uniforms: {
@@ -279,23 +306,37 @@ export default {
           }
         }
       })
+      console.log("SMALL", jarSmall.value)
+      console.log("MEDIUM", jarMedium.value)
       loadedText = true
     }
-
     let matcapType = ref(true);
     function toggleShader(){
       matcapType.value = !matcapType.value
-      console.log("CURRENT SHADER:", matcapType.value ? '1' : '2')
       renderMatcap()
     }
+    
+
+    let matcapMaterial;
     function renderMatcap(){
-      console.log("CHANGIN MATCAP", matcapType.value)
       if(matcapType.value){
-        changeMatcap()
-      } else changeMatcap2()
+        changeMatcap(tempColor)
+      } else changeMatcap2(tempColor)
     }
-    async function changeMatcap(meshMatcap){
-      console.log("KEEP ORIGINAL")
+    let tempColor;
+    function switchColor(newColorHex) {
+      tempColor = new Color(newColorHex)
+      if (matcapMaterial) {
+        const newColor = new Color(newColorHex);
+        if (matcapType.value) {
+          changeMatcap(newColor);
+        } else {
+          changeMatcap2(newColor);
+        }
+      }
+    }
+
+    async function changeMatcap(color){
       const textureLoader = new TextureLoader();
       const matcapTexture = textureLoader.load(`/assets/matcaps/${matcapId.value}.png`);
 
@@ -303,10 +344,10 @@ export default {
       // const honeyColor = new Color(0xffc107); // Example color for honey (golden yellow)
       const honeyColor = new Color(0xbf9000)
 
-      const matcapMaterial = new ShaderMaterial({
+      matcapMaterial = new ShaderMaterial({
           uniforms: {
               matcap: { value: matcapTexture },
-              colorAdjust: { value: honeyColor }
+              colorAdjust: { value: color || new Color(0xbf9000) }
           },
           vertexShader: `
               varying vec3 viewDir;
@@ -342,21 +383,22 @@ export default {
               }
           `
       });
-      globalObj.material = matcapMaterial
-      globalObj.material.needsUpdate = true;
+      globalObj300g.material = matcapMaterial
+      globalObj300g.material.needsUpdate = true;
+      globalObj150g.material = matcapMaterial
+      globalObj150g.material.needsUpdate = true;
     }
-    async function changeMatcap2(){
-      console.log("FORCE HONEY")
+    async function changeMatcap2(color){
       const textureLoader = new TextureLoader();
       const matcapTexture = textureLoader.load(`/assets/matcaps/${matcapId.value}.png`);
 
       // Step 2: Create a Shader Material with Full Color Override
       const desiredColor = new Color(0xffc107); // Example color for honey (golden yellow)
 
-      const matcapMaterial = new ShaderMaterial({
+      matcapMaterial = new ShaderMaterial({
           uniforms: {
               matcap: { value: matcapTexture },
-              colorAdjust: { value: desiredColor }
+              colorAdjust: { value: color || new Color(0xffc107) }
           },
           vertexShader: `
               varying vec3 viewDir;
@@ -397,11 +439,12 @@ export default {
               }
           `
       });
-
       // Step 3: Apply the Shader Material to Your Mesh
       // Assuming you have an existing mesh
-      globalObj.material = matcapMaterial;
-      globalObj.material.needsUpdate = true;
+      globalObj300g.material = matcapMaterial;
+      globalObj300g.material.needsUpdate = true;
+      globalObj150g.material = matcapMaterial
+      globalObj150g.material.needsUpdate = true;
     }
     function cycleMatcap(direction) {
       if (direction) {
@@ -412,7 +455,8 @@ export default {
       renderMatcap();
     }
     let labelMeshes;
-    let globalObj
+    let globalObj300g;
+    let globalObj150g;
     const setCanvas = async () => {
       // Create Scene
       globalScene = new Scene();
@@ -420,7 +464,6 @@ export default {
       // let jarPromise = await loadGlbReturnParts(loader, jarConfigs.medium.source)
       let mediumSmallScene = await loadGlbReturnParts(loader, '/assets/glb/newJars/300-150-animation-choppy-v1.glb')
       // let largeMediumScene = await loadGlbReturnParts(loader, '/assets/glb/newJars/450-300-animation-choppy-v1.glb')
-      console.log("mediumsmallscene", mediumSmallScene)
       labelMeshes = mediumSmallScene.labelMeshes
       // for (let mesh of mediumSmallScene.meshes){
       //     globalScene.add(mesh)
@@ -429,18 +472,15 @@ export default {
       if(mediumSmallScene.jarSizes){
         jarSizes = mediumSmallScene.jarSizes
       }
-      // console.log(jarAnimation1)
-      // console.log(jarAnimation2)
-      // console.log(jarAnimation3)
-      // console.log(jarAnimation4)
       mixer = initializeMixer(mediumSmallScene.scene)
       globalScene.add(mediumSmallScene.scene)
       globalScene.traverse((obj)=>{
         if(obj.isMesh){
-          console.log("MESHNAME", obj.name)
           if(obj.name === 'honey_object_300g'){
             // changeMatcap(obj)
-            globalObj = obj
+            globalObj300g = obj
+          } else if (obj.name === 'honey_object_150g'){
+            globalObj150g = obj;
           } else if (obj.name.includes('label')){
             // obj.material.transparent = true;
             // obj.material.opacity = 0;
@@ -455,8 +495,7 @@ export default {
       
 
       currentJarScene = mediumSmallScene.scene; //Scene to be loaded
-      console.log("assigned value to jar scene", currentJarScene)
-      // currentJarScene.position.set(0, 0, 0.02)
+
       jarScenes[currentJarSize.value] = currentJarScene; 
 
       // let behindJarScene = await loadGlbReturnParts(loader, jarConfigs.large.source)
@@ -467,6 +506,7 @@ export default {
       // //   jarBackToFront(behindJarScene.scene, 1200, 800)
       // // }, 2000)
       let meshes = currentJarScene.children;
+      console.log("MESHES", meshes)
       let targetMesh = meshes[1]
 
       //Add jar scene to global scene
@@ -497,7 +537,6 @@ export default {
 
       // Renderer
       const canvas = webGl.value;
-      // console.log("Canvas dimensions beofe attaching WebGLRenderer:", canvas.clientWidth, canvas.clientHeight)
       globalRenderer = new WebGLRenderer({ canvas, antialias: true, alpha: true });
       globalRenderer.setSize(containerWidth.value, containerHeight.value);
       globalRenderer.setClearColor(0x000000, 0)
@@ -534,9 +573,7 @@ export default {
       // load if not
       let jarTexturesLocal = []
       for (const size of jarSizes) {
-        console.log("OF", size)
         let textureUrl = `${baseTextureUrl}/${slugs.brand}/${slugs.productLine}/${size}/${slugs.flavour}.png`;
-        console.log("CURRENT TEXTURE:", textureUrl)
         let texture = await loadTexture(textureUrl);
         texture.flipY = false;
         texture.generateMipMaps = true;
@@ -546,39 +583,30 @@ export default {
       // jarSizes.forEach(async (size) => {
       //   let textureUrl = `${baseTextureUrl}/${slugs.brand}/${slugs.productLine}/${size}/${slugs.flavour}.png`;
       //   let texture = await loadTexture(textureUrl);
-      //   console.log("Texture MIPMAP:", texture)
       //   texture.flipY = false;
       //   texture.generateMipMaps = true
       //   texture.needsUpdate = true;
       //   jarTexturesLocal.push({texture, size})
       // })
-      // console.log("TEXTURE SIZES", textureUrls)
       // let textureUrl = `${baseTextureUrl}/${slugs.brand}/${slugs.productLine}/${slugs.size}/${slugs.flavour}.png`;
-      // console.log("URL:", textureUrl)
       // let texture = await loadTexture(textureUrl);
-      // console.log("Texture MIPMAP:", texture)
       // texture.flipY = false;
       // texture.generateMipMaps = true
       // texture.needsUpdate = true;
       // jarTextures[slugs.brand][slugs.productLine][slugs.size][slugs.flavour] = texture;
-      console.log("JARTEXTLOCAL", JSON.parse(JSON.stringify(jarTexturesLocal)))
       return jarTexturesLocal
       return texture;
     }
 
     async function updateTexture(preLoadedTexture = null) {
       let stopLoading = preLoadedTexture ? true : false;
-      console.log("CALLED UPDATE TEXTURE", isLoadingTexture, stopLoading)
       if(isLoadingTexture && stopLoading) return
       let labelMesh = null;
-      console.log("Current selected size:", currentJarSize.value)
-      console.log("Current jar scene:", currentJarScene)
 
       let tempSize = currentJarSize.value === 'medium' ? '300g' : currentJarSize.value === 'large' ? '450g' : '150g' 
       currentJarScene.traverse((obj) => {
         if(obj.isMesh){
           if(obj.name.includes('label')){
-            console.log("LABEL", obj.jarSize, currentJarSize.value)
             if(obj.jarSize === tempSize){
               currentJarLabel = obj
             } else upcomingJarLabel = obj.clone()
@@ -586,8 +614,6 @@ export default {
         }
       })
       
-      console.log("Current jar label", currentJarLabel)
-      console.log("upcomingJarLabel", upcomingJarLabel)
       // Check if the mesh and its material support textures
       if (currentJarLabel) {
         if (currentJarLabel.material && currentJarLabel.material.map) {
@@ -604,17 +630,14 @@ export default {
 
       // Create a new texture loader
       if(preLoadedTexture){
-        console.log("had preloaded")
         labelMesh.material.map = preLoadedTexture;
         labelMesh.material.needsUpdate = true;
         labelMesh.material.map = preLoadedTexture;
         labelMesh.material.needsUpdate = true;
       } else {
-        console.log("Should computeTextures")
         let textures = await computeTexture();
         // texture.flipY = false;
         textures.forEach((object) => {
-          console.log("Setting textures", object.size, tempSize)
           if(object.size === tempSize){
             currentJarLabel.material.map = object.texture
             currentJarLabel.material.needsUpdate = true;
@@ -626,7 +649,6 @@ export default {
         // labelMesh.material.map = texture;
         // labelMesh.material.needsUpdate = true;
       }
-      console.log("finished LOADING TEXTURE")
       isLoadingTexture = false
     }
 
@@ -634,22 +656,16 @@ export default {
   
 
     const selectJarSize = async (size) => {
-      console.log("Attempting to selectJarSize", size, currentJarSize.value)
       if(size === currentJarSize.value){
         return
       } else {
         slugs.size = size === 'small' ? '150g' : size === 'medium' ? '300g' : '450g'
         // let texture = await loadTexture()
-        console.log("loaded texture")
         // let movement = calculateJarMovement(currentJarScene)
-        console.log("calculated movement")
         // await prepareSceneForSwitch(size, movement)
-        // console.log("INITIAL ROTATION:", initialMeshQuaternion)
-        console.log("prepared scene")
         // animateJarOut(currentJarScene, movement, texture)
         
         clipActions.forEach((action) => {
-          console.log("Playing action")
           animationState.get(clipActions[0]).isFinished = false;
           action.play()
           currentJarSize.value = size;
@@ -661,17 +677,13 @@ export default {
       
       globalCamera.aspect = newWidth / newHeight;
       globalCamera.updateProjectionMatrix();
-      console.log("Updated Camera Aspect Ratio to:", globalCamera.aspect);
     };
 
     const updateRenderer = (newWidth, newHeight) => {
-      // console.log("Renderer resized and rerendering")
       globalRenderer.setSize(newWidth, newHeight);
       globalRenderer.render(globalScene, globalCamera);
-      console.log("Renderer Dimensions set to:", containerWidth.value, containerHeight.value);
     };
     const debouncedUpdateSize = debounce(function() {
-      console.log("DEBOUNCE SIZE UPDATE CALLED ====================")
       updateContainerSize();
       if (containerWidth.value && containerHeight.value) {
         updateCamera(containerWidth.value, containerHeight.value);
@@ -684,8 +696,6 @@ export default {
     //   rotateObject(event, currentJarScene)
     // }, 200)
     function updateContainerSize() {
-      // console.log("before UpdateCSize webGl w/h: ", toRaw(webGl.value.clientWidth), toRaw(webGl.value.clientHeight))
-      // console.log("before UpdateCSize scene-container w/h: ", toRaw(webGl.value.parentElement.clientWidth), toRaw(webGl.value.parentElement.clientHeight))
       if (webGl.value && webGl.value.parentElement) {
         containerWidth.value = webGl.value.parentElement.clientWidth;
         containerHeight.value = webGl.value.parentElement.clientHeight;
@@ -706,9 +716,7 @@ export default {
       // 'assets/exr/railway.exr',
       // 'assets/exr/lonely.exr',
       // 'assets/exr/sunrise.exr',
-      console.log("EXRTEXTURE", exrTexture) 
       // let rgbeTexture = await new RGBELoader().loadAsync("assets/HDR/test-hdr.hdr");
-      // // console.log("loader texture", rgbeTexture);
       let envMap = pmremGenerator.fromEquirectangular(exrTexture).texture;
       // pmremGenerator.compileEquirectangularShader();
       globalScene.background = null;
@@ -717,11 +725,9 @@ export default {
       exrTexture.dispose();
     }
     async function setLighting(renderer){
-      // // // console.log('calling set lighting')
       let pmremGenerator = new PMREMGenerator( renderer );
       // let rgbeTexture = await new RGBELoader().loadAsync('/assets/HDR/garden.hdr')
       let rgbeTexture = await loadEnvironment('/assets/HDR/garden.hdr')
-      // // // console.log('loader texture', rgbeTexture)
       var envMap = pmremGenerator.fromEquirectangular( rgbeTexture ).texture;
       globalScene.background = null;
       globalScene.environment = envMap;
@@ -739,7 +745,6 @@ export default {
     async function resetScene(){
       // await setCanvas();
       // animate();
-      // console.log("scene:", globalScene)
       // let tempPos;
       // // const meshAxes = new AxesHelper(5);
       // // scene.add(meshAxes)
@@ -748,31 +753,22 @@ export default {
       //   if(obj.isMesh){
       //     let tempAxes = new AxesHelper(5)
       //     if(iterations === 0){
-      //       // console.log("AXESCOLOR 0")
       //       tempAxes.setColors('red', 'green', 'blue')
       //     }else if(iterations === 1){
-      //       // console.log("AXESCOLOR 1")
       //       tempAxes.setColors('purple', 'yellow', 'blue')
       //     }else if(iterations === 2){
-      //       // console.log("AXESCOLOR 2")
       //       tempAxes.setColors('pink', 'brown', 'blue')
       //       tempPos = obj.position
       //     }else if(iterations === 3){
-      //       // console.log("AXESCOLOR 3")
       //       tempAxes.setColors('black', 'skyblue', 'blue')
       //     }
-      //     // console.log("OBJ ", obj.name, "is positioned at:", obj.position.x, obj.position.y, obj.position.z, "iteration:", iterations)
       //     obj.add(tempAxes)
       //     iterations++
-      //     // // console.log("OBJ POS:")
       //   }
       // })
-      // // console.log("Scene pos:", globalScene.position.x, globalScene.position.y, globalScene.position.z)
-      // // console.log("Cam pos:", globalCamera.position.x, globalCamera.position.y, globalCamera.position.z)
       // globalCamera.position.set(0, 0, 0.6)
       // globalCamera.lookAt(tempPos)
       // globalCamera.updateProjectionMatrix();
-      // // console.log("Cam LOOKAT:", globalCamera)
     }
 
     const clock = new Clock();
@@ -794,8 +790,6 @@ export default {
         mixer.update(delta);
       }
       if(LOGTIMER === 0 && animationDONE){
-        // console.log("scene:", globalScene.position.x, globalScene.position.y, globalScene.position.z )
-        // // console.log("controls:", controls.target.x, controls.target.y, controls.target.z)
         LOGTIMER++
       }
       stats.end()
@@ -838,6 +832,7 @@ export default {
 
   
     onMounted( async () => {
+      emitter.on('applyColor', switchColor)
       await nextTick();
       updateContainerSize(); // Set initial size
       window.addEventListener('resize', debouncedUpdateSize);
@@ -849,10 +844,10 @@ export default {
       initiateObjectRotation(currentJarScene, webGl.value.parentElement)
       await nextTick()
       // getDistanceFromCanvas(globalScene.children[0].children[0])
-      // console.log("BEFORE INTERACTION INIT", slider.value, webGl.value)
       // initSliderInteraction();
       animate();
       changeMat();
+      renderMatcap()
     });
     onUnmounted(() => {
       // Remove resize event listener
@@ -903,10 +898,6 @@ export default {
     }), (currentValues) => {
       // Update slugs if changed
       let tempSize = currentValues.size === 'large' ? '450g' : currentValues.size === 'medium' ? '300g' : '150g';
-      // console.log(currentValues.flavour, slugs.flavour, currentValues.flavour === slugs.flavour)
-      // console.log(currentValues.brand, slugs.brand, currentValues.brand === slugs.brand)
-      // console.log(currentValues.productLine, slugs.productLine, currentValues.productLine === slugs.productLine)
-      // console.log(tempSize, slugs.size, tempSize === slugs.size)
       // Check if only the flavour slug has changed
       if (
         currentValues.flavour !== slugs.flavour &&
@@ -915,7 +906,6 @@ export default {
         tempSize === slugs.size &&
         !isFirstLoad
       ) {
-          console.log('Only Flavour has Changed');
           slugs.flavour = currentValues.flavour;
           if(currentJarScene){
             animateJarOutY(currentJarScene)
@@ -935,30 +925,22 @@ export default {
 
       if (currentValues.productLine !== slugs.productLine) {
         slugs.productLine = currentValues.productLine;
-        console.log(`WATCHER: productLine`, currentValues.productLine);
       }
 
       if (currentValues.brand !== slugs.brand) {
         slugs.brand = currentValues.brand;
         currentBrand.value = currentValues.brand;
-        console.log(`WATCHER: brand`, currentValues.brand);
       }
 
       if (tempSize !== slugs.size) {
-        console.log("WATCHER: jarSize", tempSize);
       }
       
       if (currentValues.flavour !== slugs.flavour) {
-        console.log("WATCHER: flavour")
-        console.log("JarScene before ifs", currentJarScene, !!currentJarScene)
         slugs.flavour = currentValues.flavour;
-        console.log(`FLAVOUR SLUGS ===>`, currentValues.flavour, slugs.flavour, !!currentJarScene);
-        console.log(`OTHER SLUGS ===>`, currentValues.flavour, slugs.flavour, !!currentJarScene);
         if (currentJarScene) {
           // updateTexture();
         } else {
           let interval = setInterval(() => {
-            // console.log("interval CALLED", !!currentJarScene);
             if (currentJarScene) {
               // updateTexture();
               clearInterval(interval);
@@ -987,7 +969,9 @@ export default {
       matcapId,
       toggleShader,
       renderMatcap,
-      matcapType
+      matcapType,
+      jarSmall,
+      jarMedium
     };
   },
 };
