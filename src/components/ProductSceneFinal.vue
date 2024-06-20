@@ -22,7 +22,7 @@
       <button style="margin-right: 10px;" @click="renderMatcap()">RENDER: {{ matcapId }}</button>
       <button style="margin-right: 10px;" @click="cycleMatcap(1)">next</button>
     </div>
-    <div style="position: absolute; top: 0%; left: -50%; display: flex; width: 40%;">
+    <div style="position: absolute; top: 0%; left: -50%; display: flex; width: 55%;">
       <PositionSliders  class="target" :jarSmall="jarSmall" :jarMedium="jarMedium"/>
       <!-- <div class="sliders">
         <label for="xSlider">X Position:</label>

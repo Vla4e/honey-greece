@@ -3,7 +3,7 @@
     <div class="sliders">
       <h3 style="color:black;">Control Jar Medium</h3>
       <label for="xSliderMedium">X Position: {{ xMedium }}</label>
-      <input type="range" id="xSliderMedium" min="-0.2" max="0.2" step="0.00001" v-model="xMedium" @input="updatePosition('x', xMedium, jarMedium)">
+      <input type="range" id="xSliderMedium" min="-0.5" max="0.2" step="0.00001" v-model="xMedium" @input="updatePosition('x', xMedium, jarMedium)">
 
       <label for="ySliderMedium">Y Position: {{ yMedium }}</label>
       <input type="range" id="ySliderMedium" min="-0.2" max="0.2" step="0.00001" v-model="yMedium" @input="updatePosition('y', yMedium, jarMedium)">
