@@ -1,4 +1,5 @@
 import { AnimationMixer, LoopOnce } from 'three';
+import emitter from '@/helpers/emitter.js'
 
 export function initializeMixer(scene) {
     const mixer = new AnimationMixer(scene);
@@ -31,6 +32,7 @@ export function setupAnimations(mixer, animations) {
         }
         e.action.paused = false;
         e.action.setLoop(LoopOnce)
+        emitter.emit('getPositions')
         // e.action.play();
     });
 

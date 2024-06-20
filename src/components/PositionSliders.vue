@@ -25,7 +25,7 @@
 </template>
 
 <script>
-import { ref, watch, watchEffect, onMounted, toRaw, computed } from 'vue';
+import { ref, watch, watchEffect, onMounted, onUnmounted, toRaw, computed, inject } from 'vue';
 
 export default {
   name: 'PositionSliders',
@@ -34,6 +34,7 @@ export default {
     jarSmall: Array   // Expecting an array of THREE.Mesh objects for small jar
   },
   setup(props) {
+    let emitter = inject('emitter')
     const xMedium = ref(0);
     const yMedium = ref(0);
     const zMedium = ref(0);
@@ -119,6 +120,8 @@ export default {
     });
 
     function onPropsPassed(){
+      initialMedium.value = []
+      initialSmall.value = []
       console.log("CALLED ON PROPS PASSED")
       props.jarMedium.forEach(mesh => {
           initialMedium.value.push({
@@ -140,7 +143,12 @@ export default {
         console.log("Initial Small Positions:", toRaw(initialSmall.value));
     }
     onMounted(() => { // Assuming 2 seconds is enough for the initial scene setup
+      emitter.on('getPositions', onPropsPassed)
     });
+
+    onUnmounted(() => {
+      emitter.off('getPositions')
+    })
 
     watch([xMedium, yMedium, zMedium], ([newX, newY, newZ]) => {
       if (props.jarMedium) {
