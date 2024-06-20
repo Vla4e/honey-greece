@@ -841,7 +841,7 @@ export default {
 
       await setCanvas();
       // initializeEdges(globalScene.children[0]);
-      initiateObjectRotation(currentJarScene, webGl.value.parentElement)
+      // initiateObjectRotation(currentJarScene, webGl.value.parentElement)
       await nextTick()
       // getDistanceFromCanvas(globalScene.children[0].children[0])
       // initSliderInteraction();
