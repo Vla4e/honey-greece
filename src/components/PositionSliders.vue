@@ -13,7 +13,7 @@
 
       <h3 style="color:black;">Control Jar Small</h3>
       <label for="xSliderSmall">X Position: {{ xSmall }}</label>
-      <input type="range" id="xSliderSmall" min="-0.2" max="0.2" step="0.00001" v-model="xSmall" @input="updatePosition('x', xSmall, jarSmall)">
+      <input type="range" id="xSliderSmall" min="-1" max="0.1" step="0.00001" v-model="xSmall" @input="updatePosition('x', xSmall, jarSmall)">
 
       <label for="ySliderSmall">Y Position: {{ ySmall }}</label>
       <input type="range" id="ySliderSmall" min="-0.2" max="0.2" step="0.00001" v-model="ySmall" @input="updatePosition('y', ySmall, jarSmall)">
@@ -25,7 +25,7 @@
 </template>
 
 <script>
-import { ref, watch, onMounted, toRaw, computed } from 'vue';
+import { ref, watch, watchEffect, onMounted, toRaw, computed } from 'vue';
 
 export default {
   name: 'PositionSliders',
@@ -40,6 +40,7 @@ export default {
     const xSmall = ref(0);
     const ySmall = ref(0);
     const zSmall = ref(0);
+    const initialized = ref(false);
 
     const initialSmall = ref([]);
     const initialMedium = ref([]);
@@ -102,11 +103,24 @@ export default {
       ySmall.value = newPos.y;
       zSmall.value = newPos.z;
     });
+    // watch([() => props.jarMedium, () => props.jarSmall], ([newMedium, newSmall]) => {
+    //   console.log("PROPS WATCH", props.jarMedium, props.jarSmall)
+    //   if (newMedium.length > 0 && newSmall.length > 0 && !initialized.value) {
+    //     initialized.value = true;
+    //     onPropsPassed(); // Function to trigger when props are passed
+    //   }
+    // }, { immediate: true });
 
-    onMounted(() => {
-      setTimeout(() => {
-        // Initialize the initial positions of medium and small jar meshes
-        props.jarMedium.forEach(mesh => {
+    watchEffect(() => {
+      if (props.jarMedium.length > 0 && props.jarSmall.length > 0 && !initialized.value) {
+        initialized.value = true;
+        onPropsPassed(); // Function to trigger when props are passed
+      }
+    });
+
+    function onPropsPassed(){
+      console.log("CALLED ON PROPS PASSED")
+      props.jarMedium.forEach(mesh => {
           initialMedium.value.push({
             x: mesh.position.x,
             y: mesh.position.y,
@@ -124,7 +138,8 @@ export default {
 
         console.log("Initial Medium Positions:", toRaw(initialMedium.value));
         console.log("Initial Small Positions:", toRaw(initialSmall.value));
-      }, 2000); // Assuming 2 seconds is enough for the initial scene setup
+    }
+    onMounted(() => { // Assuming 2 seconds is enough for the initial scene setup
     });
 
     watch([xMedium, yMedium, zMedium], ([newX, newY, newZ]) => {
