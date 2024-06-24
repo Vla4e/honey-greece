@@ -2,12 +2,27 @@
   <div class="scene-container" ref="sceneContainer">
 
     <canvas ref="webGl" class="webGl" />
+    <div class="instructions" style="position: absolute; bottom: 2%; left: 0%; width: 50%; color: black;">
+      Left click: Rotate.
+      <br/>
+      Right click: Move.
+      <br/>
+      Scroll: zoom
+      <br/>
+      Refresh to reset
+    </div>
     <div class="target" style="position: absolute; top: 5%; left: 6%; display: flex; width: 40%;">
-      <button style="margin-right: 10px;" @click="cycleMatcap(0)">prev</button>
+      <!-- <button style="margin-right: 10px;" @click="cycleMatcap(0)">prev</button>
       <button style="margin-right: 10px;" @click="toggleShader()">toggle shader: {{ matcapType ? 'keep original color' : 'force honey color' }}</button>
       <button style="margin-right: 10px;" @click="renderMatcap()">RENDER: {{ matcapId }}</button>
-      <button style="margin-right: 10px;" @click="cycleMatcap(1)">next</button>
-      <button style3="margin-right: 10px" @click="createMatcapGrid(5, 0.5)">Create 5x5 Matcap Grid</button>
+      <button style="margin-right: 10px;" @click="cycleMatcap(1)">next</button> -->
+      <!-- <button style="margin-right: 10px" @click="createMatcapGrid()">Create Matcap Grid</button> -->
+      <button style="margin-right:10px" @click="removeLabel('label')">Show Labels: {{ showLabels }}</button>
+      <button style="margin-right:10px" @click="removeGlass('jar')">Show Glass: {{ showGlass }}</button>
+      <button style="margin-right:10px" @click="()=>{ 
+        useFixedMaterial = !useFixedMaterial;
+        switchColor('#BF9000');
+      }">Custom Shader: {{ useFixedMaterial ? 'off' : 'on' }}</button>
     </div>
   </div>
 </template>
@@ -38,11 +53,13 @@ import {
   CameraHelper,
   BoxHelper,
 Clock,
-Color
+Color,
+sRGBEncoding,
+SRGBColorSpace
 } from "three";
 
-import { InstancedMesh, Object3D, Matrix4, Group } from 'three';
-
+import { InstancedMesh, Object3D, Matrix4, Group, ShaderMaterial, MeshMatcapMaterial } from 'three';
+import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 import { watch, onMounted, onUnmounted,  ref, computed, nextTick, inject, toRaw  } from "vue";
 // let brandSizes = {}
 
@@ -146,6 +163,7 @@ export default {
      */
     let axesHelper = null;
 
+    let globalOrbitControls;
     
     let LOGTIMER = 0;
     let animationDONE = false;
@@ -170,71 +188,226 @@ export default {
 
     let loadedText = false;
 
-    function createMatcapGrid(gridSize = 5, spacing = 0.5) {
+    const globalTextureLoader = new TextureLoader();
+    function createMatcapGrid(gridWidth = 12, gridHeight = 5, spacing = 0.1) {
       if (!globalScene || !currentJarScene) {
         console.error("Scene or jar scene not initialized");
         return;
       }
 
-      // Remove existing jar from the scene
       globalScene.remove(currentJarScene);
 
       const jarGroup = new Group();
-      const textureLoader = new TextureLoader();
-
-      for (let i = 0; i < gridSize * gridSize; i++) {
-        // Clone the entire jar scene
-        const jarClone = currentJarScene.clone(true);
-
-        // Position the jar in the grid
-        const x = (i % gridSize - (gridSize - 1) / 2) * spacing;
-        const z = (Math.floor(i / gridSize) - (gridSize - 1) / 2) * spacing;
-        jarClone.position.set(x, 0, z);
-
-        // Find the honey object in the cloned jar and apply a new matcap
-        jarClone.traverse((obj) => {
-          if (obj.isMesh && obj.name === 'honey_object_300g') {
-            const matcapId = (i % 29) + 1; // Cycle through 29 matcaps
-            const matcapTexture = textureLoader.load(`/assets/matcaps/${matcapId}.png`);
+      let iterations = 0;
+      let maxIterations = 46;
+      let idx = 0;
+      for (let y = 0; y < gridHeight; y++) {
+        for (let x = 0; x < gridWidth; x++) {
+          if(iterations < maxIterations){
+            const jarClone = currentJarScene.clone(true);
+            let xN = (x - (gridWidth - 1) / 2);
+            let yN = ((gridHeight - 1) / 2 - y);
+            // Adjust positioning for vertical grid
+            const xPos = xN * spacing;
+            const yPos = yN * spacing; // Inverted y-axis
             
-            // Apply the matcap material
-            obj.material = createMatcapMaterial(matcapTexture, new Color(0xbf9000));
-          }
-        });
-
-        jarGroup.add(jarClone);
+            
+            jarClone.position.set(xPos, yPos, 0);
+            jarClone.traverse((obj) => {
+              if (obj.isMesh && obj.name === 'honey_object_300g') {
+                const matcapId = idx;
+                if(useFixedMaterial.value){
+                  obj.material = createFixedMaterial(tempColor, idx)
+                } else {
+                  obj.material = createMatcapMaterial(tempColor, idx)
+                }
+                obj.name = `matcapped-${matcapId}`
+                idx++
+              }
+            });
+            jarGroup.add(jarClone);
+            iterations++;
+          } else {}
+        }
       }
 
-      // Add the jar group to the scene
+      console.log("JARGROUP", jarGroup)
       globalScene.add(jarGroup);
 
-      // Adjust camera
-      const gridWidth = (gridSize - 1) * spacing;
-      const cameraDistance = (gridWidth / 2) / Math.tan((globalCamera.fov * Math.PI / 180) / 2);
-      globalCamera.position.set(0, cameraDistance * 0.5, cameraDistance);
+      // Adjust camera to view the vertical grid
+      const gridWidthSize = (gridWidth - 1) * spacing;
+      const gridHeightSize = (gridHeight - 1) * spacing;
+      const maxGridSize = Math.max(gridWidthSize, gridHeightSize);
+      const cameraDistance = (maxGridSize / 2) / Math.tan((globalCamera.fov * Math.PI / 180) / 1.1);
+      
+      globalCamera.position.set(0, 0, cameraDistance * 1.2);
       globalCamera.lookAt(0, 0, 0);
 
-      // Update camera and controls if needed
       globalCamera.updateProjectionMatrix();
-      if (controls) {
-        controls.update();
+      if (globalOrbitControls) {
+        globalOrbitControls.update();
       }
 
-      // Render the scene
       if (globalRenderer) {
         globalRenderer.render(globalScene, globalCamera);
       }
     }
 
-    function createMatcapMaterial(matcapTexture, color) {
+
+    function createMatcapMaterial(color, id) {
+      
+      const matcapTexture = globalTextureLoader.load(`/assets/matcaps/${id+1}.png`);
+      return new ShaderMaterial({
+      uniforms: {
+          matcap: { value: matcapTexture },
+          colorAdjust: { value: color || new Color(0xffc107) }
+      },
+      vertexShader: `
+          varying vec3 viewDir;
+          varying vec3 worldNormal;
+          varying vec2 vUv;
+
+          void main() {
+              vec4 mvPosition = modelViewMatrix * vec4(position, 1.0);
+              viewDir = normalize(-mvPosition.xyz);
+              vec4 worldPosition = modelMatrix * vec4(position, 1.0);
+              worldNormal = normalize(mat3(modelMatrix) * normal);
+
+              vUv = uv; // Pass UV coordinates to fragment shader
+
+              gl_Position = projectionMatrix * mvPosition;
+          }
+      `,
+      fragmentShader: `
+          uniform sampler2D matcap;
+          uniform vec3 colorAdjust; // RGB color for full override
+          varying vec3 viewDir;
+          varying vec3 worldNormal;
+          varying vec2 vUv; // Receive UV coordinates
+
+          void main() {
+              vec3 normal = normalize(worldNormal);
+              vec3 reflected = reflect(viewDir, normal);
+              float m = 2.0 * sqrt(reflected.z + 1.0);
+              vec2 uv = reflected.xy / m + 0.5;
+
+              vec4 texColor = texture2D(matcap, uv);
+              float grayscale = dot(texColor.rgb, vec3(0.299, 0.587, 0.114));
+
+              // Calculate brightness based on vertical position and add horizontal light effects
+              float verticalGradient = 0.65 + 0.15 * sin(vUv.y * 3.14159); // Brighter at bottom and top, darker in middle
+              float horizontalGradient = 0.5 + 0.3 * pow(1.0 - abs(vUv.x - 0.5), 2.0); // Brighter towards the middle
+
+              float brightness = verticalGradient * horizontalGradient;
+
+              vec3 fullyColored = brightness * grayscale * colorAdjust;
+
+              gl_FragColor = vec4(fullyColored, texColor.a);
+          }
+      `
+  });
+      // return new ShaderMaterial({
+      //     uniforms: {
+      //         matcap: { value: matcapTexture },
+      //         colorAdjust: { value: color || new Color(0xffc107) }
+      //     },
+      //     vertexShader: `
+      //         varying vec3 viewDir;
+      //         varying vec3 worldNormal;
+
+      //         void main() {
+      //             vec4 mvPosition = modelViewMatrix * vec4(position, 1.0);
+      //             viewDir = normalize(-mvPosition.xyz);
+
+      //             vec4 worldPosition = modelMatrix * vec4(position, 1.0);
+      //             worldNormal = normalize(mat3(modelMatrix) * normal);
+
+      //             gl_Position = projectionMatrix * mvPosition;
+      //         }
+      //     `,
+      //     fragmentShader: `
+      //         uniform sampler2D matcap;
+      //         uniform vec3 colorAdjust; // RGB color for full override
+      //         varying vec3 viewDir;
+      //         varying vec3 worldNormal;
+
+      //         void main() {
+      //             vec3 normal = normalize(worldNormal);
+      //             vec3 reflected = reflect(viewDir, normal);
+
+      //             float m = 2.0 * sqrt(reflected.z + 1.0);
+      //             vec2 uv = reflected.xy / m + 0.5;
+
+      //             vec4 texColor = texture2D(matcap, uv);
+
+      //             // Convert to grayscale to extract lighting and shading info
+      //             float grayscale = dot(texColor.rgb, vec3(0.299, 0.587, 0.114));
+
+      //             // Apply the new color fully
+      //             vec3 fullyColored = grayscale * colorAdjust;
+
+      //             gl_FragColor = vec4(fullyColored, texColor.a);
+      //         }
+      //     `
+      // });
+      // return new ShaderMaterial({
+      //   uniforms: {
+      //     matcap: { value: matcapTexture },
+      //     colorAdjust: { value: color }
+      //   },
+      //   vertexShader: `
+      //     varying vec3 vViewPosition;
+      //     varying vec3 vNormal;
+      //     void main() {
+      //       vNormal = normalize(normalMatrix * normal);
+      //       vec4 mvPosition = modelViewMatrix * vec4(position, 1.0);
+      //       vViewPosition = -mvPosition.xyz;
+      //       gl_Position = projectionMatrix * mvPosition;
+      //     }
+      //   `,
+      //   fragmentShader: `
+      //     uniform sampler2D matcap;
+      //     uniform vec3 colorAdjust;
+      //     varying vec3 vViewPosition;
+      //     varying vec3 vNormal;
+      //     void main() {
+      //       vec3 normal = normalize(vNormal);
+      //       vec3 viewDir = normalize(vViewPosition);
+      //       vec3 x = normalize(vec3(viewDir.z, 0.0, -viewDir.x));
+      //       vec3 y = cross(viewDir, x);
+      //       vec2 uv = vec2(dot(x, normal), dot(y, normal)) * 0.495 + 0.5;
+      //       vec4 matcapColor = texture2D(matcap, uv);
+      //       vec3 color = matcapColor.rgb * colorAdjust;
+      //       gl_FragColor = vec4(color, matcapColor.a);
+      //     }
+      //   `
+      // });
+    }
+
+    function createFixedMaterial(color, id){
+      const textureLoader = new TextureLoader();
+      const matcapTexture = textureLoader.load(`/assets/matcaps/${id+1}.png`);
+      matcapTexture.encoding = SRGBColorSpace
+      // Step 2: Create a MeshMatcapMaterial with the loaded texture
+      return  new MeshMatcapMaterial({
+          matcap: matcapTexture,
+          color: color || new Color(0xBF9000)
+          // color: new Color(0xBF9000) // Optional: set a base color if needed
+      });
+    }
+    function createHoneyMatcapMaterial(color, id) {
+      const matcapTexture = globalTextureLoader.load(`/assets/matcaps/${id+1}.png`);
+      // console.log("Texture: ", matcapTexture, id)
+      // console.log("Color: ", color)
       return new ShaderMaterial({
         uniforms: {
-          matcap: { value: matcapTexture },
-          colorAdjust: { value: color }
+          matcap: { type: 't', value: matcapTexture },
+          colorAdjust: { type: 'v3', value: color || new Color(0xffc107) } // Default to a honey color
         },
         vertexShader: `
-          varying vec3 vViewPosition;
           varying vec3 vNormal;
+          varying vec3 vViewPosition;
+
           void main() {
             vNormal = normalize(normalMatrix * normal);
             vec4 mvPosition = modelViewMatrix * vec4(position, 1.0);
@@ -245,22 +418,29 @@ export default {
         fragmentShader: `
           uniform sampler2D matcap;
           uniform vec3 colorAdjust;
-          varying vec3 vViewPosition;
+
           varying vec3 vNormal;
+          varying vec3 vViewPosition;
+
           void main() {
-            vec3 normal = normalize(vNormal);
-            vec3 viewDir = normalize(vViewPosition);
-            vec3 x = normalize(vec3(viewDir.z, 0.0, -viewDir.x));
-            vec3 y = cross(viewDir, x);
-            vec2 uv = vec2(dot(x, normal), dot(y, normal)) * 0.495 + 0.5;
-            vec4 matcapColor = texture2D(matcap, uv);
-            vec3 color = matcapColor.rgb * colorAdjust;
-            gl_FragColor = vec4(color, matcapColor.a);
+            vec3 viewDirection = normalize(vViewPosition);
+            vec3 refractionDirection = refract(viewDirection, vNormal, 1.1);
+
+            vec2 matcapUV = vec2(refractionDirection.x, -refractionDirection.y) * 0.5 + 0.5;
+            vec4 matcapColor = texture2D(matcap, matcapUV);
+
+            // Blend the original matcap color with the adjusted color
+            vec3 blendedColor = mix(matcapColor.rgb, colorAdjust, 0.5);
+
+            // Apply simple lighting to enhance depth
+            float light = dot(vNormal, viewDirection) * 0.5;
+            blendedColor += light * blendedColor; // Light effect based on blended color
+
+            gl_FragColor = vec4(blendedColor, matcapColor.a);
           }
         `
       });
     }
-
     let labelTest;
     let matcapId = ref(1);
     async function changeMat(){
@@ -322,22 +502,45 @@ export default {
 
     let matcapMaterial;
     function renderMatcap(){
+      
       if(matcapType.value){
         changeMatcap(tempColor)
-      } else changeMatcap3(tempColor)
+      } else changeMatcap4(tempColor)
+      globalScene.traverse((obj) => {
+        if(obj.isMesh){
+          if(obj.name.includes('matcapped')){
+            // console.log("FOUND OBJ")
+          }
+        }
+      })
     }
     let tempColor;
-
+    let useFixedMaterial = ref(false)
     function switchColor(newColorHex) {
       tempColor = new Color(newColorHex)
-      if (matcapMaterial) {
-        const newColor = new Color(newColorHex);
-        if (matcapType.value) {
-          changeMatcap(newColor);
-        } else {
-          changeMatcap3(newColor);
+      let idx = 0;
+      globalScene.traverse((obj) => {
+        if(obj.isMesh){
+          if(obj.name.includes('matcapped')){
+            console.log("ITERATION", idx, obj.name)
+            if(useFixedMaterial.value){
+              obj.material = createFixedMaterial(tempColor, idx)
+            } else {
+              obj.material = createMatcapMaterial(tempColor, idx)
+            }
+            idx++;
+          }
         }
-      }
+      })
+
+      // if (matcapMaterial) {
+      //   const newColor = new Color(newColorHex);
+      //   if (matcapType.value) {
+      //     changeMatcap(newColor);
+      //   } else {
+      //     changeMatcap4(newColor);
+      //   }
+      // }
     }
 
     async function changeMatcap(color){
@@ -397,50 +600,72 @@ export default {
       // Step 2: Create a Shader Material with Full Color Override
       const desiredColor = new Color(0xffc107); // Example color for honey (golden yellow)
 
-      matcapMaterial = new ShaderMaterial({
-          uniforms: {
-              matcap: { value: matcapTexture },
-              colorAdjust: { value: color || new Color(0xffc107) }
-          },
-          vertexShader: `
-              varying vec3 viewDir;
-              varying vec3 worldNormal;
-
-              void main() {
-                  vec4 mvPosition = modelViewMatrix * vec4(position, 1.0);
-                  viewDir = normalize(-mvPosition.xyz);
-
-                  vec4 worldPosition = modelMatrix * vec4(position, 1.0);
-                  worldNormal = normalize(mat3(modelMatrix) * normal);
-
-                  gl_Position = projectionMatrix * mvPosition;
-              }
-          `,
-          fragmentShader: `
-              uniform sampler2D matcap;
-              uniform vec3 colorAdjust; // RGB color for full override
-              varying vec3 viewDir;
-              varying vec3 worldNormal;
-
-              void main() {
-                  vec3 normal = normalize(worldNormal);
-                  vec3 reflected = reflect(viewDir, normal);
-
-                  float m = 2.0 * sqrt(reflected.z + 1.0);
-                  vec2 uv = reflected.xy / m + 0.5;
-
-                  vec4 texColor = texture2D(matcap, uv);
-
-                  // Convert to grayscale to extract lighting and shading info
-                  float grayscale = dot(texColor.rgb, vec3(0.299, 0.587, 0.114));
-
-                  // Apply the new color fully
-                  vec3 fullyColored = grayscale * colorAdjust;
-
-                  gl_FragColor = vec4(fullyColored, texColor.a);
-              }
-          `
+      matcapMaterial = new MeshMatcapMaterial({
+          matcap: matcapTexture,
+          // color: new Color(0xBF9000) // Optional: set a base color if needed
       });
+
+      // Apply the new material to your objects
+      globalObj300g.material = matcapMaterial;
+      globalObj300g.material.needsUpdate = true;
+      globalObj150g.material = matcapMaterial;
+      globalObj150g.material.needsUpdate = true;
+    }
+    
+    async function changeMatcap4(color){
+      const textureLoader = new TextureLoader();
+  const matcapTexture = textureLoader.load(`/assets/matcaps/${matcapId.value}.png`);
+
+  // Create a Shader Material with Full Color Override
+  const desiredColor = new Color(0xffc107); // Example color for honey (golden yellow)
+
+  matcapMaterial = new ShaderMaterial({
+      uniforms: {
+          matcap: { value: matcapTexture },
+          colorAdjust: { value: color || new Color(0xffc107) }
+      },
+      vertexShader: `
+          varying vec3 viewDir;
+          varying vec3 worldNormal;
+          varying vec2 vUv;
+
+          void main() {
+              vec4 mvPosition = modelViewMatrix * vec4(position, 1.0);
+              viewDir = normalize(-mvPosition.xyz);
+              vec4 worldPosition = modelMatrix * vec4(position, 1.0);
+              worldNormal = normalize(mat3(modelMatrix) * normal);
+
+              vUv = uv; // Pass UV coordinates to fragment shader
+
+              gl_Position = projectionMatrix * mvPosition;
+          }
+      `,
+      fragmentShader: `
+          uniform sampler2D matcap;
+          uniform vec3 colorAdjust; // RGB color for full override
+          varying vec3 viewDir;
+          varying vec3 worldNormal;
+          varying vec2 vUv; // Receive UV coordinates
+
+          void main() {
+              vec3 normal = normalize(worldNormal);
+              vec3 reflected = reflect(viewDir, normal);
+              float m = 2.0 * sqrt(reflected.z + 1.0);
+              vec2 uv = reflected.xy / m + 0.5;
+
+              vec4 texColor = texture2D(matcap, uv);
+              float grayscale = dot(texColor.rgb, vec3(0.299, 0.587, 0.114));
+
+              // Adjust brightness based on position
+              float brightness = 0.5 + 0.3 * sin(vUv.y * 3.14159); // Vertical gradient
+              brightness += 0.04 * (1.0 - 4.0 * abs(vUv.x - 0.5)); // Horizontal gradient
+
+              vec3 fullyColored = brightness * grayscale * colorAdjust;
+
+              gl_FragColor = vec4(fullyColored, texColor.a);
+          }
+      `
+  });
       // Step 3: Apply the Shader Material to Your Mesh
       // Assuming you have an existing mesh
       globalObj300g.material = matcapMaterial;
@@ -507,16 +732,66 @@ export default {
       globalObj300g.material = matcapMaterial;
       globalObj300g.material.needsUpdate = true;
     }
+    async function changeMatcap4(color){
+      console.log("DOING MATCAP3");
+      const textureLoader = new TextureLoader();
+      const matcapTexture = textureLoader.load(`/assets/matcaps/${matcapId.value}.png`);
+
+      // Step 2: Create a MeshMatcapMaterial with the loaded texture
+      const matcapMaterial = new MeshMatcapMaterial({
+          matcap: matcapTexture,
+          color: color
+          // color: new Color(0xBF9000) // Optional: set a base color if needed
+      });
+
+      // Apply the new material to your objects
+      globalObj300g.material = matcapMaterial;
+      globalObj300g.material.needsUpdate = true;
+    }
     function cycleMatcap(direction) {
       if (direction) {
-          matcapId.value = (matcapId.value % 29) + 1;
+          matcapId.value = (matcapId.value % 46) + 1;
       } else {
-          matcapId.value = (matcapId.value - 2 + 29) % 29 + 1;
+          matcapId.value = (matcapId.value - 2 + 46) % 46 + 1;
       }
       renderMatcap();
     }
     let labelMeshes;
     let globalObj300g;
+
+    let showLabels = ref(true)
+    let showGlass = ref(true)
+    function removeGlass(){
+      globalScene.traverse((obj) => {
+        if (obj.isMesh && obj.name.includes('jar')) {
+          if(showGlass.value){
+            obj.material.opacity = 0;
+          } else {
+            obj.material.opacity = 1;
+          }
+        }
+      })
+      showGlass.value = !showGlass.value
+    }
+
+    function removeLabel(){
+      globalScene.traverse((obj) => {
+        if (obj.isMesh && obj.name.includes('label')) {
+          console.log("Label", showLabels.value)
+          if(showLabels.value){
+            obj.material.opacity = 0;
+          } else {
+            obj.material.opacity = 1;
+          }
+        }
+      })
+      showLabels.value = !showLabels.value
+    }
+    function removeMesh(meshName) {
+      
+    }
+
+
     const setCanvas = async () => {
       // Create Scene
       globalScene = new Scene();
@@ -536,7 +811,15 @@ export default {
       let objToRemove = []
       mediumSmallScene.scene.traverse((obj) => {
         if(obj.isMesh){
-          console.log("OBJ IS MESH")
+          console.log("OBJ IS MESH", obj.name, obj.material.transmission, obj.material.opacity)
+          if(obj.name.includes('jar')){
+            // obj.material.transmission = 0;
+            // obj.material.opacity = 0;
+          }
+          if(obj.name.includes('label')){
+            // obj.material.transmission = 0;
+            // obj.material.opacity = 0;
+          }
           if(obj.name.includes('150')){
             // remove this obj
             objToRemove.push(obj)
@@ -586,7 +869,7 @@ export default {
       globalPointLight.position.set(targetMesh.position.x, targetMesh.position.y, targetMesh.position.z + 0.5);
 
       // Camera
-      globalCamera = new PerspectiveCamera(25, aspectRatio.value, 0.001, 5);
+      globalCamera = new PerspectiveCamera(25, aspectRatio.value, 0.001, 10);
       // globalCamera.zoomFactor = 10;
       let axesHelper2 = new AxesHelper(5);
       axesHelper2.setColors('blue', 'green', 'red')
@@ -614,6 +897,12 @@ export default {
       globalRenderer.shadowMap.enabled = false;
       globalRenderer.render(globalScene, globalCamera);
       
+      globalOrbitControls = new OrbitControls(globalCamera, canvas);
+      globalOrbitControls.enableDamping = true; // Add smooth damping
+      globalOrbitControls.dampingFactor = 0.05;
+      globalOrbitControls.minDistance = 0.1;
+      globalOrbitControls.maxDistance = 10;
+      globalOrbitControls.maxPolarAngle = Math.PI / 2;
       await setLightingEXR(globalRenderer)
       // await setLighting(globalRenderer)
     };
@@ -723,7 +1012,6 @@ export default {
       if (containerWidth.value && containerHeight.value) {
         updateCamera(containerWidth.value, containerHeight.value);
         updateRenderer(containerWidth.value, containerHeight.value);
-        getDistanceFromCanvas(globalScene.children[0].children[0]);
       }
     }, 600);
 
@@ -739,7 +1027,7 @@ export default {
     async function setLightingEXR(renderer){
       
       let pmremGenerator = new PMREMGenerator(renderer);
-      let exrTexture = await new EXRLoader().loadAsync("/assets/exr/reinforced.exr")
+      let exrTexture = await new EXRLoader().loadAsync("/assets/exr/brown_photostudio_02_1k.exr")
       
       // 'assets/exr/bright.exr',
       // "assets/exr/lw.exr",
@@ -775,6 +1063,7 @@ export default {
           labelTest.material.uniforms.linePosition.value = linePosition;
         }
       }
+      globalOrbitControls.update();
       globalRenderer.render(globalScene, globalCamera);
       if(LOGTIMER === 0 && animationDONE){
         LOGTIMER++
@@ -792,8 +1081,9 @@ export default {
       await setCanvas();
       await nextTick()
       animate();
-      changeMat();
-      renderMatcap()
+      // changeMat();
+      // renderMatcap()
+      createMatcapGrid()
     });
 
     onUnmounted(() => {
@@ -829,6 +1119,9 @@ export default {
       }
 
 
+      if (globalOrbitControls) {
+        globalOrbitControls.dispose();
+      }
       // Clear the internal three.js caches
       Cache.clear();
       if (stats.dom) {
@@ -853,7 +1146,13 @@ export default {
       matcapType,
       jarSmall,
       jarMedium,
-      createMatcapGrid
+      createMatcapGrid,
+      removeGlass,
+      removeLabel,
+      showGlass,
+      showLabels,
+      useFixedMaterial,
+      switchColor
     };
   },
 };
@@ -916,21 +1215,4 @@ export default {
   width: 100%;
   height: 100%;
 }
-// .slider-container{
-//   width: 100%;
-//   height: 100%;
-//   position: absolute;
-//   .slider{
-//     position: absolute;
-//     cursor: ew-resize;
-//     width: 40px;
-//     height: 40px;
-//     background-color: #F32196;
-//     opacity: 0.7;
-//     border-radius: 50%;
-//     top: calc(50% - 20px);
-//     left: calc(50% - 20px);
-//     z-index: 20000;
-//   }
-// }
 </style>

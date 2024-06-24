@@ -321,8 +321,8 @@ export default {
     let matcapMaterial;
     function renderMatcap(){
       if(matcapType.value){
-        changeMatcap6(tempColor)
-      } else changeMatcap3(tempColor)
+        changeMatcap(tempColor)
+      } else changeMatcap2(tempColor)
     }
     let tempColor;
     function switchColor(newColorHex) {
@@ -330,9 +330,9 @@ export default {
       if (matcapMaterial) {
         const newColor = new Color(newColorHex);
         if (matcapType.value) {
-          changeMatcap6(newColor);
+          changeMatcap(newColor);
         } else {
-          changeMatcap3(newColor);
+          changeMatcap2(newColor);
         }
       }
     }
@@ -673,6 +673,7 @@ export default {
           } else if (obj.name === 'honey_object_150g'){
             globalObj150g = obj;
           } else if (obj.name.includes('jar')){
+            // console.log("OBJ TRANSMISSION", obj.material.transmission)
             // obj.material.transparent = true;
             // obj.material.opacity = 0;
           }

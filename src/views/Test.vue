@@ -20,11 +20,13 @@ export default {
 };
 </script>
 
-<style lang="scss">
+<style lang="scss" scoped>
 .color-picker{
   position: absolute;
-  top: 30%;
-  left: 80%;
+  bottom: 10%;
+  right: 10%;
+  top:auto !important;
+  left: auto !important;
   z-index: 10000;
 }
 .product-page-container{

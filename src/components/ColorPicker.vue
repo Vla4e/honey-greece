@@ -20,7 +20,7 @@ let emitter = inject('emitter')
 // Define a reactive variable for the selected color
 const color = ref('#ff0000');
 watch(() => color.value, (newValue) => {
-  emitter.emit('applyColor', newValue)
+  // emitter.emit('applyColor', newValue)
 })
 function emitApplyColor(){
   emitter.emit('applyColor', color.value)
