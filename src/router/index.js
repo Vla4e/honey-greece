@@ -8,6 +8,7 @@ import History from '@/views/History.vue';
 import ProductPage from '@/views/ProductPage.vue';
 import AllProducts from '@/views/AllProducts.vue';
 import About from '@/views/About.vue';
+import Test from '@/views/Test.vue';
 
 
 import emitter from '@/helpers/emitter.js';
@@ -84,6 +85,15 @@ const router = createRouter({
       component: About,
       meta: {
         hasNavbar: true, 
+        playAnimationOnEnter: true
+      }
+    },
+    {
+      path: '/test',
+      name: 'Test',
+      component: Test,
+      meta: {
+        hasNavbar: false, 
         playAnimationOnEnter: true
       }
     },

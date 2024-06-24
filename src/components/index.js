@@ -3,8 +3,6 @@ import Sidebar from './Sidebar.vue'
 import ContactForm from './ContactForm/ContactForm.vue'
 import JarScene from './JarScene.vue'
 import Footer from './Footer.vue'
-import ProductScene from './ProductScene.vue'
-import ProductScene2 from './ProductScene2.vue'
 import LinkTree from './LinkTree.vue'
 import PageTransition from './Transitions/PageTransition.vue'
 import BurgerMenuIcon from './Navbar/BurgerMenuIcon.vue'
@@ -18,8 +16,6 @@ export default [
     ContactForm,
     JarScene,
     Footer,
-    ProductScene,
-    ProductScene2,
     LinkTree,
     PageTransition,
     BurgerMenuIcon,

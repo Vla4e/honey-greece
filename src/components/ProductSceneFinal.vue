@@ -65,7 +65,8 @@ import {
   BoxHelper,
 Clock,
 Color,
-ShaderMaterial
+ShaderMaterial,
+MeshMatcapMaterial
 } from "three";
 
 import {
@@ -320,8 +321,8 @@ export default {
     let matcapMaterial;
     function renderMatcap(){
       if(matcapType.value){
-        changeMatcap(tempColor)
-      } else changeMatcap2(tempColor)
+        changeMatcap6(tempColor)
+      } else changeMatcap3(tempColor)
     }
     let tempColor;
     function switchColor(newColorHex) {
@@ -329,9 +330,9 @@ export default {
       if (matcapMaterial) {
         const newColor = new Color(newColorHex);
         if (matcapType.value) {
-          changeMatcap(newColor);
+          changeMatcap6(newColor);
         } else {
-          changeMatcap2(newColor);
+          changeMatcap3(newColor);
         }
       }
     }
@@ -388,6 +389,196 @@ export default {
       globalObj150g.material = matcapMaterial
       globalObj150g.material.needsUpdate = true;
     }
+    async function changeMatcap6(){
+    const textureLoader = new TextureLoader();
+    const matcapTexture = textureLoader.load(`/assets/matcaps/${matcapId.value}.png`);
+
+    // Step 2: Create a Shader Material that uses the matcap's original color
+    matcapMaterial = new ShaderMaterial({
+        uniforms: {
+            matcap: { value: matcapTexture }
+        },
+        vertexShader: `
+            varying vec3 viewDir;
+            varying vec3 worldNormal;
+
+            void main() {
+                vec4 mvPosition = modelViewMatrix * vec4(position, 1.0);
+                viewDir = normalize(-mvPosition.xyz);
+
+                vec4 worldPosition = modelMatrix * vec4(position, 1.0);
+                worldNormal = normalize(mat3(modelMatrix) * normal);
+
+                gl_Position = projectionMatrix * mvPosition;
+            }
+        `,
+        fragmentShader: `
+            uniform sampler2D matcap;
+            varying vec3 viewDir;
+            varying vec3 worldNormal;
+
+            void main() {
+                vec3 normal = normalize(worldNormal);
+                vec3 reflected = reflect(viewDir, normal);
+
+                float m = 2.0 * sqrt(reflected.z + 1.0);
+                vec2 uv = reflected.xy / m + 0.5;
+
+                vec4 texColor = texture2D(matcap, uv);
+
+                // Use the original color from the matcap texture
+                gl_FragColor = vec4(texColor.rgb, texColor.a);
+            }
+        `
+    });
+
+    // Apply the Shader Material to Your Mesh
+    globalObj300g.material = matcapMaterial;
+    globalObj300g.material.needsUpdate = true;
+    globalObj150g.material = matcapMaterial;
+    globalObj150g.material.needsUpdate = true;
+}
+    async function changeMatcap3(color){
+      console.log("DOING MATCAP3");
+      const textureLoader = new TextureLoader();
+      const matcapTexture = textureLoader.load(`/assets/matcaps/${matcapId.value}.png`);
+
+      // Step 2: Create a MeshMatcapMaterial with the loaded texture
+      const matcapMaterial = new MeshMatcapMaterial({
+          matcap: matcapTexture,
+          // color: new Color(0xBF9000) // Optional: set a base color if needed
+      });
+
+      // Apply the new material to your objects
+      globalObj300g.material = matcapMaterial;
+      globalObj300g.material.needsUpdate = true;
+      globalObj150g.material = matcapMaterial;
+      globalObj150g.material.needsUpdate = true;
+    }
+    
+    async function changeMatcap4(color){
+      const textureLoader = new TextureLoader();
+  const matcapTexture = textureLoader.load(`/assets/matcaps/${matcapId.value}.png`);
+
+  // Create a Shader Material with Full Color Override
+  const desiredColor = new Color(0xffc107); // Example color for honey (golden yellow)
+
+  matcapMaterial = new ShaderMaterial({
+      uniforms: {
+          matcap: { value: matcapTexture },
+          colorAdjust: { value: color || new Color(0xffc107) }
+      },
+      vertexShader: `
+          varying vec3 viewDir;
+          varying vec3 worldNormal;
+          varying vec2 vUv;
+
+          void main() {
+              vec4 mvPosition = modelViewMatrix * vec4(position, 1.0);
+              viewDir = normalize(-mvPosition.xyz);
+              vec4 worldPosition = modelMatrix * vec4(position, 1.0);
+              worldNormal = normalize(mat3(modelMatrix) * normal);
+
+              vUv = uv; // Pass UV coordinates to fragment shader
+
+              gl_Position = projectionMatrix * mvPosition;
+          }
+      `,
+      fragmentShader: `
+          uniform sampler2D matcap;
+          uniform vec3 colorAdjust; // RGB color for full override
+          varying vec3 viewDir;
+          varying vec3 worldNormal;
+          varying vec2 vUv; // Receive UV coordinates
+
+          void main() {
+              vec3 normal = normalize(worldNormal);
+              vec3 reflected = reflect(viewDir, normal);
+              float m = 2.0 * sqrt(reflected.z + 1.0);
+              vec2 uv = reflected.xy / m + 0.5;
+
+              vec4 texColor = texture2D(matcap, uv);
+              float grayscale = dot(texColor.rgb, vec3(0.299, 0.587, 0.114));
+
+              // Adjust brightness based on position
+              float brightness = 0.5 + 0.3 * sin(vUv.y * 3.14159); // Vertical gradient
+              brightness += 0.04 * (1.0 - 4.0 * abs(vUv.x - 0.5)); // Horizontal gradient
+
+              vec3 fullyColored = brightness * grayscale * colorAdjust;
+
+              gl_FragColor = vec4(fullyColored, texColor.a);
+          }
+      `
+  });
+  // Apply the Shader Material to Your Mesh
+  // Assuming you have an existing mesh
+  globalObj300g.material = matcapMaterial;
+  globalObj300g.material.needsUpdate = true;
+  globalObj150g.material = matcapMaterial;
+  globalObj150g.material.needsUpdate = true;
+    }
+    async function changeMatcap5(color){
+  const textureLoader = new TextureLoader();
+  const matcapTexture = textureLoader.load(`/assets/matcaps/${matcapId.value}.png`);
+
+  // Create a Shader Material with Full Color Override
+  const desiredColor = new Color(0xffc107); // Example color for honey (golden yellow)
+
+  matcapMaterial = new ShaderMaterial({
+      uniforms: {
+          matcap: { value: matcapTexture },
+          colorAdjust: { value: color || new Color(0xffc107) }
+      },
+      vertexShader: `
+          varying vec3 viewDir;
+          varying vec3 worldNormal;
+          varying vec2 vUv;
+
+          void main() {
+              vec4 mvPosition = modelViewMatrix * vec4(position, 1.0);
+              viewDir = normalize(-mvPosition.xyz);
+              vec4 worldPosition = modelMatrix * vec4(position, 1.0);
+              worldNormal = normalize(mat3(modelMatrix) * normal);
+
+              vUv = uv; // Pass UV coordinates to fragment shader
+
+              gl_Position = projectionMatrix * mvPosition;
+          }
+      `,
+      fragmentShader: `
+          uniform sampler2D matcap;
+          uniform vec3 colorAdjust; // RGB color for full override
+          varying vec3 viewDir;
+          varying vec3 worldNormal;
+          varying vec2 vUv; // Receive UV coordinates
+
+          void main() {
+              vec3 normal = normalize(worldNormal);
+              vec3 reflected = reflect(viewDir, normal);
+              float m = 2.0 * sqrt(reflected.z + 1.0);
+              vec2 uv = reflected.xy / m + 0.5;
+
+              vec4 texColor = texture2D(matcap, uv);
+              float grayscale = dot(texColor.rgb, vec3(0.299, 0.587, 0.114));
+
+              // Calculate brightness based on vertical position and add horizontal light effects
+              float verticalGradient = 0.65 + 0.15 * sin(vUv.y * 3.14159); // Brighter at bottom and top, darker in middle
+              float horizontalGradient = 0.5 + 0.3 * pow(1.0 - abs(vUv.x - 0.5), 2.0); // Brighter towards the middle
+
+              float brightness = verticalGradient * horizontalGradient;
+
+              vec3 fullyColored = brightness * grayscale * colorAdjust;
+
+              gl_FragColor = vec4(fullyColored, texColor.a);
+          }
+      `
+  });
+  // Apply the Shader Material to Your Mesh
+  globalObj300g.material = matcapMaterial;
+  globalObj300g.material.needsUpdate = true;
+  globalObj150g.material = matcapMaterial;
+  globalObj150g.material.needsUpdate = true;
+}
     async function changeMatcap2(color){
       const textureLoader = new TextureLoader();
       const matcapTexture = textureLoader.load(`/assets/matcaps/${matcapId.value}.png`);
@@ -448,9 +639,9 @@ export default {
     }
     function cycleMatcap(direction) {
       if (direction) {
-          matcapId.value = (matcapId.value % 29) + 1;
+          matcapId.value = (matcapId.value % 44) + 1;
       } else {
-          matcapId.value = (matcapId.value - 2 + 29) % 29 + 1;
+          matcapId.value = (matcapId.value - 2 + 44) % 44 + 1;
       }
       renderMatcap();
     }
@@ -481,7 +672,7 @@ export default {
             globalObj300g = obj
           } else if (obj.name === 'honey_object_150g'){
             globalObj150g = obj;
-          } else if (obj.name.includes('label')){
+          } else if (obj.name.includes('jar')){
             // obj.material.transparent = true;
             // obj.material.opacity = 0;
           }
@@ -704,7 +895,7 @@ export default {
     async function setLightingEXR(renderer){
       
       let pmremGenerator = new PMREMGenerator(renderer);
-      let exrTexture = await new EXRLoader().loadAsync("/assets/exr/reinforced.exr")
+      let exrTexture = await new EXRLoader().loadAsync("/assets/exr/brown_photostudio_02_1k.exr")
       
       // 'assets/exr/bright.exr',
       // "assets/exr/lw.exr",
@@ -965,6 +1156,9 @@ export default {
       updateTexture,
       changeMat,
       changeMatcap2,
+      changeMatcap3,
+      changeMatcap4,
+      changeMatcap5,
       cycleMatcap,
       matcapId,
       toggleShader,

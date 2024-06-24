@@ -3,12 +3,7 @@
     <!-- <span class="floating-text" ">
       {{ currentFlavour.name }}
     </span> -->
-    <button style="position: absolute; top: 0%; left: 10%; z-index: 200000;" @click="toggleViews()">Toggle views</button>
-    <button 
-    @click="()=>{videoScene = !videoScene}" 
-    style="position: absolute; top: 10%; left: 90%;">
-      TOGGLE SCENE
-    </button>
+
     <transition name="fade" mode="out-in">
       <span class="floating-text" :style="{ 'font-size': computedTextLength + 'px' }" :key="currentFlavour.name">
         {{ currentFlavour.name }}
@@ -18,12 +13,6 @@
     <div class="series-selection">
       <div class="pushdown" style="height: 35%; width: 100%;"></div>
       <div class="series-item-container">
-        
-        <!-- <div class="brand-selection-test">
-          <img @click="switchBrand()" class="arrow arrow-up" :src="arrow"/>
-          <img class="brand-image" :src="computedLogo"/>
-          <img @click="switchBrand()" class="arrow arrow-down" :src="arrow"/>
-        </div> -->
         <div class="series-items">
           <div
             class="series-item"
@@ -58,14 +47,13 @@
 
     <div class="product-viewer" ref="productViewer">
       <!-- <div class="pushdown" style="height: 15%; width: 100%;"></div> -->
-      <!-- <ProductScene /> -->
-      <!-- <ProductScene2 v-if="videoScene"/> -->
-      <!-- <ProductSceneSlider/> -->
       <ProductSceneFinal />
     </div>
     <ColorPicker class="color-picker target"/>
+    <button style="position: absolute; top: 0%; left: 10%; z-index: 200000;" @click="toggleViews()">Toggle views</button>
+
     <div class="blend-selection">
-      <div class="brand-selection">
+      <div class="brand-selection pushdown">
         <!-- <img @click="switchBrand()" class="brand-image" :src="computedLogo"/> -->
       </div>
       <span
@@ -100,9 +88,6 @@ import { onUnmounted, onMounted, ref, toRaw, computed, watch, inject } from "vue
 import { useWindowSize } from "@vueuse/core";
 import { useRoute } from 'vue-router';
 
-import ProductScene from "../components/ProductScene.vue";
-import ProductScene2 from "../components/ProductScene2.vue";
-
 import downloadIcon from "@/assets/pages/product-page/download-icon.png";
 import pointerLine from "@/assets/pages/product-page/pointer-line.svg";
 import pointerCircle from "@/assets/pages/product-page/pointer-circle.svg";
@@ -110,11 +95,10 @@ import arrow from "@/assets/images/arrow.svg";
 
 import brandConfigs from "@/assets/brand-information/index.js"
 import { useProductStore } from '@/store/product.js'
-import ProductSceneSlider from "../components/ProductSceneSlider.vue";
 import ProductSceneFinal from "../components/ProductSceneFinal.vue"
 
 export default {
-  components: { ProductScene, ProductScene2, ProductSceneSlider, ProductSceneFinal },
+  components: { ProductSceneFinal },
   props: ['line', 'selectedBrand'],
 
   setup(props) {
