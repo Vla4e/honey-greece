@@ -14,12 +14,9 @@
     <div class="target" style="position: absolute; top: 5%; left: 6%; display: flex; width: 40%;">
       <button style="margin-right:10px" @click="removeLabel('label')">Show Labels: {{ showLabels }}</button>
       <button style="margin-right:10px" @click="removeGlass('jar')">Show Glass: {{ showGlass }}</button>
-      <button style="margin-right:10px" @click="()=>{ 
-        useMaterial === 'fixed' ? useMaterial = 'matcap' : useMaterial === 'matcap' ? useMaterial = 'complex' : 'fixed';
-        applyMaterialChanges();
-      }">Custom Shader: {{ useMaterial === 'fixed' ? 'Fixed' : useMaterial === 'matcap' ? 'matcap' : 'complex' }}</button>
+      <button style="margin-right:10px" @click="cycleMaterial()">Custom Shader: {{ useMaterial }}</button>
     </div>
-    <div v-if="useMaterial === 'complex'" class="material-controls" style="position: absolute; bottom: 5%; left: 35%; width: 600px; background: rgba(255,255,255,0.7); padding: 10px;">
+    <div v-if="useMaterial === 'complex' || useMaterial === 'complexOptions'" class="material-controls" style="position: absolute; bottom: 5%; left: 35%; width: 600px; background: rgba(255,255,255,0.7); padding: 10px;">
       <label>Density: {{ density }}</label>
       <input type="range" v-model="density" min="1" max="20" step="0.01">
       <label>Light: {{ light }}</label>
@@ -30,10 +27,10 @@
       <input type="range" v-model="hPosition" min="0" max="5" step="0.01">
       <label>Highlight intensity: {{ hIntensity }}</label>
       <input type="range" v-model="hIntensity" min="0" max="5" step="0.01"> -->
-      <label>envMapIntensity intensity: {{ envMapIntensity }}</label>
-      <input type="range" v-model="envMapIntensity" min="0" max="5" step="0.01">
-      <label>viscosityWaviness: {{ viscosityWaviness }}</label>
-      <input type="range" v-model="viscosityWaviness" min="5" max="100" step="1">
+      <!-- <label>envMapIntensity intensity: {{ envMapIntensity }}</label>
+      <input type="range" v-model="envMapIntensity" min="0" max="5" step="0.01"> -->
+      <label v-if="useMaterial === 'complexOptions'">viscosityWaviness: {{ viscosityWaviness }}</label>
+      <input v-if="useMaterial === 'complexOptions'" type="range" v-model="viscosityWaviness" min="5" max="100" step="1">
       <button @click="applyMaterialChanges">Apply Changes</button>
     </div>
   </div>
@@ -245,8 +242,14 @@ export default {
                     honeyObject = obj
                     console.log("THIS IS THE HONEYOBJ", honeyObject.name)
                   }
-                } else{
-                  obj.material = createComplexMaterial(idx,  density.value, light.value, viscosity.value, hPosition.value, hIntensity.value, envMapIntensity.value, viscosityWaviness.value)
+                } else if( useMaterial.value === 'complexOptions'){
+                  obj.material = createComplexMaterialOptions(idx,  density.value, light.value, viscosity.value, hPosition.value, hIntensity.value, envMapIntensity.value, viscosityWaviness.value)
+                  if(!honeyObject){
+                    honeyObject = obj
+                    console.log("THIS IS THE HONEYOBJ", honeyObject.name)
+                  }
+                } else {
+                  obj.material = createComplexMaterial(idx,  density.value, light.value, viscosity.value)
                   if(!honeyObject){
                     honeyObject = obj
                     console.log("THIS IS THE HONEYOBJ", honeyObject.name)
@@ -349,98 +352,107 @@ export default {
         `
       });
     }
-
     function createComplexMaterial(
+      id, 
+      density = 16.53, 
+      light = 1.03, 
+      viscosity = 0.01
+    ) {
+      console.log("Applying with values: ", density, light, viscosity)
+      
+      const matcapTexture = globalTextureLoader.load(`/assets/matcaps/${id+1}.png`);
+
+
+      return new ShaderMaterial({
+        uniforms: {
+          matcap: { value: matcapTexture },
+          colorAdjust: { value: honeyColor},
+          time: { value: 0 },
+          envMap: { value: globalScene.environment },
+          IOR: { value: density},
+          subSurfaceScatter: { value: light},
+          viscosity: { value: viscosity},
+        },
+        vertexShader: `
+          varying vec3 vNormal;
+          varying vec3 vViewPosition;
+          varying vec3 vWorldPosition;
+
+          void main() {
+            vNormal = normalize(normalMatrix * normal);
+            vec4 mvPosition = modelViewMatrix * vec4(position, 1.0);
+            vViewPosition = -mvPosition.xyz;
+            vWorldPosition = (modelMatrix * vec4(position, 1.0)).xyz;
+            gl_Position = projectionMatrix * mvPosition;
+          }
+        `,
+        fragmentShader: `
+          uniform sampler2D matcap;
+          uniform vec3 colorAdjust;
+          uniform float time;
+          uniform samplerCube envMap;
+          uniform float IOR;
+          uniform float subSurfaceScatter;
+          uniform float viscosity;
+
+          varying vec3 vNormal;
+          varying vec3 vViewPosition;
+          varying vec3 vWorldPosition;
+
+          vec3 getEnvironmentReflection(vec3 viewDir, vec3 normal) {
+            vec3 reflectVec = reflect(viewDir, normal);
+            return textureCube(envMap, reflectVec).rgb;
+          }
+
+          void main() {
+            vec3 viewDir = normalize(vViewPosition);
+            vec3 normal = normalize(vNormal);
+
+            // Refraction
+            vec3 refractColor = refract(viewDir, normal, 1.0 / IOR);
+            vec2 matcapUV = refractColor.xy * 0.5 + 0.5;
+            vec3 matcapColor = texture2D(matcap, matcapUV).rgb;
+
+            // Environment reflection
+            vec3 reflColor = getEnvironmentReflection(viewDir, normal);
+
+            // Fresnel effect
+            float fresnel = pow(1.0 - dot(viewDir, normal), 5.0);
+
+            // Subsurface scattering approximation
+            vec3 scatterColor = colorAdjust * (1.0 - fresnel) * subSurfaceScatter;
+
+            // Viscosity simulation (subtle movement)
+            float viscosityEffect = sin(vWorldPosition.y * 20.0 + time * 0.1) * viscosity;
+            matcapColor += vec3(viscosityEffect);
+
+            // Blend colors
+            vec3 finalColor = mix(matcapColor, reflColor, fresnel);
+            finalColor += scatterColor;
+            finalColor *= colorAdjust;
+
+            // Color depth simulation
+            float depth = (vWorldPosition.y + 1.0) * 0.5; // Normalize to 0-1 range
+            finalColor *= mix(vec3(1.0), colorAdjust, depth);
+
+            gl_FragColor = vec4(finalColor, 1.0);
+          }
+        `
+      });
+    }
+    function createComplexMaterialOptions(
       id, 
       density = 16.53, 
       light = 1.03, 
       viscosity = 0.01, 
       hPosition = 0.50, 
       hIntensity = 0.50, 
-      envMapIntensity = 0.50, 
+      envMapIntensity = 1.00, 
       viscosityWaviness = 20.00
     ) {
       console.log("Applying with values: ", density, light, viscosity, hPosition, hIntensity, envMapIntensity, viscosityWaviness)
       
       const matcapTexture = globalTextureLoader.load(`/assets/matcaps/${id+1}.png`);
-
-
-      // return new ShaderMaterial({
-      //   uniforms: {
-      //     matcap: { value: matcapTexture },
-      //     colorAdjust: { value: honeyColor},
-      //     time: { value: 0 },
-      //     envMap: { value: globalScene.environment },
-      //     IOR: { value: density},
-      //     subSurfaceScatter: { value: light},
-      //     viscosity: { value: viscosity},
-      //   },
-      //   vertexShader: `
-      //     varying vec3 vNormal;
-      //     varying vec3 vViewPosition;
-      //     varying vec3 vWorldPosition;
-
-      //     void main() {
-      //       vNormal = normalize(normalMatrix * normal);
-      //       vec4 mvPosition = modelViewMatrix * vec4(position, 1.0);
-      //       vViewPosition = -mvPosition.xyz;
-      //       vWorldPosition = (modelMatrix * vec4(position, 1.0)).xyz;
-      //       gl_Position = projectionMatrix * mvPosition;
-      //     }
-      //   `,
-      //   fragmentShader: `
-      //     uniform sampler2D matcap;
-      //     uniform vec3 colorAdjust;
-      //     uniform float time;
-      //     uniform samplerCube envMap;
-      //     uniform float IOR;
-      //     uniform float subSurfaceScatter;
-      //     uniform float viscosity;
-
-      //     varying vec3 vNormal;
-      //     varying vec3 vViewPosition;
-      //     varying vec3 vWorldPosition;
-
-      //     vec3 getEnvironmentReflection(vec3 viewDir, vec3 normal) {
-      //       vec3 reflectVec = reflect(viewDir, normal);
-      //       return textureCube(envMap, reflectVec).rgb;
-      //     }
-
-      //     void main() {
-      //       vec3 viewDir = normalize(vViewPosition);
-      //       vec3 normal = normalize(vNormal);
-
-      //       // Refraction
-      //       vec3 refractColor = refract(viewDir, normal, 1.0 / IOR);
-      //       vec2 matcapUV = refractColor.xy * 0.5 + 0.5;
-      //       vec3 matcapColor = texture2D(matcap, matcapUV).rgb;
-
-      //       // Environment reflection
-      //       vec3 reflColor = getEnvironmentReflection(viewDir, normal);
-
-      //       // Fresnel effect
-      //       float fresnel = pow(1.0 - dot(viewDir, normal), 5.0);
-
-      //       // Subsurface scattering approximation
-      //       vec3 scatterColor = colorAdjust * (1.0 - fresnel) * subSurfaceScatter;
-
-      //       // Viscosity simulation (subtle movement)
-      //       float viscosityEffect = sin(vWorldPosition.y * 20.0 + time * 0.1) * viscosity;
-      //       matcapColor += vec3(viscosityEffect);
-
-      //       // Blend colors
-      //       vec3 finalColor = mix(matcapColor, reflColor, fresnel);
-      //       finalColor += scatterColor;
-      //       finalColor *= colorAdjust;
-
-      //       // Color depth simulation
-      //       float depth = (vWorldPosition.y + 1.0) * 0.5; // Normalize to 0-1 range
-      //       finalColor *= mix(vec3(1.0), colorAdjust, depth);
-
-      //       gl_FragColor = vec4(finalColor, 1.0);
-      //     }
-      //   `
-      // });
 
 
       return new ShaderMaterial({
@@ -545,9 +557,24 @@ export default {
     const viscosity = ref(0.01)
     const hPosition =  ref(0.50)
     const hIntensity = ref(0.50)
-    const envMapIntensity = ref(0.50)
+    const envMapIntensity = ref(1.00)
     const viscosityWaviness = ref(20.00)
-
+    function cycleMaterial() {
+      switch (useMaterial.value) {
+        case 'fixed':
+          useMaterial.value = 'matcap';
+            break;
+        case 'matcap':
+          useMaterial.value = 'complexOptions';
+            break;
+        case 'complexOptions':
+          useMaterial.value = 'complex';
+            break;
+        default:
+          useMaterial.value = 'fixed';
+    }
+    applyMaterialChanges();
+  }
     function applyMaterialChanges() {
       console.log("APPLYING MAT CHNAGES")
       let idx = 0;
@@ -557,8 +584,10 @@ export default {
             obj.material = createFixedMaterial(idx)
           } else if( useMaterial.value === 'matcap'){
             obj.material = createMatcapMaterial(idx)
-          } else{
-            obj.material = createComplexMaterial(idx, density.value, light.value, viscosity.value, hPosition.value, hIntensity.value, envMapIntensity.value, viscosityWaviness.value);
+          } else if( useMaterial.value === 'complexOptions'){
+            obj.material = createComplexMaterialOptions(idx, density.value, light.value, viscosity.value, hPosition.value, hIntensity.value, envMapIntensity.value, viscosityWaviness.value);
+          } else {
+            obj.material = createComplexMaterial(idx, density.value, light.value, viscosity.value);
           }
           idx++
         }
@@ -580,13 +609,14 @@ export default {
       globalScene.traverse((obj) => {
         if(obj.isMesh){
           if(obj.name.includes('matcapped')){
-            // console.log("ITERATION", idx, obj.name)
             if(useMaterial.value === 'fixed'){
               obj.material = createFixedMaterial(idx)
             } else if( useMaterial.value === 'matcap'){
               obj.material = createMatcapMaterial(idx)
-            } else{
-              obj.material = createComplexMaterial(idx, density.value, light.value, viscosity.value, hPosition.value, hIntensity.value, envMapIntensity.value, viscosityWaviness.value)
+            } else if( useMaterial.value === 'complexOptions'){
+              obj.material = createComplexMaterialOptions(idx, density.value, light.value, viscosity.value, hPosition.value, hIntensity.value, envMapIntensity.value, viscosityWaviness.value);
+            } else {
+              obj.material = createComplexMaterial(idx, density.value, light.value, viscosity.value);
             }
             idx++;
           }
@@ -899,7 +929,8 @@ export default {
       hIntensity,
       envMapIntensity,
       viscosityWaviness,
-      applyMaterialChanges
+      applyMaterialChanges,
+      cycleMaterial
     };
   },
 };
