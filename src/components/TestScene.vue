@@ -30,6 +30,10 @@
       <input type="range" v-model="hPosition" min="0" max="5" step="0.01">
       <label>Highlight intensity: {{ hIntensity }}</label>
       <input type="range" v-model="hIntensity" min="0" max="5" step="0.01"> -->
+      <label>envMapIntensity intensity: {{ envMapIntensity }}</label>
+      <input type="range" v-model="envMapIntensity" min="0" max="5" step="0.01">
+      <label>viscosityWaviness: {{ viscosityWaviness }}</label>
+      <input type="range" v-model="viscosityWaviness" min="5" max="100" step="1">
       <button @click="applyMaterialChanges">Apply Changes</button>
     </div>
   </div>
@@ -242,7 +246,7 @@ export default {
                     console.log("THIS IS THE HONEYOBJ", honeyObject.name)
                   }
                 } else{
-                  obj.material = createComplexMaterial(idx,  density.value, light.value, viscosity.value, hPosition.value, hIntensity.value)
+                  obj.material = createComplexMaterial(idx,  density.value, light.value, viscosity.value, hPosition.value, hIntensity.value, envMapIntensity.value, viscosityWaviness.value)
                   if(!honeyObject){
                     honeyObject = obj
                     console.log("THIS IS THE HONEYOBJ", honeyObject.name)
@@ -346,87 +350,19 @@ export default {
       });
     }
 
-    function createComplexMaterial(id, density = 16.53, light = 1.03, viscosity = 0.01, hPosition = 0.50, hIntensity = 0.50) {
-      console.log("Applying with values: ", density, light, viscosity, hPosition, hIntensity)
+    function createComplexMaterial(
+      id, 
+      density = 16.53, 
+      light = 1.03, 
+      viscosity = 0.01, 
+      hPosition = 0.50, 
+      hIntensity = 0.50, 
+      envMapIntensity = 0.50, 
+      viscosityWaviness = 20.00
+    ) {
+      console.log("Applying with values: ", density, light, viscosity, hPosition, hIntensity, envMapIntensity, viscosityWaviness)
+      
       const matcapTexture = globalTextureLoader.load(`/assets/matcaps/${id+1}.png`);
-
-
-      return new ShaderMaterial({
-        uniforms: {
-          matcap: { value: matcapTexture },
-          colorAdjust: { value: honeyColor},
-          time: { value: 0 },
-          envMap: { value: globalScene.environment },
-          IOR: { value: density},
-          subSurfaceScatter: { value: light},
-          viscosity: { value: viscosity},
-        },
-        vertexShader: `
-          varying vec3 vNormal;
-          varying vec3 vViewPosition;
-          varying vec3 vWorldPosition;
-
-          void main() {
-            vNormal = normalize(normalMatrix * normal);
-            vec4 mvPosition = modelViewMatrix * vec4(position, 1.0);
-            vViewPosition = -mvPosition.xyz;
-            vWorldPosition = (modelMatrix * vec4(position, 1.0)).xyz;
-            gl_Position = projectionMatrix * mvPosition;
-          }
-        `,
-        fragmentShader: `
-          uniform sampler2D matcap;
-          uniform vec3 colorAdjust;
-          uniform float time;
-          uniform samplerCube envMap;
-          uniform float IOR;
-          uniform float subSurfaceScatter;
-          uniform float viscosity;
-
-          varying vec3 vNormal;
-          varying vec3 vViewPosition;
-          varying vec3 vWorldPosition;
-
-          vec3 getEnvironmentReflection(vec3 viewDir, vec3 normal) {
-            vec3 reflectVec = reflect(viewDir, normal);
-            return textureCube(envMap, reflectVec).rgb;
-          }
-
-          void main() {
-            vec3 viewDir = normalize(vViewPosition);
-            vec3 normal = normalize(vNormal);
-
-            // Refraction
-            vec3 refractColor = refract(viewDir, normal, 1.0 / IOR);
-            vec2 matcapUV = refractColor.xy * 0.5 + 0.5;
-            vec3 matcapColor = texture2D(matcap, matcapUV).rgb;
-
-            // Environment reflection
-            vec3 reflColor = getEnvironmentReflection(viewDir, normal);
-
-            // Fresnel effect
-            float fresnel = pow(1.0 - dot(viewDir, normal), 5.0);
-
-            // Subsurface scattering approximation
-            vec3 scatterColor = colorAdjust * (1.0 - fresnel) * subSurfaceScatter;
-
-            // Viscosity simulation (subtle movement)
-            float viscosityEffect = sin(vWorldPosition.y * 20.0 + time * 0.1) * viscosity;
-            matcapColor += vec3(viscosityEffect);
-
-            // Blend colors
-            vec3 finalColor = mix(matcapColor, reflColor, fresnel);
-            finalColor += scatterColor;
-            finalColor *= colorAdjust;
-
-            // Color depth simulation
-            float depth = (vWorldPosition.y + 1.0) * 0.5; // Normalize to 0-1 range
-            finalColor *= mix(vec3(1.0), colorAdjust, depth);
-
-            gl_FragColor = vec4(finalColor, 1.0);
-          }
-        `
-      });
 
 
       // return new ShaderMaterial({
@@ -438,8 +374,6 @@ export default {
       //     IOR: { value: density},
       //     subSurfaceScatter: { value: light},
       //     viscosity: { value: viscosity},
-      //     highlightPosition: { value: hPosition },
-      //     highlightIntensity: { value: hIntensity },
       //   },
       //   vertexShader: `
       //     varying vec3 vNormal;
@@ -462,8 +396,6 @@ export default {
       //     uniform float IOR;
       //     uniform float subSurfaceScatter;
       //     uniform float viscosity;
-      //     uniform float highlightIntensity;
-      //     uniform float highlightPosition;
 
       //     varying vec3 vNormal;
       //     varying vec3 vViewPosition;
@@ -496,36 +428,125 @@ export default {
       //       float viscosityEffect = sin(vWorldPosition.y * 20.0 + time * 0.1) * viscosity;
       //       matcapColor += vec3(viscosityEffect);
 
-      //       // Enhanced Vertical highlight
-      //       float verticalHighlight = smoothstep(highlightPosition - 0.1, highlightPosition + 0.1, abs(vWorldPosition.y));
-      //       verticalHighlight = pow(verticalHighlight, 2.0) * highlightIntensity;
-
       //       // Blend colors
       //       vec3 finalColor = mix(matcapColor, reflColor, fresnel);
       //       finalColor += scatterColor;
       //       finalColor *= colorAdjust;
 
-      //       // Apply vertical highlight more prominently
-      //       finalColor = mix(finalColor, vec3(1.0), verticalHighlight);
-
       //       // Color depth simulation
       //       float depth = (vWorldPosition.y + 1.0) * 0.5; // Normalize to 0-1 range
       //       finalColor *= mix(vec3(1.0), colorAdjust, depth);
-
-      //       // Enhance transparency effect
-      //       float transparency = smoothstep(0.2, 0.8, abs(dot(viewDir, normal)));
-      //       finalColor = mix(finalColor, reflColor, transparency * 0.3);
 
       //       gl_FragColor = vec4(finalColor, 1.0);
       //     }
       //   `
       // });
+
+
+      return new ShaderMaterial({
+        uniforms: {
+          matcap: { value: matcapTexture },
+          colorAdjust: { value: honeyColor},
+          time: { value: 0 },
+          envMap: { value: globalScene.environment },
+          IOR: { value: density},
+          subSurfaceScatter: { value: light},
+          viscosity: { value: viscosity},
+          viscosityWaviness: { value: viscosityWaviness},
+          highlightPosition: { value: hPosition },
+          highlightIntensity: { value: hIntensity },
+          envMapIntensity: { value: envMapIntensity},
+        },
+        vertexShader: `
+          varying vec3 vNormal;
+          varying vec3 vViewPosition;
+          varying vec3 vWorldPosition;
+
+          void main() {
+            vNormal = normalize(normalMatrix * normal);
+            vec4 mvPosition = modelViewMatrix * vec4(position, 1.0);
+            vViewPosition = -mvPosition.xyz;
+            vWorldPosition = (modelMatrix * vec4(position, 1.0)).xyz;
+            gl_Position = projectionMatrix * mvPosition;
+          }
+        `,
+        fragmentShader: `
+          uniform sampler2D matcap;
+          uniform vec3 colorAdjust;
+          uniform float time;
+          uniform samplerCube envMap;
+          uniform float envMapIntensity;
+          uniform float IOR;
+          uniform float subSurfaceScatter;
+          uniform float viscosity;
+          uniform float highlightIntensity;
+          uniform float highlightPosition;
+          uniform float viscosityWaviness;
+
+          varying vec3 vNormal;
+          varying vec3 vViewPosition;
+          varying vec3 vWorldPosition;
+
+          vec3 getEnvironmentReflection(vec3 viewDir, vec3 normal) {
+            vec3 reflectVec = reflect(viewDir, normal);
+            return textureCube(envMap, reflectVec).rgb;
+          }
+
+          void main() {
+            vec3 viewDir = normalize(vViewPosition);
+            vec3 normal = normalize(vNormal);
+
+            // Refraction
+            vec3 refractColor = refract(viewDir, normal, 1.0 / IOR);
+            vec2 matcapUV = refractColor.xy * 0.5 + 0.5;
+            vec3 matcapColor = texture2D(matcap, matcapUV).rgb;
+
+            // Environment reflection with reduced intensity
+            vec3 reflColor = getEnvironmentReflection(viewDir, normal) * envMapIntensity;
+
+            // Adjusted Fresnel effect
+            float fresnelPower = 3.0;
+            float fresnel = pow(1.0 - dot(viewDir, normal), fresnelPower);
+
+            // Subsurface scattering approximation
+            vec3 scatterColor = colorAdjust * (1.0 - fresnel) * subSurfaceScatter;
+
+            // Viscosity simulation (subtle movement)
+            float viscosityEffect = sin(vWorldPosition.y * viscosityWaviness + time * 0.1) * viscosity;
+            matcapColor += vec3(viscosityEffect);
+
+            // Enhanced Vertical highlight
+            float verticalHighlight = smoothstep(highlightPosition - 0.1, highlightPosition + 0.1, abs(vWorldPosition.y));
+            verticalHighlight = pow(verticalHighlight, 2.0) * highlightIntensity * 2.0;
+
+            // Blend colors with adjusted weights
+            vec3 baseColor = mix(matcapColor, reflColor, fresnel * 0.5);
+            vec3 finalColor = mix(baseColor, colorAdjust, 0.5);
+            finalColor += scatterColor;
+
+            // Apply vertical highlight more prominently
+            finalColor += vec3(verticalHighlight);
+
+            // Color depth simulation
+            float depth = (vWorldPosition.y + 1.0) * 0.5; // Normalize to 0-1 range
+            finalColor *= mix(vec3(1.0), colorAdjust, depth);
+
+            // Enhance transparency effect with reduced environment map influence
+            float transparency = smoothstep(0.2, 0.8, abs(dot(viewDir, normal)));
+            finalColor = mix(finalColor, reflColor, transparency * 0.2);
+
+            gl_FragColor = vec4(finalColor, 1.0);
+          }
+        `
+      });
     }
     const density = ref(16.53);
     const light = ref(1.03);
     const viscosity = ref(0.01)
     const hPosition =  ref(0.50)
     const hIntensity = ref(0.50)
+    const envMapIntensity = ref(0.50)
+    const viscosityWaviness = ref(20.00)
 
     function applyMaterialChanges() {
       console.log("APPLYING MAT CHNAGES")
@@ -537,7 +558,7 @@ export default {
           } else if( useMaterial.value === 'matcap'){
             obj.material = createMatcapMaterial(idx)
           } else{
-            obj.material = createComplexMaterial(idx, density.value, light.value, viscosity.value, hPosition.value, hIntensity.value);
+            obj.material = createComplexMaterial(idx, density.value, light.value, viscosity.value, hPosition.value, hIntensity.value, envMapIntensity.value, viscosityWaviness.value);
           }
           idx++
         }
@@ -565,7 +586,7 @@ export default {
             } else if( useMaterial.value === 'matcap'){
               obj.material = createMatcapMaterial(idx)
             } else{
-              obj.material = createComplexMaterial(idx, density.value, light.value, viscosity.value, hPosition.value, hIntensity.value)
+              obj.material = createComplexMaterial(idx, density.value, light.value, viscosity.value, hPosition.value, hIntensity.value, envMapIntensity.value, viscosityWaviness.value)
             }
             idx++;
           }
@@ -876,6 +897,8 @@ export default {
       light,
       hPosition,
       hIntensity,
+      envMapIntensity,
+      viscosityWaviness,
       applyMaterialChanges
     };
   },
