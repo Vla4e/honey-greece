@@ -3,6 +3,7 @@
     <input type="color" v-model="color" />
     <!-- <div class="color-display" :style="{ backgroundColor: color }"></div> -->
     <p>{{ color }}</p>
+    <input type="text" v-model="color" />
     <button @click="emitApplyColor()">Apply Color</button>
   </div>
 </template>
@@ -19,8 +20,10 @@ import { ref, inject, watch, onMounted, onUnmounted } from 'vue';
 let emitter = inject('emitter')
 // Define a reactive variable for the selected color
 const color = ref('#ff0000');
-watch(() => color.value, (newValue) => {
+const colorText = ref('#ff0000')
+watch(() => colorText.value, (newValue) => {
   // emitter.emit('applyColor', newValue)
+  color.value = colorText.value
 })
 function emitApplyColor(){
   emitter.emit('applyColor', color.value)
@@ -29,6 +32,7 @@ onMounted(() => {
   emitter.on('switchColor', (value) => {
     console.log("switchcolor value", value)
     color.value = value
+    colorText.value = value
     emitApplyColor();
   })
 })
