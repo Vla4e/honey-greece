@@ -12,17 +12,21 @@
       Refresh to reset
     </div>
     <div class="target" style="position: absolute; top: 5%; left: 6%; display: flex; width: 40%;">
-      <!-- <button style="margin-right: 10px;" @click="cycleMatcap(0)">prev</button>
-      <button style="margin-right: 10px;" @click="toggleShader()">toggle shader: {{ matcapType ? 'keep original color' : 'force honey color' }}</button>
-      <button style="margin-right: 10px;" @click="renderMatcap()">RENDER: {{ matcapId }}</button>
-      <button style="margin-right: 10px;" @click="cycleMatcap(1)">next</button> -->
-      <!-- <button style="margin-right: 10px" @click="createMatcapGrid()">Create Matcap Grid</button> -->
       <button style="margin-right:10px" @click="removeLabel('label')">Show Labels: {{ showLabels }}</button>
       <button style="margin-right:10px" @click="removeGlass('jar')">Show Glass: {{ showGlass }}</button>
       <button style="margin-right:10px" @click="()=>{ 
-        useFixedMaterial = !useFixedMaterial;
-        switchColor('#BF9000');
-      }">Custom Shader: {{ useFixedMaterial ? 'off' : 'on' }}</button>
+        useMaterial === 'fixed' ? useMaterial = 'matcap' : useMaterial === 'matcap' ? useMaterial = 'complex' : 'fixed';
+        applyMaterialChanges();
+      }">Custom Shader: {{ useMaterial === 'fixed' ? 'Fixed' : useMaterial === 'matcap' ? 'matcap' : 'complex' }}</button>
+    </div>
+    <div v-if="useMaterial === 'complex'" class="material-controls" style="position: absolute; bottom: 5%; left: 35%; width: 600px; background: rgba(255,255,255,0.7); padding: 10px;">
+      <label>Density: {{ density }}</label>
+      <input type="range" v-model="density" min="1" max="20" step="0.01">
+      <label>Light: {{ light }}</label>
+      <input type="range" v-model="light" min="0" max="3" step="0.01">
+      <label>Viscosity: {{ viscosity }}</label>
+      <input type="range" v-model="viscosity" min="0" max="10" step="0.01">
+      <button @click="applyMaterialChanges">Apply Changes</button>
     </div>
   </div>
 </template>
@@ -111,6 +115,11 @@ Cache.enabled = true;
 
 export default {
   setup() {
+
+    
+    let honeyColor = '#ffc107'; //STARTING COLOR
+    // let honeyColor = '#ff0000'; //STARTING COLOR
+
     let jarMedium = ref([]);
     let jarSmall = ref([]);
 
@@ -216,10 +225,24 @@ export default {
             jarClone.traverse((obj) => {
               if (obj.isMesh && obj.name === 'honey_object_300g') {
                 const matcapId = idx;
-                if(useFixedMaterial.value){
-                  obj.material = createFixedMaterial(tempColor, idx)
-                } else {
-                  obj.material = createMatcapMaterial(tempColor, idx)
+                if(useMaterial.value === 'fixed'){
+                  obj.material = createFixedMaterial(idx)
+                  if(!honeyObject){
+                    honeyObject = obj
+                    console.log("THIS IS THE HONEYOBJ !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!", honeyObject.name, idx)
+                  }
+                } else if( useMaterial.value === 'matcap'){
+                  obj.material = createMatcapMaterial(idx)
+                  if(!honeyObject){
+                    honeyObject = obj
+                    console.log("THIS IS THE HONEYOBJ", honeyObject.name)
+                  }
+                } else{
+                  obj.material = createComplexMaterial(idx,  density.value, light.value, viscosity.value)
+                  if(!honeyObject){
+                    honeyObject = obj
+                    console.log("THIS IS THE HONEYOBJ", honeyObject.name)
+                  }
                 }
                 obj.name = `matcapped-${matcapId}`
                 idx++
@@ -231,7 +254,6 @@ export default {
         }
       }
 
-      console.log("JARGROUP", jarGroup)
       globalScene.add(jarGroup);
 
       // Adjust camera to view the vertical grid
@@ -253,32 +275,44 @@ export default {
       }
     }
 
+    
+    function createFixedMaterial(id){
+      const textureLoader = new TextureLoader();
+      const matcapTexture = textureLoader.load(`/assets/matcaps/${id+1}.png`);
+      matcapTexture.encoding = SRGBColorSpace
+      // Step 2: Create a MeshMatcapMaterial with the loaded texture
+      return  new MeshMatcapMaterial({
+          matcap: matcapTexture,
+          color: honeyColor
+          // color: new Color(0xBF9000) // Optional: set a base color if needed
+      });
+    }
 
-    function createMatcapMaterial(color, id) {
+    function createMatcapMaterial(id) {
       
       const matcapTexture = globalTextureLoader.load(`/assets/matcaps/${id+1}.png`);
       return new ShaderMaterial({
-      uniforms: {
+        uniforms: {
           matcap: { value: matcapTexture },
-          colorAdjust: { value: color || new Color(0xffc107) }
-      },
-      vertexShader: `
+          colorAdjust: { value: honeyColor}
+        },
+        vertexShader: `
           varying vec3 viewDir;
           varying vec3 worldNormal;
           varying vec2 vUv;
 
           void main() {
-              vec4 mvPosition = modelViewMatrix * vec4(position, 1.0);
-              viewDir = normalize(-mvPosition.xyz);
-              vec4 worldPosition = modelMatrix * vec4(position, 1.0);
-              worldNormal = normalize(mat3(modelMatrix) * normal);
+            vec4 mvPosition = modelViewMatrix * vec4(position, 1.0);
+            viewDir = normalize(-mvPosition.xyz);
+            vec4 worldPosition = modelMatrix * vec4(position, 1.0);
+            worldNormal = normalize(mat3(modelMatrix) * normal);
 
-              vUv = uv; // Pass UV coordinates to fragment shader
+            vUv = uv; // Pass UV coordinates to fragment shader
 
-              gl_Position = projectionMatrix * mvPosition;
+            gl_Position = projectionMatrix * mvPosition;
           }
-      `,
-      fragmentShader: `
+        `,
+        fragmentShader: `
           uniform sampler2D matcap;
           uniform vec3 colorAdjust; // RGB color for full override
           varying vec3 viewDir;
@@ -304,458 +338,140 @@ export default {
 
               gl_FragColor = vec4(fullyColored, texColor.a);
           }
-      `
-  });
-      // return new ShaderMaterial({
-      //     uniforms: {
-      //         matcap: { value: matcapTexture },
-      //         colorAdjust: { value: color || new Color(0xffc107) }
-      //     },
-      //     vertexShader: `
-      //         varying vec3 viewDir;
-      //         varying vec3 worldNormal;
-
-      //         void main() {
-      //             vec4 mvPosition = modelViewMatrix * vec4(position, 1.0);
-      //             viewDir = normalize(-mvPosition.xyz);
-
-      //             vec4 worldPosition = modelMatrix * vec4(position, 1.0);
-      //             worldNormal = normalize(mat3(modelMatrix) * normal);
-
-      //             gl_Position = projectionMatrix * mvPosition;
-      //         }
-      //     `,
-      //     fragmentShader: `
-      //         uniform sampler2D matcap;
-      //         uniform vec3 colorAdjust; // RGB color for full override
-      //         varying vec3 viewDir;
-      //         varying vec3 worldNormal;
-
-      //         void main() {
-      //             vec3 normal = normalize(worldNormal);
-      //             vec3 reflected = reflect(viewDir, normal);
-
-      //             float m = 2.0 * sqrt(reflected.z + 1.0);
-      //             vec2 uv = reflected.xy / m + 0.5;
-
-      //             vec4 texColor = texture2D(matcap, uv);
-
-      //             // Convert to grayscale to extract lighting and shading info
-      //             float grayscale = dot(texColor.rgb, vec3(0.299, 0.587, 0.114));
-
-      //             // Apply the new color fully
-      //             vec3 fullyColored = grayscale * colorAdjust;
-
-      //             gl_FragColor = vec4(fullyColored, texColor.a);
-      //         }
-      //     `
-      // });
-      // return new ShaderMaterial({
-      //   uniforms: {
-      //     matcap: { value: matcapTexture },
-      //     colorAdjust: { value: color }
-      //   },
-      //   vertexShader: `
-      //     varying vec3 vViewPosition;
-      //     varying vec3 vNormal;
-      //     void main() {
-      //       vNormal = normalize(normalMatrix * normal);
-      //       vec4 mvPosition = modelViewMatrix * vec4(position, 1.0);
-      //       vViewPosition = -mvPosition.xyz;
-      //       gl_Position = projectionMatrix * mvPosition;
-      //     }
-      //   `,
-      //   fragmentShader: `
-      //     uniform sampler2D matcap;
-      //     uniform vec3 colorAdjust;
-      //     varying vec3 vViewPosition;
-      //     varying vec3 vNormal;
-      //     void main() {
-      //       vec3 normal = normalize(vNormal);
-      //       vec3 viewDir = normalize(vViewPosition);
-      //       vec3 x = normalize(vec3(viewDir.z, 0.0, -viewDir.x));
-      //       vec3 y = cross(viewDir, x);
-      //       vec2 uv = vec2(dot(x, normal), dot(y, normal)) * 0.495 + 0.5;
-      //       vec4 matcapColor = texture2D(matcap, uv);
-      //       vec3 color = matcapColor.rgb * colorAdjust;
-      //       gl_FragColor = vec4(color, matcapColor.a);
-      //     }
-      //   `
-      // });
-    }
-
-    function createFixedMaterial(color, id){
-      const textureLoader = new TextureLoader();
-      const matcapTexture = textureLoader.load(`/assets/matcaps/${id+1}.png`);
-      matcapTexture.encoding = SRGBColorSpace
-      // Step 2: Create a MeshMatcapMaterial with the loaded texture
-      return  new MeshMatcapMaterial({
-          matcap: matcapTexture,
-          color: color || new Color(0xBF9000)
-          // color: new Color(0xBF9000) // Optional: set a base color if needed
+        `
       });
     }
-    function createHoneyMatcapMaterial(color, id) {
+
+    function createComplexMaterial(id, density = 16.53, light = 1.03, viscosity = 0.01) {
+      console.log("Applying with values: ", density, light, viscosity)
       const matcapTexture = globalTextureLoader.load(`/assets/matcaps/${id+1}.png`);
-      // console.log("Texture: ", matcapTexture, id)
-      // console.log("Color: ", color)
       return new ShaderMaterial({
         uniforms: {
-          matcap: { type: 't', value: matcapTexture },
-          colorAdjust: { type: 'v3', value: color || new Color(0xffc107) } // Default to a honey color
+          matcap: { value: matcapTexture },
+          colorAdjust: { value: honeyColor},
+          time: { value: 0 },
+          envMap: { value: globalScene.environment },
+          IOR: { value: density},
+          subSurfaceScatter: { value: light},
+          viscosity: { value: viscosity},
         },
         vertexShader: `
           varying vec3 vNormal;
           varying vec3 vViewPosition;
+          varying vec3 vWorldPosition;
 
           void main() {
             vNormal = normalize(normalMatrix * normal);
             vec4 mvPosition = modelViewMatrix * vec4(position, 1.0);
             vViewPosition = -mvPosition.xyz;
+            vWorldPosition = (modelMatrix * vec4(position, 1.0)).xyz;
             gl_Position = projectionMatrix * mvPosition;
           }
         `,
         fragmentShader: `
           uniform sampler2D matcap;
           uniform vec3 colorAdjust;
+          uniform float time;
+          uniform samplerCube envMap;
+          uniform float IOR;
+          uniform float subSurfaceScatter;
+          uniform float viscosity;
 
           varying vec3 vNormal;
           varying vec3 vViewPosition;
+          varying vec3 vWorldPosition;
+
+          vec3 getEnvironmentReflection(vec3 viewDir, vec3 normal) {
+            vec3 reflectVec = reflect(viewDir, normal);
+            return textureCube(envMap, reflectVec).rgb;
+          }
 
           void main() {
-            vec3 viewDirection = normalize(vViewPosition);
-            vec3 refractionDirection = refract(viewDirection, vNormal, 1.1);
+            vec3 viewDir = normalize(vViewPosition);
+            vec3 normal = normalize(vNormal);
 
-            vec2 matcapUV = vec2(refractionDirection.x, -refractionDirection.y) * 0.5 + 0.5;
-            vec4 matcapColor = texture2D(matcap, matcapUV);
+            // Refraction
+            vec3 refractColor = refract(viewDir, normal, 1.0 / IOR);
+            vec2 matcapUV = refractColor.xy * 0.5 + 0.5;
+            vec3 matcapColor = texture2D(matcap, matcapUV).rgb;
 
-            // Blend the original matcap color with the adjusted color
-            vec3 blendedColor = mix(matcapColor.rgb, colorAdjust, 0.5);
+            // Environment reflection
+            vec3 reflColor = getEnvironmentReflection(viewDir, normal);
 
-            // Apply simple lighting to enhance depth
-            float light = dot(vNormal, viewDirection) * 0.5;
-            blendedColor += light * blendedColor; // Light effect based on blended color
+            // Fresnel effect
+            float fresnel = pow(1.0 - dot(viewDir, normal), 5.0);
 
-            gl_FragColor = vec4(blendedColor, matcapColor.a);
+            // Subsurface scattering approximation
+            vec3 scatterColor = colorAdjust * (1.0 - fresnel) * subSurfaceScatter;
+
+            // Viscosity simulation (subtle movement)
+            float viscosityEffect = sin(vWorldPosition.y * 20.0 + time * 0.1) * viscosity;
+            matcapColor += vec3(viscosityEffect);
+
+            // Blend colors
+            vec3 finalColor = mix(matcapColor, reflColor, fresnel);
+            finalColor += scatterColor;
+            finalColor *= colorAdjust;
+
+            // Color depth simulation
+            float depth = (vWorldPosition.y + 1.0) * 0.5; // Normalize to 0-1 range
+            finalColor *= mix(vec3(1.0), colorAdjust, depth);
+
+            gl_FragColor = vec4(finalColor, 1.0);
           }
         `
       });
     }
+    const density = ref(16.53);
+    const light = ref(1.03);
+    const viscosity = ref(0.01)
+
+    function applyMaterialChanges() {
+      console.log("APPLYING MAT CHNAGES")
+      let idx = 0;
+      globalScene.traverse((obj) => {
+        if (obj.isMesh && obj.name.includes('matcapped')) {
+          if(useMaterial.value === 'fixed'){
+            obj.material = createFixedMaterial(idx)
+          } else if( useMaterial.value === 'matcap'){
+            obj.material = createMatcapMaterial(idx)
+          } else{
+            obj.material = createComplexMaterial(idx, density.value, light.value, viscosity.value);
+          }
+          idx++
+        }
+      });
+    }
+
     let labelTest;
     let matcapId = ref(1);
-    async function changeMat(){
-      let textureLoad = await loadTexture('/assets/label-textures-2/haa/monoflorals/300g/fir_limited.png')
-      textureLoad.flipY = false;
-      let textureLoad2 = await loadTexture('/assets/label-textures-2/haa/monoflorals/300g/pine_limited.png')
-      textureLoad2.flipY = false;
-
-      globalScene.traverse((obj)=>{
-        if(obj.isMesh){
-          if(obj.name.includes('150g')){
-            jarSmall.value.push(obj)
-          } else if (obj.name.includes('300g')){
-            jarMedium.value.push(obj)
-          }
-          if(obj.name === 'label_object_300g'){
-            labelTest = obj
-            labelTest.material = new ShaderMaterial({
-              uniforms: {
-                  textureA: { type: 't', value: textureLoad },
-                  textureB: { type: 't', value: textureLoad2 },
-                  linePosition: { type: 'f', value: 0.0 }
-              },
-              vertexShader: `
-                  varying vec2 vUv;
-                  void main() {
-                      vUv = uv;
-                      gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
-                  }
-              `,
-              fragmentShader: `
-                  uniform sampler2D textureA;
-                  uniform sampler2D textureB;
-                  uniform float linePosition;
-                  varying vec2 vUv;
-                  void main() {
-                      vec4 colorA = texture2D(textureA, vUv);
-                      vec4 colorB = texture2D(textureB, vUv);
-                      float blendFactor = step(linePosition, vUv.x);
-                      gl_FragColor = mix(colorA, colorB, blendFactor);
-                  }
-              `,
-              transparent: true
-            });
-          }
-        }
-      })
-      console.log("SMALL", jarSmall.value)
-      console.log("MEDIUM", jarMedium.value)
-      loadedText = true
-    }
 
     let matcapType = ref(true);
-    function toggleShader(){
-      matcapType.value = !matcapType.value
-      renderMatcap()
-    }
     
 
     let matcapMaterial;
-    function renderMatcap(){
-      
-      if(matcapType.value){
-        changeMatcap(tempColor)
-      } else changeMatcap4(tempColor)
-      globalScene.traverse((obj) => {
-        if(obj.isMesh){
-          if(obj.name.includes('matcapped')){
-            // console.log("FOUND OBJ")
-          }
-        }
-      })
-    }
-    let tempColor;
-    let useFixedMaterial = ref(false)
+    let useMaterial = ref('fixed')
     function switchColor(newColorHex) {
-      tempColor = new Color(newColorHex)
+      console.log("Got new hex", newColorHex)
+      honeyColor = new Color(newColorHex)
       let idx = 0;
       globalScene.traverse((obj) => {
         if(obj.isMesh){
           if(obj.name.includes('matcapped')){
-            console.log("ITERATION", idx, obj.name)
-            if(useFixedMaterial.value){
-              obj.material = createFixedMaterial(tempColor, idx)
-            } else {
-              obj.material = createMatcapMaterial(tempColor, idx)
+            // console.log("ITERATION", idx, obj.name)
+            if(useMaterial.value === 'fixed'){
+              obj.material = createFixedMaterial(idx)
+            } else if( useMaterial.value === 'matcap'){
+              obj.material = createMatcapMaterial(idx)
+            } else{
+              obj.material = createComplexMaterial(idx, density.value, light.value, viscosity.value)
             }
             idx++;
           }
         }
       })
-
-      // if (matcapMaterial) {
-      //   const newColor = new Color(newColorHex);
-      //   if (matcapType.value) {
-      //     changeMatcap(newColor);
-      //   } else {
-      //     changeMatcap4(newColor);
-      //   }
-      // }
     }
 
-    async function changeMatcap(color){
-      const textureLoader = new TextureLoader();
-      const matcapTexture = textureLoader.load(`/assets/matcaps/${matcapId.value}.png`);
-
-      // Step 2: Create a Shader Material with Color Adjustment
-      // const honeyColor = new Color(0xffc107); // Example color for honey (golden yellow)
-      const honeyColor = new Color(0xbf9000)
-
-      matcapMaterial = new ShaderMaterial({
-          uniforms: {
-              matcap: { value: matcapTexture },
-              colorAdjust: { value: color || new Color(0xbf9000) }
-          },
-          vertexShader: `
-              varying vec3 viewDir;
-              varying vec3 worldNormal;
-
-              void main() {
-                  vec4 mvPosition = modelViewMatrix * vec4(position, 1.0);
-                  viewDir = normalize(-mvPosition.xyz);
-
-                  vec4 worldPosition = modelMatrix * vec4(position, 1.0);
-                  worldNormal = normalize(mat3(modelMatrix) * normal);
-
-                  gl_Position = projectionMatrix * mvPosition;
-              }
-          `,
-          fragmentShader: `
-              uniform sampler2D matcap;
-              uniform vec3 colorAdjust; // RGB multiplier for color adjustment
-              varying vec3 viewDir;
-              varying vec3 worldNormal;
-
-              void main() {
-                  vec3 normal = normalize(worldNormal);
-                  vec3 reflected = reflect(viewDir, normal);
-
-                  float m = 2.0 * sqrt(reflected.z + 1.0);
-                  vec2 uv = reflected.xy / m + 0.5;
-
-                  vec4 texColor = texture2D(matcap, uv);
-                  // Apply the color adjustment
-                  vec3 tintedColor = texColor.rgb * colorAdjust;
-                  gl_FragColor = vec4(tintedColor, texColor.a);
-              }
-          `
-      });
-      globalObj300g.material = matcapMaterial
-      globalObj300g.material.needsUpdate = true;
-    }
-    async function changeMatcap2(color){
-      const textureLoader = new TextureLoader();
-      const matcapTexture = textureLoader.load(`/assets/matcaps/${matcapId.value}.png`);
-
-      // Step 2: Create a Shader Material with Full Color Override
-      const desiredColor = new Color(0xffc107); // Example color for honey (golden yellow)
-
-      matcapMaterial = new MeshMatcapMaterial({
-          matcap: matcapTexture,
-          // color: new Color(0xBF9000) // Optional: set a base color if needed
-      });
-
-      // Apply the new material to your objects
-      globalObj300g.material = matcapMaterial;
-      globalObj300g.material.needsUpdate = true;
-      globalObj150g.material = matcapMaterial;
-      globalObj150g.material.needsUpdate = true;
-    }
-    
-    async function changeMatcap4(color){
-      const textureLoader = new TextureLoader();
-  const matcapTexture = textureLoader.load(`/assets/matcaps/${matcapId.value}.png`);
-
-  // Create a Shader Material with Full Color Override
-  const desiredColor = new Color(0xffc107); // Example color for honey (golden yellow)
-
-  matcapMaterial = new ShaderMaterial({
-      uniforms: {
-          matcap: { value: matcapTexture },
-          colorAdjust: { value: color || new Color(0xffc107) }
-      },
-      vertexShader: `
-          varying vec3 viewDir;
-          varying vec3 worldNormal;
-          varying vec2 vUv;
-
-          void main() {
-              vec4 mvPosition = modelViewMatrix * vec4(position, 1.0);
-              viewDir = normalize(-mvPosition.xyz);
-              vec4 worldPosition = modelMatrix * vec4(position, 1.0);
-              worldNormal = normalize(mat3(modelMatrix) * normal);
-
-              vUv = uv; // Pass UV coordinates to fragment shader
-
-              gl_Position = projectionMatrix * mvPosition;
-          }
-      `,
-      fragmentShader: `
-          uniform sampler2D matcap;
-          uniform vec3 colorAdjust; // RGB color for full override
-          varying vec3 viewDir;
-          varying vec3 worldNormal;
-          varying vec2 vUv; // Receive UV coordinates
-
-          void main() {
-              vec3 normal = normalize(worldNormal);
-              vec3 reflected = reflect(viewDir, normal);
-              float m = 2.0 * sqrt(reflected.z + 1.0);
-              vec2 uv = reflected.xy / m + 0.5;
-
-              vec4 texColor = texture2D(matcap, uv);
-              float grayscale = dot(texColor.rgb, vec3(0.299, 0.587, 0.114));
-
-              // Adjust brightness based on position
-              float brightness = 0.5 + 0.3 * sin(vUv.y * 3.14159); // Vertical gradient
-              brightness += 0.04 * (1.0 - 4.0 * abs(vUv.x - 0.5)); // Horizontal gradient
-
-              vec3 fullyColored = brightness * grayscale * colorAdjust;
-
-              gl_FragColor = vec4(fullyColored, texColor.a);
-          }
-      `
-  });
-      // Step 3: Apply the Shader Material to Your Mesh
-      // Assuming you have an existing mesh
-      globalObj300g.material = matcapMaterial;
-      globalObj300g.material.needsUpdate = true;
-    }
-    
-    async function changeMatcap3(color){
-      const textureLoader = new TextureLoader();
-      const matcapTexture = textureLoader.load(`/assets/matcaps/${matcapId.value}.png`);
-
-      // Step 2: Create a Shader Material with Full Color Override
-
-      matcapMaterial = new ShaderMaterial({
-          uniforms: {
-              matcap: { value: matcapTexture },
-              colorAdjust: {  value: color || new Color(0xbf9000) }, // Honey-like color
-              glossiness: { value: 1.5 } // Adjust glossiness as needed
-          },
-          vertexShader: `
-              varying vec3 viewDir;
-              varying vec3 worldNormal;
-
-              void main() {
-                  vec4 mvPosition = modelViewMatrix * vec4(position, 1.0);
-                  viewDir = normalize(-mvPosition.xyz);
-
-                  vec4 worldPosition = modelMatrix * vec4(position, 1.0);
-                  worldNormal = normalize(mat3(modelMatrix) * normal);
-
-                  gl_Position = projectionMatrix * mvPosition;
-              }
-          `,
-          fragmentShader: `
-              uniform sampler2D matcap;
-              uniform vec3 colorAdjust;
-              uniform float glossiness;
-
-              varying vec3 viewDir;
-              varying vec3 worldNormal;
-
-              void main() {
-                  vec3 normal = normalize(worldNormal);
-                  vec3 reflected = reflect(viewDir, normal);
-
-                  float m = 2.0 * sqrt(reflected.z + 1.0);
-                  vec2 uv = reflected.xy / m + 0.5;
-
-                  vec4 texColor = texture2D(matcap, uv);
-
-                  float grayscale = dot(texColor.rgb, vec3(0.299, 0.587, 0.114));
-                  vec3 fullyColored = grayscale * colorAdjust;
-
-                  float glossFactor = pow(grayscale, glossiness);
-                  vec3 finalColor = mix(fullyColored, vec3(1.0), glossFactor * 0.1);
-
-                  gl_FragColor = vec4(finalColor, texColor.a);
-              }
-          `
-          /*The glossiness uniform can be adjusted dynamically to control how shiny the honey appears. Higher values make the highlights sharper and more reflective.
-            colorAdjust uniform can be modified to get different honey shades, from light amber to darker tones.
-            If the honey needs to be semi-transparent, you can adjust the texColor.a component or use additional alpha blending technique
-*/
-      });
-      globalObj300g.material = matcapMaterial;
-      globalObj300g.material.needsUpdate = true;
-    }
-    async function changeMatcap4(color){
-      console.log("DOING MATCAP3");
-      const textureLoader = new TextureLoader();
-      const matcapTexture = textureLoader.load(`/assets/matcaps/${matcapId.value}.png`);
-
-      // Step 2: Create a MeshMatcapMaterial with the loaded texture
-      const matcapMaterial = new MeshMatcapMaterial({
-          matcap: matcapTexture,
-          color: color
-          // color: new Color(0xBF9000) // Optional: set a base color if needed
-      });
-
-      // Apply the new material to your objects
-      globalObj300g.material = matcapMaterial;
-      globalObj300g.material.needsUpdate = true;
-    }
-    function cycleMatcap(direction) {
-      if (direction) {
-          matcapId.value = (matcapId.value % 46) + 1;
-      } else {
-          matcapId.value = (matcapId.value - 2 + 46) % 46 + 1;
-      }
-      renderMatcap();
-    }
     let labelMeshes;
     let globalObj300g;
 
@@ -777,7 +493,6 @@ export default {
     function removeLabel(){
       globalScene.traverse((obj) => {
         if (obj.isMesh && obj.name.includes('label')) {
-          console.log("Label", showLabels.value)
           if(showLabels.value){
             obj.material.opacity = 0;
           } else {
@@ -807,11 +522,9 @@ export default {
       if(mediumSmallScene.jarSizes){
         jarSizes = mediumSmallScene.jarSizes
       }
-      console.log("Before Traversal", !!mediumSmallScene.scene)
       let objToRemove = []
       mediumSmallScene.scene.traverse((obj) => {
         if(obj.isMesh){
-          console.log("OBJ IS MESH", obj.name, obj.material.transmission, obj.material.opacity)
           if(obj.name.includes('jar')){
             // obj.material.transmission = 0;
             // obj.material.opacity = 0;
@@ -826,22 +539,17 @@ export default {
           }
         }
       })
-      console.log("OBJ TO REMOVE ", objToRemove)
       for (let obj of objToRemove) {
         if (obj.parent) {
           obj.parent.remove(obj);
-          console.log(`Removed: ${obj.name}`);
         } else {
-          console.warn(`Object ${obj.name} has no parent and cannot be removed.`);
         }
       }
-      console.log("After Traversal", mediumSmallScene.scene)
       globalScene.add(mediumSmallScene.scene)
 
       globalScene.traverse((obj)=>{
         if(obj.isMesh){
           if(obj.name === 'honey_object_300g'){
-            // changeMatcap(obj)
             globalObj300g = obj
           }
         }
@@ -849,16 +557,7 @@ export default {
       currentJarScene = mediumSmallScene.scene; //Scene to be loaded
 
       jarScenes[currentJarSize.value] = currentJarScene; 
-
-      // let behindJarScene = await loadGlbReturnParts(loader, jarConfigs.large.source)
-      // behindJarScene.scene.position.set(-0.8, 0, -0.1)
-      // // await updateTexture()
-      // // globalScene.add(behindJarScene.scene)
-      // // setTimeout(()=>{
-      // //   jarBackToFront(behindJarScene.scene, 1200, 800)
-      // // }, 2000)
       let meshes = currentJarScene.children;
-      console.log("MESHES", meshes)
       let targetMesh = meshes[1]
 
       //Add jar scene to global scene
@@ -907,95 +606,6 @@ export default {
       // await setLighting(globalRenderer)
     };
 
-    async function computeTexture() {
-      isFirstLoad = false;
-      const baseTextureUrl = '/assets/label-textures-2';
-      isLoadingTexture = true;
-
-      // initialize nested object CACHE IS ENABLED - dont need this unless manual control
-      // if (!jarTextures[slugs.brand]) {
-      //     jarTextures[slugs.brand] = {};
-      // }
-      // if (!jarTextures[slugs.brand][slugs.productLine]) {
-      //     jarTextures[slugs.brand][slugs.productLine] = {};
-      // }
-      // if (!jarTextures[slugs.brand][slugs.productLine][slugs.size]) {
-      //     jarTextures[slugs.brand][slugs.productLine][slugs.size] = {};
-      // }
-
-      // // check if texture exists, return it
-      // if (jarTextures[slugs.brand][slugs.productLine][slugs.size][slugs.flavour]) {
-      //     return jarTextures[slugs.brand][slugs.productLine][slugs.size][slugs.flavour];
-      // }
-
-      // load if not
-      let jarTexturesLocal = []
-      for (const size of jarSizes) {
-        let textureUrl = `${baseTextureUrl}/${slugs.brand}/${slugs.productLine}/${size}/${slugs.flavour}.png`;
-        let texture = await loadTexture(textureUrl);
-        texture.flipY = false;
-        texture.generateMipMaps = true;
-        texture.needsUpdate = true;
-        jarTexturesLocal.push({ texture, size });
-      }
-
-      return jarTexturesLocal
-      return texture;
-    }
-
-    async function updateTexture(preLoadedTexture = null) {
-      let stopLoading = preLoadedTexture ? true : false;
-      if(isLoadingTexture && stopLoading) return
-      let labelMesh = null;
-
-      let tempSize = currentJarSize.value === 'medium' ? '300g' : currentJarSize.value === 'large' ? '450g' : '150g' 
-      currentJarScene.traverse((obj) => {
-        if(obj.isMesh){
-          if(obj.name.includes('label')){
-            if(obj.jarSize === tempSize){
-              currentJarLabel = obj
-            } else upcomingJarLabel = obj.clone()
-          }
-        }
-      })
-      
-      // Check if the mesh and its material support textures
-      if (currentJarLabel) {
-        if (currentJarLabel.material && currentJarLabel.material.map) {
-          // Dispose of the current texture to free up memory
-          currentJarLabel.material.map.dispose();
-        }
-      } else return
-      if (upcomingJarLabel) {
-        if (upcomingJarLabel.material && upcomingJarLabel.material.map) {
-          // Dispose of the current texture to free up memory
-          upcomingJarLabel.material.map.dispose();
-        }
-      } else return
-
-      // Create a new texture loader
-      if(preLoadedTexture){
-        labelMesh.material.map = preLoadedTexture;
-        labelMesh.material.needsUpdate = true;
-        labelMesh.material.map = preLoadedTexture;
-        labelMesh.material.needsUpdate = true;
-      } else {
-        let textures = await computeTexture();
-        // texture.flipY = false;
-        textures.forEach((object) => {
-          if(object.size === tempSize){
-            currentJarLabel.material.map = object.texture
-            currentJarLabel.material.needsUpdate = true;
-          } else {
-            upcomingJarLabel.material.map = object.texture
-            upcomingJarLabel.material.needsUpdate = true;
-          }
-        })
-        // labelMesh.material.map = texture;
-        // labelMesh.material.needsUpdate = true;
-      }
-      isLoadingTexture = false
-    }
 
     const updateCamera = (newWidth, newHeight) => {
       
@@ -1052,7 +662,7 @@ export default {
 
     const clock = new Clock();
     const clockTexture = new Clock();
-
+    let honeyObject = null
     const animate = () => {
       
       stats.begin();
@@ -1061,6 +671,15 @@ export default {
           const elapsedTime = clockTexture.getElapsedTime();
           const linePosition = (Math.sin(elapsedTime) + 1) / 2; // Oscillate between 0 and 1
           labelTest.material.uniforms.linePosition.value = linePosition;
+        }
+      }
+      const elapsedTime = clock.getElapsedTime();
+      if (honeyObject && honeyObject.material.uniforms) {
+        if(honeyObject.material.uniforms.time){
+          if(honeyObject.material.uniforms.time.value){
+            console.log("elapsedTime", elapsedTime, honeyObject.name)
+            honeyObject.material.uniforms.time.value = elapsedTime;
+          }
         }
       }
       globalOrbitControls.update();
@@ -1075,14 +694,16 @@ export default {
   
     onMounted( async () => {
       emitter.on('applyColor', switchColor)
+      setTimeout(() => {
+        console.log("emitting Switch color")
+        emitter.emit('switchColor', honeyColor)
+      }, 2500)
       await nextTick();
       updateContainerSize(); // Set initial size
       window.addEventListener('resize', debouncedUpdateSize);
       await setCanvas();
       await nextTick()
       animate();
-      // changeMat();
-      // renderMatcap()
       createMatcapGrid()
     });
 
@@ -1135,14 +756,7 @@ export default {
     return { 
       webGl, 
       sceneContainer,
-      updateTexture,
-      changeMat,
-      changeMatcap2,
-      changeMatcap3,
-      cycleMatcap,
       matcapId,
-      toggleShader,
-      renderMatcap,
       matcapType,
       jarSmall,
       jarMedium,
@@ -1151,8 +765,12 @@ export default {
       removeLabel,
       showGlass,
       showLabels,
-      useFixedMaterial,
-      switchColor
+      useMaterial,
+      switchColor,
+      density,
+      viscosity,
+      light,
+      applyMaterialChanges
     };
   },
 };
@@ -1214,5 +832,31 @@ export default {
 .webGl{
   width: 100%;
   height: 100%;
+}
+.material-controls {
+  display: flex;
+  flex-direction: column;
+
+  label {
+    margin-top: 10px;
+    color: black;
+  }
+
+  input[type="range"] {
+    width: 100%;
+  }
+
+  button {
+    margin-top: 10px;
+    padding: 5px;
+    background-color: #4CAF50;
+    color: white;
+    border: none;
+    cursor: pointer;
+
+    &:hover {
+      background-color: #45a049;
+    }
+  }
 }
 </style>

@@ -15,7 +15,7 @@ export default {
 </script>
 
 <script setup>
-import { ref, inject, watch } from 'vue';
+import { ref, inject, watch, onMounted, onUnmounted } from 'vue';
 let emitter = inject('emitter')
 // Define a reactive variable for the selected color
 const color = ref('#ff0000');
@@ -25,7 +25,17 @@ watch(() => color.value, (newValue) => {
 function emitApplyColor(){
   emitter.emit('applyColor', color.value)
 }
+onMounted(() => {
+  emitter.on('switchColor', (value) => {
+    console.log("switchcolor value", value)
+    color.value = value
+    emitApplyColor();
+  })
+})
 
+onUnmounted(() => {
+  emitter.off('switchColor',)
+})
 </script>
 
 <style scoped>
