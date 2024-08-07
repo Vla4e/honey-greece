@@ -30,7 +30,6 @@ import { ref, computed, inject, onMounted, onUnmounted } from 'vue';
 import router from '@/router/index.js'
 import oktoJar from '@/assets/images/jar-labels/okto/monoflorals/450g/oak_honey.png'
 import haaJar from '@/assets/images/jar-labels/haa/monoflorals/300g/cotton_limited.png'
-import mockJar from '@/assets/pages/home/jar-medium.png'
 
 export default {
   name: 'Tab',
@@ -75,7 +74,7 @@ export default {
       switch(props.brand) {
         case 'Okto': return oktoJar
         case 'HAA': return haaJar
-        default: return mockJar
+        default: return oktoJar
       }
     })
 
