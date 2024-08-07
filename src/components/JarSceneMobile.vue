@@ -169,10 +169,6 @@ export default {
       //XYZ axes
       // scene.add(new AxesHelper(5))
 
-      //jarscene.glb
-      //no_compression.glb
-      //low_res_no_compression.glb
-      //low_res_10_compression.glb
       let loaderPromise = await loadGlb("assets/glb/jarscene-mobile-v1.glb");
       console.log("Loaded glb: ", loaderPromise)
       scene.add(loaderPromise.scene)

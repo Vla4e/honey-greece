@@ -1,26 +1,26 @@
 import { createRouter, createWebHistory } from 'vue-router';
 import { useNavbarStore } from '@/store/navbar.js';
 import { useGlobalStore } from '@/store/global.js';
+import { useSidebarStore } from '@/store/sidebar.js';
 import brandConfigs from '@/assets/brand-information/index.js'
-import Home from '@/views/Home.vue';
-import Tabs from '@/views/Tabs.vue';
-import History from '@/views/History.vue';
-import ProductPage from '@/views/ProductPage.vue';
-import AllProducts from '@/views/AllProducts.vue';
-import About from '@/views/About.vue';
-import Test from '@/views/Test.vue';
-
-
 import emitter from '@/helpers/emitter.js';
 
-const transitionDelay = 500; // Page transition delay to ensure animations plays out before transitioning.
-const allowedSelectedBrands = ['Okto', 'HAA', 'Melculum']
+const transitionDelay = 500;
+const allowedSelectedBrands = ['Okto', 'HAA']
+// const allowedLines = {
+//   'Okto' : [
+//     'Monoflorals',
+//     'Multiflorals'
+//   ],
+//   'HAA': [
+//     'Monoflorals',
+//     'Blends'
+//   ]
+// }
+const allowedLines = ['Blends', 'Monoflorals', 'Multiflorals']
 
-//Rework this so it's not hardcoded
-let allowedLines = ['Blends', 'Monoflorals']
-// brandConfigs.forEach((brand) => {
-//   allowedLines.push()
-// })
+// lazy load views
+const lazyLoad = (view) => () => import(`@/views/${view}.vue`)
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -28,29 +28,37 @@ const router = createRouter({
     {
       path: '/',
       name: 'Home',
-      component: Home,
-      meta: {
+      component: lazyLoad('Home'),
+      meta: { 
         hasNavbar: true, 
-        playAnimationOnEnter: false
+        playAnimationOnEnter: false,
+        navbarColor: {
+          mobile: 'black',
+          desktop: 'black',
+        }
       }
     },
     {
       path: '/history',
       name: 'History',
-      component: History,
-      meta: {
-        hasNavbar: true,
-        navbarFloating: true,
-        playAnimationOnEnter: true
+      component: lazyLoad('History'),
+      meta: { 
+        hasNavbar: true, 
+        navbarFloating: true, 
+        playAnimationOnEnter: true,
+        navbarColor: {
+          mobile: 'white',
+          desktop: 'white',
+        } 
       }
     },
     {
       path: '/products',
       name: 'Tabs',
-      component: Tabs,
-      meta: {
+      component: lazyLoad('Tabs'),
+      meta: { 
         hasNavbar: false, 
-        playAnimationOnEnter: true
+        playAnimationOnEnter: true 
       }
     },
     {
@@ -60,48 +68,64 @@ const router = createRouter({
     {
       path: '/product/:selectedBrand',
       name: 'Product',
-      component: ProductPage,
-      meta: {
+      component: lazyLoad('ProductPage'),
+      meta: { 
         hasNavbar: true, 
-        playAnimationOnEnter: true
+        playAnimationOnEnter: true,
+        navbarColor: {
+          mobile: 'black',
+          desktop: 'black',
+        }
       },
       props: (route) => ({
         selectedBrand: route.params.selectedBrand,
-        selectedLine: route.query.line // You can also derive this value dynamically if needed
+        selectedLine: route.query.line
       })
     },
     {
       path: '/all-products',
       name: 'AllProducts',
-      component: AllProducts,
-      meta: {
+      component: lazyLoad('AllProducts'),
+      meta: { 
         hasNavbar: true, 
-        playAnimationOnEnter: true
+        playAnimationOnEnter: true,
+        navbarColor: {
+          mobile: 'black',
+          desktop: 'black',
+        }
       }
     },
     {
       path: '/about-us',
       name: 'About',
-      component: About,
-      meta: {
+      component: lazyLoad('About'),
+      meta: { 
         hasNavbar: true, 
-        playAnimationOnEnter: true
+        playAnimationOnEnter: true,
+        navbarColor: {
+          mobile: 'black',
+          desktop: 'black',
+        } 
       }
     },
     {
       path: '/test',
       name: 'Test',
-      component: Test,
-      meta: {
+      component: lazyLoad('Test'),
+      meta: { 
         hasNavbar: false, 
-        playAnimationOnEnter: true
+        playAnimationOnEnter: true,
+        navbarColor: {
+          mobile: 'black',
+          desktop: 'black',
+        }
       }
     },
   ]
 })
 
 function processRouteTransition(to, next) {
-  // console.log("Going to", to.name, to.params, to.query);
+  console.log("Going to ROUTER", to.name, to.params, to.query);
 
   // Set default query if not already set
   if (!to.query.line) {
@@ -130,20 +154,26 @@ function processRouteTransition(to, next) {
 }
 
 router.beforeEach((to, from, next) => {
-  emitter.emit('toggleSidebarRoute')
+  emitter.emit('toggleSidebarRoute') //for burger menu icon
+
+  console.log("Routing to History page: ", to)
   const navbarStore = useNavbarStore();
   const globalStore = useGlobalStore();
-  console.log("BEFORE HSITORY", to.meta.navbarFloating)
+  const sidebarStore = useSidebarStore();
+
   if (to.meta.hasNavbar) {
     navbarStore.changeNavbarStatus(true);
+    if (to.meta.navbarFloating){ // enable floating navbar
+      navbarStore.changeNavbarFloating(true)
+    } else {
+      navbarStore.changeNavbarFloating(false)
+    }
+    navbarStore.setNavbarColor(to.meta.navbarColor) //set navbar color for route
   } else {
     navbarStore.changeNavbarStatus(false);
   }
-  if (to.meta.navbarFloating){
-    navbarStore.changeNavbarFloating(true)
-  } else {
-    navbarStore.changeNavbarFloating(false)
-  }
+
+  sidebarStore.setSidebarStatus(false)
 
   if (to.meta.playAnimationOnEnter) {
     globalStore.changeAnimationFlag(true);

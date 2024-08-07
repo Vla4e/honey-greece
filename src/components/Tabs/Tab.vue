@@ -1,106 +1,62 @@
 <template>
   <div 
-  :id="tabId" 
-  @mouseover="tabHover(true)" 
-  @mouseleave="tabHover(false)" 
-  :class="`tab-${tabId}`" 
-  class="tab"
+    :id="tabId" 
+    @mouseover="tabHover(true)" 
+    @mouseleave="tabHover(false)" 
+    @click="tabClick(brand)"
+    :class="['tab', `tab-${tabId}`, tabState]"
   >
-    <!-- SINGLE DIV -->
-    <!-- <img :src="currentTabBackground" class="tab-background" :class="[!tabActive ? 'hide' : 'show', tabClicked ? 'clicked': '']" /> -->
-    <div :class="!tabActive ? 'inactive-tab': tabClicked ? 'clicked-tab' : 'active-tab'" @click="tabClick(tabId)">
-      <img :src="logoSource" class="tab-logo" :class="`tab-logo-${tabId}`"/>
-      <!-- CLICKED -->
-      <div class="series-container">
-        <!-- <router-link class="series-link" :to="`/product`" v-for="(series,idx) in series" :key="idx">
-          {{series}}
-        </router-link> -->
-        <span class="series-link" @click="goToProductLine(brand, productLine)" v-for="(productLine, idx) in productLines" :key="idx">
-          {{ productLine }}
-        </span>
-      </div>
-      <!-- <JarScene class="jar-clicked"/> -->
-      <!-- ACTIVE -->
-      <div class="tab-texts">
-        <span class="tab-title">{{tabTitle}}</span>
-        <span class="tab-text">{{tabText}}</span>
-      </div>
-      <img :src="mockJar" class="tab-jar"/>
+    <img :src="logoSource" class="tab-logo" :class="`tab-logo-${tabId}`"/>
+    <div class="series-container">
+      <span 
+        v-for="(productLine, idx) in productLines" 
+        :key="idx"
+        class="series-link" 
+        @click="goToProductLine(brand, productLine)"
+      >
+        {{ productLine }}
+      </span>
     </div>
+    <div class="tab-texts">
+      <span class="tab-title">{{tabTitle}}</span>
+      <span class="tab-text">{{tabText}}</span>
+    </div>
+    <img :src="jarImage" class="tab-jar" :class="brand.toLowerCase()"/>
   </div>
 </template>
 
 <script>
-import {ref, computed, inject } from 'vue';
+import { ref, computed, inject, onMounted, onUnmounted } from 'vue';
 import router from '@/router/index.js'
-import JarScene from '@/components/JarScene.vue'
+import oktoJar from '@/assets/images/jar-labels/okto/monoflorals/450g/oak_honey.png'
+import haaJar from '@/assets/images/jar-labels/haa/monoflorals/300g/cotton_limited.png'
 import mockJar from '@/assets/pages/home/jar-medium.png'
-import tab1bg from '@/assets/pages/tabs/bg-1.png'
-import tab2bg from '@/assets/pages/tabs/bg-2.png'
-import tab3bg from '@/assets/pages/tabs/bg-3.png'
-import { stringifyQuery } from 'vue-router';
+
 export default {
-  name: 'tab',
-  components: { JarScene },
+  name: 'Tab',
   props: {
-    content: {
-      type: Array,
-      required: false,
-      default: null
-    },
-    logoSource: {
-      type: String,
-      required: false,
-      default: ''
-    },
-    backgroundSource: {
-      type: String,
-      required: false,
-      default: ''
-    },
-    tabText: {
-      type: String,
-      required: false,
-      default: 'Test'
-    },
-    tabTitle: {
-      type: String,
-      required: false,
-      default: 'Test'
-    },
-    tabId: {
-      type: Number,
-      required: false,
-      default: ''
-    },
-    brand: {
-      type: String,
-      required: false
-    },
-    productLines: {
-      type: Array,
-      required: false,
-      default: () => {
-        return [
-          'Test1',
-          'Test2',
-          'Test3'
-        ]
-      }
-    },
-    line: {
-      type: String,
-      required: true,
-      default: 'Okto'
-    }
+    tabText: { type: String, default: 'Test' },
+    tabTitle: { type: String, default: 'Test' },
+    tabId: { type: Number, required: true },
+    brand: { type: String, required: true },
+    productLines: { type: Array, default: () => ['Test1', 'Test2', 'Test3'] },
+    line: { type: String, required: true, default: 'Okto' }
   },
-  setup(props){
-    // console.log("USEIMAGE", useImage)
-    console.log("PROPS RECIEVED", props)
-    let singleTabEmitter = inject('emitter')
-    let tabActive = ref(false)
-    let tabOpen = ref(false)
-    let tabClicked = ref(false)
+  setup(props) {
+    console.log("PROPS TABID", props.tabId, props.brand)
+    const singleTabEmitter = inject('emitter')
+    const { isMobile } = inject('screenSize')
+
+    const tabActive = ref(false)
+    const tabClicked = ref(false)
+
+    const tabState = computed(() => {
+      if (tabClicked.value) return 'clicked-tab'
+      if (tabActive.value) return 'hovered-tab'
+      return 'inactive-tab'
+    })
+
+    
     let logoUrl = computed(() => {
       switch(props.tabId){
         case 1:
@@ -114,44 +70,63 @@ export default {
           return imgUrl3;
       }
     })
-    let currentTabBackground = null;
-    if(props.tabId == 1) currentTabBackground = tab1bg
-    else if (props.tabId == 2) currentTabBackground = tab2bg
-    else currentTabBackground = tab3bg
-    function tabHover(bool){
-      // console.log("TABHOVER", bool)
+
+    const jarImage = computed(() => {
+      switch(props.brand) {
+        case 'Okto': return oktoJar
+        case 'HAA': return haaJar
+        default: return mockJar
+      }
+    })
+
+    function tabHover(bool) {
+      if (isMobile.value) return
+      if (props.tabId === 3) return
+
       tabActive.value = bool
-      if(!bool){
+      if (!bool) {
         tabClicked.value = bool
-        singleTabEmitter.emit('toggleClickedTab', {value: tabClicked.value, tabId: null})
+        singleTabEmitter.emit('toggleClickedTab', { value: tabClicked.value, tabId: null })
       }
     }
-    function tabClick(tabId){
-      if(tabId === 3) return //Tab 3 is coming soon
 
+    function tabClick(brand) {
+      console.log("TABCLICKED", brand)
+      if(brand === 'Melculum') return // Melculum not ready
       tabClicked.value = !tabClicked.value
-      singleTabEmitter.emit('toggleClickedTab', {value: tabClicked.value, tabId: props.tabId})
-      
+      singleTabEmitter.emit('toggleClickedTab', { value: tabClicked.value, brand: props.brand })
     }
 
-    function goToProductLine(brand, productLine){
-      router.push({ name: 'Product', params: { selectedBrand: brand}, query: {line: productLine}}).catch(err => {
-        console.log("error while routing", err)
+    onMounted(() => {
+      singleTabEmitter.on('toggleClickedTab', ({ value, brand }) => {
+        if (brand !== props.brand) {
+          tabClicked.value = false;
+          tabActive.value = false;
+        }
       });
-      // console.log("Going to:", brand, productLine)
+    })
+    onUnmounted(() => {
+      singleTabEmitter.off('toggleClickedTab')
+    })
+
+    function goToProductLine(brand, productLine) {
+      console.log("going to TABS", brand, productLine)
+      if(brand === 'Melculum'){
+        return
+      }
+      router.push({ 
+        name: 'Product', 
+        params: { selectedBrand: brand }, 
+        query: { line: productLine }
+      }).catch(err => {
+        console.log("error while routing", err)
+      })
     }
-    return{ 
-      tabTitle: props.tabTitle,
-      tabText: props.tabText,
-      productLines: props.productLines,
-      brand: props.brand,
-      backgroundSource: props.backgroundSource, 
-      logoSource: logoUrl, 
-      tabActive,
-      tabClicked,
-      tabOpen,
-      mockJar,
-      currentTabBackground,
+
+    return { 
+      tabState,
+      jarImage,
+      logoSource: logoUrl,
       tabHover,
       tabClick,
       goToProductLine
@@ -161,108 +136,109 @@ export default {
 </script>
 
 <style lang="scss" scoped>
-.tab{
+.tab {
   display: flex;
   flex-direction: column;
   width: 100%;
   height: 100%;
   align-items: center;
   justify-content: center;
-  background: #FFFFFF;
-  border-right: 2px gray solid;
+  // background: #FFFFFF;
+  // border-right: 2px gray solid;
   overflow: hidden !important;
   position: relative;
   background-size: cover;
   background-position: center;
   background-repeat: no-repeat;
   cursor: pointer;
-  &-1{
-    background-image: url('@/assets/pages/tabs/bg-1.png');
+
+  &-1 {
+    background-image: url('@/assets/pages/tabs/bg-1.png'); 
   }
-  &-2{
+  &-2 { 
     background-image: url('@/assets/pages/tabs/bg-2.png');
-  }
-  &-3{
-    background-image: url('@/assets/pages/tabs/bg-3.png');
-  }
-  .inactive-tab{
-  }
-  .active-tab{
-  }
-  .clicked-tab{
-    .series-container{
-      display: flex;
-      justify-content: space-around;
-      align-items: center;
-      .series-link{
-        color: #000;
-        text-align: center;
-        font-family: "DMSans";
-        font-size: 22px;
-        font-style: bold;
-        font-weight: 400;
-        line-height: normal;
-        letter-spacing: 2px;
-        text-transform: capitalize;
-        transition: font-size ease-in-out 0.3s;
-        &:hover{
-          font-size: 24px;
-          transition: all ease-in-out 0.3s;
-        }
+    &.hovered-tab .tab-jar {
+      // max-height: 45% !important;
+      @media(max-width: 1366px) {
+        // // max-height: 55% !important;
+        // right: -25% !important;
+        // bottom: -5% !important;
       }
     }
   }
-  .active-tab, .clicked-tab{
-    .tab-title{
-      color: #000;
-      font-family: "DMSans";
-      font-size: 20px;
-      font-style: normal;
-      font-weight: 700;
-      line-height: normal;
-      letter-spacing: 2px;
-      text-transform: uppercase;
-      margin-bottom: 10px;
-      text-align: left;
+  &-3 { 
+    background-image: url('@/assets/pages/tabs/bg-3.png');
+    position: relative;
+    .tab-texts{
+      display: flex;
+      position: absolute !important;
+      top: 70% !important;
+      left: 50% !important;
+      max-width: 100% !important;
+      width: 100% !important;
+      justify-content: center;
+      transform: translate(-50%, -50%);
+      opacity: 0.6;
+      @media(max-width: 767px){
+        // display: none !important;
+        .tab-title{
+          margin-bottom: 0px !important;
+          margin-top: 20px !important;
+        }
+      }
+      .tab-text{
+        display: none !important;
+      }
     }
-    .tab-text{
-      color: #000;
-      font-family: "DMSans";
-      font-size: 15px;
-      font-style: normal;
-      font-weight: 400;
-      line-height: normal;
-      letter-spacing: 1.5px;
-      text-transform: capitalize;
+  }
+
+  &:last-child { 
+    border-right: none; 
+  }
+
+  .tab-title {
+    color: #000;
+    font-family: "DMSans";
+    font-size: 20px;
+    font-weight: 700;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    margin-bottom: 10px;
+    text-align: left;
+    @media(max-width: 1366px) { font-size: 16px; }
+  }
+
+  .tab-text {
+    color: #000;
+    font-family: "DMSans";
+    font-size: 15px;
+    font-weight: 400;
+    letter-spacing: 1.5px;
+    text-align: left;
+    @media(max-width: 1366px) { 
+      font-size: 14px; 
+    }
+    @media(max-width: 768px) {
+      display: flex;
+      justify-content: flex-start;
+      font-size: 12px;
       text-align: left;
     }
   }
   
-  .inactive-tab, .clicked-tab, .active-tab{
+  &.inactive-tab, .clicked-tab, .hovered-tab {
     width: 100%;
     height: 100%;
     display: flex;
     flex-direction: column;
     position: relative;
-    background: transparent;
+    // background: transparent;
     z-index: 6;
   }
 }
-.tab:last-child{
-  border-right: none;
-}
 
-//ANIMATIONS
-.clicked-tab{
-  .jar-clicked{
-    display: block;
-    position: absolute;
-    width: 70%;
-    height: auto;
-    top: 60%;
-    left: 10%;
-  }
-  .series-container{
+.clicked-tab {
+  .series-container {
     opacity: 1;
     transition: opacity ease-in-out 0.5s;
     transition-delay: 0.3s;
@@ -271,24 +247,43 @@ export default {
     top: 60%;
     transform: translate(-50%, -50%);
     width: 80%;
+    display: flex;
+    justify-content: space-around;
+    align-items: center;
+
+    .series-link {
+      color: #000;
+      text-align: center;
+      font-family: "DMSans";
+      font-size: 22px;
+      font-weight: 400;
+      letter-spacing: 2px;
+      text-transform: capitalize;
+      transition: font-size ease 0.3s;
+      &:hover { font-size: 24px; }
+    }
   }
-  .tab-texts{ 
+  .tab-texts { 
     max-width: 60%;
+    
+    @media(max-width: 768px){
+      max-width: 90%;
+    }
+
     position: absolute;
     top: 30%;
     left: -100%;
     transition: all ease-in-out 0.15s;
   }
-  .tab-jar{ //clicked jar
+  .tab-jar {
     position: absolute;
-    // display: none !important;
     max-height: 40%;
     bottom: 25%;
     right: -100% !important;
     transform: translate(50%, 50%);
     transition: all 0.5s ease-in-out;
   }
-  .tab-logo{
+  .tab-logo {
     position: absolute;
     top: 35%;
     left: 50%;
@@ -297,13 +292,15 @@ export default {
     margin-left: auto;
     margin-right: auto;
     transition: all ease-in-out 0.3s;
+    @media(max-width: 767px){
+      width: 40%;
+      top: 25%;
+    }
   }
 }
-.active-tab{
-  .jar-clicked{
-    display: none;
-  }
-  .tab-logo{
+
+.hovered-tab {
+  .tab-logo {
     position: absolute;
     top: 20%;
     left: 50%;
@@ -312,35 +309,41 @@ export default {
     opacity: 1;
     transition: 0.5s ease-in-out;
   }
-  .series-container{
+  .series-container {
+    display: none;
     opacity: 0;
     transition: all ease-in 1s, all ease-out 0s;
   }
-  .tab-texts{
+  .tab-texts {
     display: flex !important;
     flex-direction: column;
     max-width: 60%;
+    @media(max-width: 768px){
+      max-width: 90%;
+    }
     position: absolute;
     top: 30%;
     left: 10%;
     transition: left ease-in-out 1s;
   }
-  .tab-jar{ //hovered jar
+  .tab-jar {
     position: absolute;
     bottom: 0% !important;
     right: -30%;
     transition: all 0.8s ease-in-out;
     max-height: 50%;
-    @media(max-width: 1600px){
-      max-height: 35%;
+    @media(max-width: 1600px) { 
+      max-height: 45%; 
+    }
+    @media(max-width: 1366px) {
+      max-height: 45%;
+      right: -25%;
     }
   }
 }
-.inactive-tab{
-  .jar-clicked{
-    display: none;
-  }
-  .tab-logo{
+
+.inactive-tab {
+  .tab-logo {
     position: absolute;
     width: 70%;
     opacity: 0.6;
@@ -348,40 +351,65 @@ export default {
     left: 50%;
     transform: translate(-50%, -50%);
     transition: all 0.3s ease-in-out;
+    @media(max-width: 767px){
+      width: 50%;
+      opacity: 1;
+    }
   }
-  .series-container{
-    display: none !important;
+  .series-container { 
+    display: none; 
+    opacity: 0 !important; 
   }
-  .tab-texts{
+  .tab-texts {
     max-width: 60%;
+    
+    @media(max-width: 768px){
+      max-width: 90%;
+    }
     position: absolute;
     top: 30%;
     left: -100%;
   }
-  .tab-jar{
+  .tab-jar {
     position: absolute;
-    // display: none !important;
     max-height: 60%;
     right: -200%;
   }
 }
-.tab-background{
-  height: 100%;
-  position: absolute;
-  top: 0%;
-  // left: 0%;
-  // transform: translate(50%, 50%);
-  z-index: 5;
-  opacity: 1;
-  transition: opacity ease-in-out 0.25s;
-  // transition-delay: 0.5s;
-  &.hide{
-    opacity: 0;
+
+@media (max-width: 767px) {
+  .tab {
+    .inactive-tab, .clicked-tab, .hovered-tab {
+      background: none !important; // Ensure no background color is applied on mobile
+    }
+    .series-link{
+      font-size: 18px !important;
+    }
   }
-  &.clicked{
-    transform: scale(1.6, 1.6);
-    transition: all ease-in-out 0.3s;
-    // transition-delay: 0.5s;
+}
+
+@media (max-width: 767px) and (min-height: 700px) {
+  .clicked-tab{
+    .tab-texts{
+      // position: static;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      max-width: 90%;
+      width: 90%;
+      transition: all 0.5s ease;
+      .tab-title{
+        display: none;
+      }
+      .tab-text{}
+    }
+    .tab-logo{
+      top: 18%;
+    }
+    .series-container{
+      bottom: 5%;
+      top: auto;
+    }
   }
 }
 </style>

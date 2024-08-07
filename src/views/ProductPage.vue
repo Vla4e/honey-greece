@@ -1,18 +1,25 @@
 <template>
-  <div :class="showControls ? 'show' : 'hide'" class="product-page-container">
+  <div class="product-page-container">
     <!-- <span class="floating-text" ">
       {{ currentFlavour.name }}
     </span> -->
 
     <transition name="fade" mode="out-in">
-      <span class="floating-text" :style="{ 'font-size': computedTextLength + 'px' }" :key="currentFlavour.name">
+      <span class="floating-text" :style="{ 
+        'font-size': computedTextLength.fontSize + 'px',
+        'line-height': computedTextLength.lineHeight + 'px'
+      }" :key="currentFlavour.name">
         {{ currentFlavour.name }}
       </span>
     </transition>
+    
+    <span v-if="isMobile" class="mobile-series">
+          {{ currentProductLine.name }}
+        </span>
 
     <div class="series-selection">
       <div class="pushdown" style="height: 35%; width: 100%;"></div>
-      <div class="series-item-container">
+      <div v-if="!isMobile" class="series-item-container">
         <div class="series-items">
           <div
             class="series-item"
@@ -49,10 +56,13 @@
       <!-- <div class="pushdown" style="height: 15%; width: 100%;"></div> -->
       <ProductSceneFinal />
     </div>
-    <ColorPicker class="color-picker target"/>
-    <button style="position: absolute; top: 0%; left: 10%; z-index: 200000;" @click="toggleViews()">Toggle views</button>
 
-    <div class="blend-selection">
+
+    <!-- <ColorPicker class="color-picker target"/>
+    <button style="position: absolute; top: 0%; left: 10%; z-index: 200000;" @click="toggleViews()">Toggle views</button> -->
+
+    <div v-if="(isMobile && circleToggled) || !isMobile" class="blend-selection">
+      <img src="../assets/images/x-icon.svg" @click="toggleCircle()" v-if="isMobile"/>
       <div class="brand-selection pushdown">
         <!-- <img @click="switchBrand()" class="brand-image" :src="computedLogo"/> -->
       </div>
@@ -79,6 +89,36 @@
           <img :src="pointerLine" class="pointer-line" />
         </div>
       </span>
+      <div
+        class="blend product-line"
+        v-for="(brandProductLine, idx) in brandProductLines"
+        :style="currentProductLine.name !== brandProductLine.name ? '': 'display: none !important;'"
+        @click="selectProductLine(brandProductLine.name)"
+        :key="idx"
+        v-if="isMobile"
+      >
+        <span class="blend-text">
+          {{ brandProductLine.name }} &gt;
+        </span>
+      </div>
+    </div>
+
+    <div v-if="isMobile && !circleToggled" class="series-selection-mobile">
+      <div @click="toggleCircle()" :class="circleToggled ? 'clicked': ''" class="circle" id="circle">
+        <div class="plus"></div>
+      </div>
+    </div>
+
+    
+
+    <div v-if="isMobile" class="suggested-brand-section">
+      <span class="flavor-text">Also discover... </span>
+      <div class="suggested-brands">
+        <router-link :to="`/product/HAA?line=Monoflorals`" class="brand">
+          <img :src="suggestedBrandLogoUrl" class="logo" alt="Brand"/>
+          <img :src="chevronRight" class="chevron" alt="Go to brand"/>
+        </router-link>
+      </div>
     </div>
   </div>
 </template>
@@ -92,6 +132,7 @@ import downloadIcon from "@/assets/pages/product-page/download-icon.png";
 import pointerLine from "@/assets/pages/product-page/pointer-line.svg";
 import pointerCircle from "@/assets/pages/product-page/pointer-circle.svg";
 import arrow from "@/assets/images/arrow.svg";
+import chevronRight from '@/assets/images/arrow.svg';
 
 import brandConfigs from "@/assets/brand-information/index.js"
 import { useProductStore } from '@/store/product.js'
@@ -102,17 +143,19 @@ export default {
   props: ['line', 'selectedBrand'],
 
   setup(props) {
+    const { width: windowWidth, height: windowHeight } = useWindowSize();
 
+    const { isMobile } = inject('screenSize')
+    
     let showControls = ref(false)
-
     function toggleViews(){
       showControls.value = !showControls.value
     }
+
     const route = useRoute();
 
-    const { width: windowWidth, height: windowHeight } = useWindowSize();
-    let videoScene = ref(false)
     const productStore = useProductStore()
+
     //receives distance of Mesh from Canvas ends
     let emitter = inject('emitter')
     emitter.on('meshEdges', (meshEdges)=>{
@@ -121,6 +164,7 @@ export default {
     onUnmounted(() => {
       emitter.off('meshEdges')
     })
+
     const productViewer = ref()
     const blendItem = ref()
     const seriesItem = ref()
@@ -156,19 +200,35 @@ export default {
     productLineFlavours = computed(() => currentProductLine.value.flavours)
     currentFlavour.value = productLineFlavours.value[0]
 
-    
-    let computedLogo = computed(() => {
+
+    //TODO: incorrect usage of computed - asynchronous fetch of url - this should be function with separate reactive variable
+    let computedLogo = computed( async () => {
       switch(selectedBrand.value.brand){
         case 'Okto':
-          const imgUrl = new URL('@/assets/pages/tabs/tab1-larger.png', import.meta.url).href;
+          const imgUrl = new URL('@/assets/pages/tabs/tab2-larger.png', import.meta.url).href;
           return imgUrl;
         case 'HAA':
           console.log("returnign HAA")
-          const imgUrl2 = new URL('@/assets/pages/tabs/tab2-larger.png', import.meta.url).href;
+          const imgUrl2 = new URL('@/assets/pages/tabs/tab1-larger.png', import.meta.url).href;
           return imgUrl2;
       }
     })
-    
+
+    async function fetchLogoUrl(){
+      console.log("Attempting to fetch logourl", selectedBrand.value.brand)
+      let imgUrl = null
+      switch(selectedBrand.value.brand){
+        case 'Okto':
+          imgUrl = (await import('@/assets/pages/tabs/tab2-larger.png')).default;
+          return imgUrl;
+        case 'HAA':
+          console.log("returnign HAA")
+          imgUrl = (await import('@/assets/pages/tabs/tab1-larger.png')).default;
+          return imgUrl;
+      }
+    }
+    let suggestedBrandLogoUrl = ref(null) // does not look cool bro...
+
     let computedTextLength = computed(()=>{
       let nameLength = currentFlavour.value.name.length
       let fontSize;
@@ -203,11 +263,16 @@ export default {
         }
         default: fontSize = 100;
       }
-      if(windowWidth.value <= 1440){
+      if(windowWidth.value <= 1440 && !isMobile.value){
         fontSize -= 20
       }
-      // console.log("Calculated fontsize", fontSize)
-      return fontSize
+      if(isMobile.value){
+        console.log("DELETING 40px", fontSize)
+        fontSize -= 50
+      }
+      console.log("Calculated fontsize", fontSize)
+      let lineHeight = fontSize * 1.3
+      return {fontSize, lineHeight}
     })
 
     const isSelected = function (brandProductLine){
@@ -238,14 +303,16 @@ export default {
       }
     });
 
-    watch(selectedBrand, (newBrand) => {
+    watch(selectedBrand, async (newBrand) => {
       // console.log("newBrand", toRaw(newBrand))
       brandProductLines.value = newBrand.brandProductLines
       currentProductLine.value = brandProductLines.value[route.query?.line ? route.query.line : 'Monoflorals']
       if(newBrand){
         productStore.setBrand({name: newBrand.brand, urlSlug: newBrand.urlSlug })
+        suggestedBrandLogoUrl.value = await fetchLogoUrl()
       }
     }, {immediate: true})
+
     watch(currentProductLine, (newProductLine) => {
       // console.log("newProductLine", toRaw(newProductLine))
       // console.log("currentProductLine", toRaw(currentProductLine))
@@ -253,6 +320,7 @@ export default {
         productStore.setProductLine({name: newProductLine.name, urlSlug: newProductLine.urlSlug })
       }
     }, {immediate: true})
+
     watch(currentFlavour, (newFlavour) => {
       // console.log("newFlavour", toRaw(newFlavour))
       if(newFlavour){
@@ -267,6 +335,7 @@ export default {
       } else 
       return
     }
+
     function selectFlavour(flavour) {
       if(currentFlavour.value !== flavour){
         currentFlavour.value = flavour;
@@ -291,6 +360,10 @@ export default {
         currentProductLine.value = nextBrand.brandProductLines['Blends'] || nextBrand.brandProductLines[Object.keys(nextBrand.brandProductLines)[0]];
       }
       console.log("CPL", toRaw(currentProductLine.value))
+      window.scrollTo({
+        top: 0,
+        behavior: "smooth",
+      });
     }
 
     function calculateLineWidths(edgeCoordinates){
@@ -313,8 +386,17 @@ export default {
         return
       }
     }
-    
+
+    let circleToggled = ref(false)
+    function toggleCircle(){
+      console.log("TOGGLING CIRCLE")
+      circleToggled.value = !circleToggled.value
+    }
+
+
     return {
+      toggleCircle,
+      circleToggled,
       downloadIcon,
       pointerCircle,
       pointerLine,
@@ -329,14 +411,16 @@ export default {
       currentProductLine,
       computedLogo,
       computedTextLength,
+      suggestedBrandLogoUrl,
       isSelected,
       displayStyle,
       selectProductLine,
       selectFlavour,
       switchBrand,
-      videoScene,
       toggleViews,
-      showControls
+      showControls,
+      isMobile,
+      chevronRight
     };
   },
 };
@@ -354,8 +438,9 @@ export default {
   // justify-content: space-between;
   display: grid;
   grid-template-rows: 1fr;
-  grid-template-columns: 25% 50% 25%;
+  grid-template-columns: 25% 55% 20%;
   flex-grow: 1 !important;
+  width: 95% !important;
   &.hide{
     .floating-text{
       opacity: 0;
@@ -385,7 +470,7 @@ export default {
     }
   }
 
-  .floating-text {
+  .floating-text, .mobile-series {
     // opacity: 0;
     z-index: 1;
     color: rgba(0, 0, 0, 0.1);
@@ -434,7 +519,7 @@ export default {
       display: flex;
       justify-content: flex-start;
       align-items: center;
-      width: 100%;
+      // width: 100%;
       margin-bottom: 15px;
       width: 80%;
       .stylish-pointer-to-left {
@@ -591,10 +676,235 @@ export default {
       max-height: 60vh;
     }
   }
+
+  
+  @media(max-width: 767px){
+    display: flex;
+    flex-direction: column;
+    width: 100% !important;
+    max-width: 100%;
+    background: white;
+    .floating-text{
+      position: static;
+      max-width: 95%;
+      text-align: center;
+      line-height: 60px;
+      font-size: 65px;
+      margin: auto;
+      margin-bottom: -30px;
+    }
+    .mobile-series{
+      position: static;
+      font-size: 24px;
+      width: 100%;
+      align-self: center;
+      text-align: center; 
+      margin-top: 50px;
+      border-top: 0.5px solid #8080803b; // margin-top: -20px;
+    }
+    .product-viewer {
+      order: 1;
+      margin-bottom: 30px;
+    }
+    .selected-description {
+      order: 2;
+      margin-bottom: 30px;
+    }
+    .blend-selection {
+      order: 3;
+
+      background: #00000095;
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      z-index: 10000;
+      align-items: center;
+      justify-content: center;
+      margin-bottom: 30px;
+
+      .stylish-pointer-to-left{
+        display: none !important;
+      }
+      .pushdown{
+        display: none;
+      }
+      img{
+        width: 40px;
+        height: 40px;
+        align-self: flex-end;
+        margin-right: 20px;
+        margin-bottom: 20px;
+      }
+      .blend{
+        width: 100%;
+        justify-content: center;
+        margin-bottom: 40px;
+        min-height: 40px;
+        .blend-text{
+          color: white;
+          text-align: center;
+          transition: font-size 0.3s ease;
+          font-size: 18px;
+        }
+        &.selected{
+          .blend-text{
+            position: relative;
+            font-size: 25px;
+            &::before,
+            &::after {
+                content: '';
+                position: absolute;
+                top: 50%;
+                width: 20px;
+                height: 2px;
+                background-color: #fff;
+            }
+
+            &::before {
+                left: -30px; /* Adjust this value to position the line */
+                transform: translateY(-50%);
+            }
+
+            &::after {
+                right: -30px; /* Adjust this value to position the line */
+                transform: translateY(-50%);
+            }
+          }
+        }
+
+        &.product-line{
+          margin-top: 35px;
+          border-top: 1px solid white;
+          width: 80%;
+          margin: auto;
+          padding-top: 30px;
+          margin-top: 0px;
+          margin-bottom: 0;
+          .blend-text{
+            font-size: 22px;
+          }
+        }
+      }
+      
+    }
+    .series-selection {
+      order: 4;
+
+      width: 100% !important;
+      align-items: center;
+      margin-bottom: 30px;
+      .stylish-pointer{
+        display: none !important;
+      }
+      .selected-description{
+        order: 1;
+        align-items: center;
+        .description-subheading{
+          text-align: center;
+        }
+        .description-text{
+          text-align: center;
+        }
+      }
+      .technical-sheet{
+        order: 2;
+      }
+    }
+    .suggested-brand-section{
+      order: 4;
+    }
+  }
 }
 
+.series-selection-mobile{
+  display: flex;
+  flex-direction: column;
+  width: 95%;
+  margin: auto;
+  .circle {
+    position: relative;
+    width: 45px;
+    height: 45px;
+    border-radius: 50%;
+    background-color: transparent;
+    border: 1px solid #000;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    z-index: 10001;
+    align-self: flex-end;
 
-
+    &.clicked {
+      // border-color: white;
+      background-color: black;
+      .plus{
+        background-color: white;
+        &:before{
+          background-color: white;
+        }
+      }
+    }
+    
+    .plus {
+      position: absolute;
+      width: 25px;
+      height: 1px;
+      background-color: #000;
+      &:before{
+        content: '';
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        width: 1px;
+        // margin-left: -1px;
+        height: 25px;
+        background-color: #000;
+      }
+    }
+  }
+}
+.suggested-brand-section{
+  margin-top: 50px;
+  .flavor-text{
+    font-family: "Didact Gothic";
+    font-size: 14px;
+    font-weight: 400;
+    line-height: 18.35px;
+    letter-spacing: 0.1em;
+    text-align: center;
+    color: #525151;
+  }
+  .suggested-brands{
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: flex-start;
+    .brand{
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 100%;
+      height: 100%;
+      position: relative;
+      .logo{
+        width: 50%;
+        justify-self: center;
+        opacity: 0.3;
+      }
+      .chevron{
+        position: absolute;
+        right: 2%;
+        width: 30px;
+        height: 30px;
+      }
+    }
+  }
+}
 // @keyframes fadeInMaskRight {
 //     0% {
 //         mask-image: linear-gradient(to right, transparent 0%, black 100%);

@@ -1,35 +1,65 @@
 <template>
   <div class="all-products-page">
-    <div v-for="(brand,idx)  of brands" :key="idx" class="row">
-      <div class="brand-info-container">
-        <span class="heading">
-          Honey Apiary Academy
-        </span>
-        <span class="subheading">
-          Ultra Premium Greek Honey
-        </span>
-        <span class="description">
-         Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. 
-        </span>
-        <router-link :to="`/product/${brand.name}`" class="explore-link">
+    <div v-if="isMobile"  class="mobile-selection">
+      <span class="selection-description">
+        Discover our complete range of products
+      </span>
+      <div class="selection">
+        <div 
+          v-for="(brand, idx) of brands" 
+          :key="idx" 
+          class="item"
+          :class="currentlySelectedBrand === brand.name ? 'selected' : ''"
+          @click="currentlySelectedBrand = brand.name"
+        >
+          {{ brand.fullName }}
+        </div>
+      </div>
+    </div>
+    <template v-for="( brand, idx )  of brands">
+      <div 
+        class="brand"
+        v-if="computeVisibility(brand.name)"
+        :key="idx"
+      >
+        <div v-if="!isMobile" class="brand-info-container">
+          <span class="heading">
+            Honey Apiary Academy
+          </span>
+          <span class="subheading">
+            Ultra Premium Greek Honey
+          </span>
+          <span class="description">
+          Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. 
+          </span>
+          <router-link :to="`/product/${brand.name}`" class="explore-link">
+            <span>Explore complete range</span>
+            <img :src="rightArrow" class="arrow"/>
+          </router-link>
+        </div>
+        <Carousel
+          class="carousel"
+          :brand="brand"
+        />
+        <router-link v-if="isMobile" :to="`/product/${currentlySelectedBrand}`" class="explore-link">
           <span>Explore complete range</span>
           <img :src="rightArrow" class="arrow"/>
         </router-link>
       </div>
-      <Carousel
-        class="carousel"
-        :brand="brand"
-      />
-    </div>
+    </template>
   </div>
 </template>
 
 <script setup>
-import { ref, onMounted, toRaw, inject } from 'vue';
+import { ref, onMounted, toRaw, inject, computed } from 'vue';
 import rightArrow from '@/assets/pages/all-products/right-arrow.svg'
+import brandConfigs from '@/assets/brand-information/index.js'
+
+console.log("Brandconf", brandConfigs)
 
 let emitter = inject('emitter')
 emitter.emit('switchTextColor')
+
 const imageModules = import.meta.glob('@/assets/images/jar-labels/**/*.png', {eager: true});
 let categorizedImageUrls;
 
@@ -64,7 +94,19 @@ async function fillCategorizedImageUrls(){
   return {imageUrls, allImageUrls}
 }
 
-
+const { isMobile } = inject('screenSize')
+let currentlySelectedBrand = ref('haa')
+let computedVisibility = computed(() => {
+  if(isMobile.value){
+    return (brandName) => currentlySelectedBrand.value === brandName; // return function to pass brand.name argument into
+  } else return () => true
+})
+function computeVisibility(brandName) {
+  console.log("COMPUTING VISIBILITY", brandName, toRaw(currentlySelectedBrand.value), toRaw(isMobile.value))
+  if(isMobile.value){
+    return currentlySelectedBrand.value === brandName; // return function to pass brand.name argument into
+  } else return true
+}
 
 
 const carouselItems = [
@@ -79,15 +121,18 @@ const carouselItems = [
 let brands = ref([])
 onMounted(async () => {
   let imageUrls = await fillCategorizedImageUrls()
+  console.log("IMAGEURLS", imageUrls)
   categorizedImageUrls = imageUrls.allImageUrls
   brands.value = [
     {
       name: 'haa',
+      fullName: 'Honey Apiary Academy',
       carouselItems: carouselItems,
       imageUrls: categorizedImageUrls['haa']
     },
     {
       name: 'okto',
+      fullName: 'Oktώ',
       carouselItems: carouselItems,
       imageUrls: categorizedImageUrls['okto']
     }
@@ -102,7 +147,49 @@ onMounted(async () => {
   display: flex;
   flex-direction: column;
   justify-content: space-around;
-  .row{
+  .mobile-selection{
+    box-shadow: 1px 1px 10px 1px #0000001A;
+    min-height: 200px;
+    display: flex;
+    flex-direction: column;
+    .selection-description{
+      display: flex;
+      align-items: center;
+      width: 90%;
+      margin: auto;
+      // justify-content: flex-start;
+      font-family: "DMSans";
+      font-size: 20px;
+      font-weight: 700;
+      line-height: 26.04px;
+      letter-spacing: 0.1em;
+      color: black;
+      text-align: left;
+      flex-grow: 1;
+    }
+    .selection{
+      display: flex;
+      justify-content: space-around;
+      width: 90%;
+      margin: auto;
+      margin-bottom: 15px;
+      .item{
+        color: black;
+        font-family: "DMSans";
+        font-size: 13px;
+        font-weight: 400;
+        transition: font-weight 0.25s ease;
+        &.selected{
+          font-weight: 700;
+        }
+      }
+    }
+    
+    @media(min-width: 768px){
+      display: none;
+    }
+  }
+  .brand{
     display: flex;
     justify-content: space-between;
     align-items: center;
@@ -137,11 +224,23 @@ onMounted(async () => {
         color: black;
         margin-bottom: 20px;
       }
-      .explore-link{
+    }
+    .carousel{
+      width: 75%;
+    }
+  }
+  
+  .explore-link{
         display: flex;
         align-items: center;
         // justify-content: space-between;
         width: 100%;
+        @media(max-width: 767px){
+          align-self: center;
+          margin-top: 40px;
+          margin-bottom: 25px;
+          justify-content: center;
+        }
         span{
           font-family: "DMSans";
           font-size: 14px;
@@ -154,10 +253,28 @@ onMounted(async () => {
           width: 20px;
         }
       }
+    
+  @media(max-width: 767px){
+    justify-content: flex-start;
+    .brand{
+      flex-direction: column;
+      .brand-info-container{
+        width: 100%;
+      }
+      .carousel-container{
+        .carousel-animation-container{
+          .carousel-content{
+            .carousel-item{
+              background-color: red;
+              .jar-image{
+                width: auto;
+                height: 20%;
+              }
+            }
+          }
+        }
+      }
     }
-    .carousel{
-      width: 75%;
-    }
-  } 
+  }
 }
 </style>

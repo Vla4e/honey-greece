@@ -1,23 +1,27 @@
 <template>
+  <div v-if="isMobile" class="mobile-header">
+    HELLENIC <br/> PREMIUM HONEY
+  </div>
   <div class="tab-container" :class="currentClickedTab ? `tab-container-clicked-${currentClickedTab}`: 'no-clicked-tab'">
-    <Tab 
-    :tabId="1" 
+    <Tab
+    class='order-target-1'
+    :tabId="1"
     :tabTitle="tabTitles[0]"
     :tabText="oktoConfig.brandDescriptionShort"
     :brand="oktoConfig.brand"
     :productLines="oktoConfig.productLines"
-    line="Okto"
-    logoSource="pages/tabs/tab1.png"/>
+    />
     <Tab 
-    :tabId="2" 
+    class='order-target-2'
+    :tabId="2"
     :tabTitle="tabTitles[1]"
     :tabText="HAAConfig.brandDescriptionShort"
     :brand="HAAConfig.brand"
     :productLines="HAAConfig.productLines"
     :line="tab2Line"
-    line="HAA"
-    logoSource="pages/tabs/tab2.png"/>
+    />
     <Tab 
+    class='order-target-3'
     :tabId="3" 
     :tabTitle="tabTitles[2]"
     :tabText="tabTexts[2]"
@@ -25,38 +29,42 @@
     :productLines="tab3Series"
     :line="tab3Line"
     line="Melculum"
-    logoSource="pages/tabs/tab3.png"/>
+    />
   </div>
 </template>
 
 <script>
 import Tab from "@/components/Tabs/Tab.vue"
-import { inject, ref, onUnmounted } from 'vue';
+import { inject, ref, onMounted, onUnmounted } from 'vue';
 
 import brandConfigs from "@/assets/brand-information/index.js"
 
 export default {
   components: { Tab },
   setup(){
-
+    const { isMobile } = inject('screenSize')
     let HAAConfig = brandConfigs['HAA']
     let oktoConfig = brandConfigs['Okto']
+
     let currentClickedTab = ref(null)
     let emitter = inject('emitter')
-    emitter.on('toggleClickedTab', (event) => {
-      console.log("TAB EVENT", event.tabId)
-      if(currentClickedTab.value === event.tabId){
-        currentClickedTab.value = 0
-      } else {
-        currentClickedTab.value = event.tabId
-      }
+
+    onMounted(() => {
+      emitter.on('toggleClickedTab', (event) => {
+        console.log("TAB EVENT", event.brand)
+        if(currentClickedTab.value === event.brand){
+          currentClickedTab.value = 0
+        } else {
+          currentClickedTab.value = event.brand
+        }
+      })
     })
     onUnmounted(() => {
       emitter.off('toggleClickedTab')
     })
     
     let tabTitles = [
-      `Ultra Premium Greek Honey`,
+      `Premium Greek Honey`,
       `Ultra Premium Greek Honey`,
       `Coming soon`,
     ]
@@ -66,34 +74,93 @@ export default {
       `Our creative team at Hellenic Premium Honey never rests. We're brimming with innovative ideas, and soon, we'll introduce Melculum, our Diversity Series. Get ready for the wildest combinations designed for all honey lovers. Remember, honey is more than just a spread - you'll be amazed.`
     ]
 
-    let tab1Series = ['Mono Floral series','Multi Floral series','All Products']
-    let tab2Series = ['Blend series', 'Mono Floral series', 'All Products']
     let tab3Series = ['Mono Floral series', 'Multi Floral series', 'All products']
 
-    return { HAAConfig, oktoConfig, tabTexts, tabTitles, tab1Series, tab2Series, tab3Series, currentClickedTab }
+    return { 
+      HAAConfig, 
+      oktoConfig, 
+      tabTexts, 
+      tabTitles,
+      tab3Series, 
+      currentClickedTab,
+      isMobile 
+    }
   }
 }
 </script>
 
 <style lang="scss" scoped>
-  .tab-container{
+  .tab-container {
     display: grid;
-    max-width: 100vw !important;
-    width: 100vw !important;
-    height: 100vh !important;
-    height: 600px;
+    max-width: 100vw;
+    // @media(min-width: 767px){
+    //   min-height: 100vh;
+    // }
+    width: 100%;
+    height: 100%;
     grid-template-columns: 1fr 1fr 1fr;
     transition: all ease-in 0.3s;
-    &-clicked{
-      &-1{
-        grid-template-columns: 1.70fr 0.65fr 0.65fr;
+
+    // Mobile
+    @media (max-width: 767px) {
+      grid-template-columns: 1fr;
+      grid-template-rows: 1fr 1fr 1fr;
+      grid-row-gap: 5px;
+      flex-grow: 1;
+      &-clicked {
+        &-HAA {
+          grid-template-rows: 1.70fr 0.65fr 0.65fr;
+        }
+        &-Okto {
+          grid-template-rows: 0.65fr 1.70fr 0.65fr;
+        }
+        &-melculum {
+          grid-template-rows: 0.65fr 0.65fr 1.70fr;
+        }
       }
-      &-2{
-        grid-template-columns: 0.65fr 1.70fr 0.65fr;
-      }
-      &-3{
-        grid-template-columns: 0.65fr 0.65fr 1.70fr;
+
+      .order-target{
+        &-1{
+          order: 2
+        }
+        &-2{
+          order: 1;
+        }
+        &-3{
+          order: 3;
+        }
       }
     }
+
+    // Tablets
+    @media (min-width: 768px) {
+      &-clicked {
+        &-Okto {
+          grid-template-columns: 1.70fr 0.65fr 0.65fr;
+        }
+        &-HAA {
+          grid-template-columns: 0.65fr 1.70fr 0.65fr;
+        }
+        &-Melculum {
+          grid-template-columns: 0.65fr 0.65fr 1.70fr;
+        }
+      }
+    }
+
+  }
+  .mobile-header{
+    display: flex;
+    // width: 100%;
+    height: 20%;
+    align-items: flex-end;
+    font-family: "DMSans";
+    font-size: 32px;
+    font-weight: 700;
+    line-height: 34px;
+    text-align: left;
+    color: #0000001A;
+    padding-left: 2.5%;
+    margin-bottom: 15px;
+    margin-top: 15px;
   }
 </style>

@@ -114,6 +114,7 @@ export default {
 
     watchEffect(() => {
       if (props.jarMedium.length > 0 && props.jarSmall.length > 0 && !initialized.value) {
+        console.log("HUH")
         initialized.value = true;
         onPropsPassed(); // Function to trigger when props are passed
       }
@@ -144,6 +145,7 @@ export default {
     }
     onMounted(() => { // Assuming 2 seconds is enough for the initial scene setup
       emitter.on('getPositions', onPropsPassed)
+      console.log("PROPS:", props.jarMedium, props.jarSmall)
     });
 
     onUnmounted(() => {

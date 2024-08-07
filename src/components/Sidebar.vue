@@ -8,17 +8,22 @@
     <div class="left-side">
         <router-link class="sidebar-link" to="/history">
           <span class="link-heading">History</span>
+          <span class="link-subheading">Looking Back and Inspiring the Future</span>
         </router-link>
-        <router-link class="sidebar-link" to="/product/HAA?line=Blends">
+        <router-link class="sidebar-link" to="/product/HAA?line=Monoflorals">
           <span class="link-heading">Honey apiary academy</span>
           <span class="link-subheading">Ultra Premium Greek Honey</span>
         </router-link>
-        <router-link class="sidebar-link" to="/product/Okto?line=Blends">
-          <span class="link-heading">Okto</span>
+        <router-link class="sidebar-link" to="/product/Okto?line=Monoflorals">
+          <!-- <span class="link-heading">Okto</span> -->
+          <OktoText class="link-heading" :fontSize="36" :fontSizeMobile="24" :hoverable="true"/>
           <span class="link-subheading">Premium Greek Honey</span>
         </router-link>
         <router-link class="sidebar-link disabled" to="/">
-          <span class="link-heading">Melculum</span>
+          <span class="link-heading">
+          Melculum
+          <!-- <span v-if="!isMobile" style="font-size: 15px;">coming soon</span> -->
+          </span>
           <span class="link-subheading">Diversity Series</span>
         </router-link>
     </div>
@@ -41,20 +46,28 @@
           39.14698616699479, 22.28284913351356
         </span>
       </div>
-      <router-link class="sidebar-link disabled" to="/about-us">
+      <router-link class="sidebar-link" to="/about-us">
         <span class="link-heading">About</span>
+        <span class="link-subheading">Unveiling Our Hive: Meet our Team</span>
       </router-link>
     </div>
   </div>
 </template>
 
 <script>
+import OktoText from './OktoText.vue';
+
 export default {
   name: "Sidebar",
   setup(){
     return {}
   },
 }
+</script>
+
+<script setup>
+import { inject } from 'vue'
+const { isMobile } = inject('screenSize')
 </script>
 
 <style lang="scss" scoped>
@@ -64,20 +77,23 @@ export default {
   width: 100vw;
   height: 100vh;
   min-height: 100vh;
-  background-image: url('@/assets/images/bg.png');
-  background-repeat: no-repeat;
-  background-size: cover;
   justify-content: space-around;
   align-items: center;
   color: black;
   font-size: 40px;
-  z-index: 12;
+  z-index: 9;
+
+  @media(min-width: 768px){
+    background-image: url('@/assets/images/bg.png');
+    background-repeat: no-repeat;
+    background-size: cover;
+  }
   .background-cover{
     position: absolute;
     top: 0;
     left: 0;
     width: 100vw;
-    height: 100vw;
+    height: 100vh;
     background: rgba(255, 255, 255, 0.60);
     z-index: 11;
   }
@@ -111,7 +127,7 @@ export default {
       font-style: normal;
       font-weight: 400;
       line-height: normal;
-      letter-spacing: 9.18px;
+      letter-spacing: 7.18px;
       text-align: left;
       text-transform: uppercase;
       margin-bottom: 15px;
@@ -120,6 +136,9 @@ export default {
         // transform: scale(1.01);
         font-weight:700;
         // transition: all ease-in 0.3s;
+        }
+        .okt, .omega{
+          font-weight: 700;
         }
       }
     }
@@ -145,6 +164,34 @@ export default {
       text-transform: none;
       text-align: left;
       max-width: 60%;
+    }
+  }
+  
+  @media(max-width:767px){ // Mobile
+    flex-direction: column;
+    justify-content: center;
+    .background-cover{
+      background: rgba(16, 16, 16, 0.9);
+    }
+    .left-side, .right-side{
+      width: 90%;
+      height: auto;
+    }
+    
+    .sidebar-link{
+      align-items: center;
+      margin-bottom: 25px !important;
+      &:last-child{
+        margin-bottom: 15px;
+      }
+      .link-heading{
+        font-size: 28px;
+        text-align: center;
+        color: white;
+      }
+      .link-subheading, .link-info{
+        display: none;
+      }
     }
   }
 }

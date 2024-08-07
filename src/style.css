@@ -12,6 +12,7 @@
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   -webkit-text-size-adjust: 100%;
+  --navbar-color: #131313;
 }
 
 a {
@@ -71,7 +72,7 @@ button:focus-visible {
 #app {
   /* overflow: hidden; */
   width: 100vw;
-  height: 100vh;
+  min-height: 100vh;
   max-width: 100vw!important;
   /* margin: 0 auto;
   padding: 2rem; */

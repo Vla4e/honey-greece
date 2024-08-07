@@ -7,7 +7,7 @@
       <div class="left-side">
         <div class="header-container">
           <h1 class="header-text">Contact Us</h1>
-          <p class="subheader-text">Lorem Ipsum Dolor Sit Amet, Consectetur Adipiscing Elit, Sed Do Eiusmod Tempor Incididunt Ut Labore Et Dolore Magna Aliqua. Ut Enim Ad</p>
+          <p class="subheader-text">We're always happy to hear from you! Whether you have a question or feedback, feel free to reach out. Your thoughts and inquiries are important to us, and we're here to assist you in any way we can.</p>
         </div>
       </div>
       <div class="right-side">
@@ -217,6 +217,7 @@ function toggleContactForm(){
             background: none;
             padding: 15px;
             border-radius: 0px;
+            margin-top: 15px;
             &:hover{
               border-color: #131313;
             }

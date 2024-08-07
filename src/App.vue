@@ -1,9 +1,9 @@
 <template>
   <div class="app-container" :style="hideOverflow ? 'overflow: hidden': ''">
-    <div v-if="!isMobile && !showContactForm" class="burger-icon-container">
+    <!-- <div v-if="!showContactForm && !isMobile" class="burger-icon-container">
       <BurgerMenuIcon @click="toggleSidebar" class="burger-icon"/>
-    </div>
-    <NavbarComponent v-show="showNavbar" id="nav"/>
+    </div> -->
+    <NavbarComponent v-show="showNavbarComputed" id="nav"/>
 
     <Transition name="sidebar">
       <Sidebar v-if="showSidebar"/>
@@ -11,20 +11,29 @@
     <Transition name="contact-form">
       <ContactForm v-if="showContactForm"/>
     </Transition>
-
+    <LoadingScreen></LoadingScreen>
     <PageTransition></PageTransition>
     <RouterView class="page-container"/>
   </div>
 </template>
 
 <script>
-import { inject, ref, watch, onMounted, onUnmounted } from 'vue';
+import { provide, inject, ref, computed, watch, onMounted, onUnmounted } from 'vue';
+
 import { useNavbarStore } from '@/store/navbar.js'
 import { useGlobalStore } from '@/store/global.js'
+import { useSidebarStore } from '@/store/sidebar.js'
 import { storeToRefs } from 'pinia';
+
+import { useScreenSize } from './composables/useScreenSize'
+
 import burgerIcon from '@/assets/images/burger-icon.svg'
+
 export default {
   setup(){
+    const { isMobile, isTablet, isDesktop } = useScreenSize()
+    provide('screenSize', { isMobile, isTablet, isDesktop })
+
     let globalStore = useGlobalStore()
     let { playAnimationOnEnter } = storeToRefs(globalStore)
     let hideOverflow = ref(false)
@@ -38,36 +47,51 @@ export default {
 
     let navbarStore = useNavbarStore()
     let { showNavbar } = storeToRefs(navbarStore)
+    let showNavbarComputed = computed(() => {
+      if(isMobile.value){
+        return true
+      } else return showNavbar.value
+    })
+
 
     let emitter = inject('emitter')
-    let showSidebar = ref(false);
+    const sidebarStore = useSidebarStore()
+    let showSidebar = computed(() => sidebarStore.getSidebarStatus);
     let showContactForm = ref(false);
-    let isMobile = ref(false)
-    if(screen.width < 768){
-      isMobile = true
-    }
     
     //SIDEBAR
-    function toggleSidebar(){
-      showSidebar.value = !showSidebar.value
-    }
+    // function toggleSidebar(){
+    //   showSidebar.value = !showSidebar.value
+    // }
     onMounted(()=>{
       emitter.on('toggleContactForm', ()=>{
         showContactForm.value = !showContactForm.value
       })
-      emitter.on('toggleSidebarRoute', ()=>{
-        if(showSidebar.value){
-          toggleSidebar();
-        }
-      })
+      // emitter.on('toggleSidebarRoute', ()=>{
+      //   if(showSidebar.value){
+      //     toggleSidebar();
+      //   }
+      // })
+      // emitter.on('toggleSidebar', ()=>{
+      //   toggleSidebar();
+      // })
+
+      
+      // console.log("ISMOBILE", isMobile.value)
+      // if(isMobile.value){
+      //   console.log("setting shownav", showNavbar.value)
+      //   showNavbar.value = true
+      // }
     })
     onUnmounted(()=> {
       emitter.off('toggleContactForm')
-      emitter.off('toggleSidebarRoute')
+      // emitter.off('toggleSidebarRoute')
+      // emitter.off('toggleSidebar')
     })
     return {
       showSidebar, 
-      toggleSidebar,
+      // toggleSidebar,
+      showNavbarComputed,
       showContactForm, 
       showNavbar, 
       burgerIcon, 
@@ -80,7 +104,10 @@ export default {
 <style lang="scss" scoped>
 .app-container{
   // overflow: hidden;
-  height: 100%;
+  min-height: 100vh;
+  @media(min-width: 1024px){
+    height: 100vh;
+  }
   width: 100%;
   display: flex;
   flex-direction: column;
@@ -96,6 +123,10 @@ export default {
   margin: auto;
   flex-grow: 1;
   z-index: 3;
+  @media(max-width: 767px){
+    max-width: 100%;
+    margin: 0;
+  }
 }
 #nav, #footer{
   z-index: 10;

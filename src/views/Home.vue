@@ -1,114 +1,151 @@
 
 <template>
   <div class="home-container">
-    <JarScene v-if="!showVideo && !isMobile"/>
-    <div v-else-if="!isMobile" class="video-container">
+
+    <div class="video-container">
       <!-- Add video tag here -->
       <!-- <img :src="bgNew" class="background-video"/> -->
-      <video class="background-video" autoplay muted loop playsinline>
-        <source :src="placeHolder" type="video/mp4">
-        Your browser does not support the video tag.
+      <video v-if="videoReady" class="background-video" :class="isMobile ? 'mobile' : ''" autoplay muted loop playsinline disableremoteplayback>
+        <source :src="videoSource" type="video/mp4">
+        <!-- Your browser does not support the video tag. -->
+        {{ videoReady }} {{ videoSource }}
       </video>
+      <p v-else>Loading video...</p>
     </div>
-    <button v-if="!isMobile" class="show-vid-button" @click="showBg()">switch to video/scene</button>
-    <JarSceneMobile v-if="isMobile"/>
-    <!-- <div class="texts-container">
+
+    <div class="texts-container">
       <div class="home-text-container">
         <span class="home-text">Essence of <br/>Nature</span>
         <router-link class="route-button small-button" style="color: #131313;" to="/products">Start your journey</router-link>
       </div>
-      <span class="home-subtext">By Honey Apiary Academy</span>
-    </div> -->
+    </div>
   </div>
 </template>
 
 <script>
-import { ref } from 'vue';
-import { useWindowSize } from "@vueuse/core";
-import homeVideoHQ from '@/assets/pages/home/0001_1.mp4'
-import placeHolder from '@/assets/pages/home/landingpage-placeholder.mp4'
+import { ref, inject, onMounted } from 'vue';
+import { getNetworkSpeed } from '@/helpers/checkNetworkSpeed.js';
+import { useGlobalStore } from '@/store/global.js'
+
 import bgNew from '@/assets/pages/home/bg-new.png'
-import JarScene from '../components/JarScene.vue'
-import JarSceneMobile from '../components/JarSceneMobile.vue'
 import WebGL from 'three/addons/capabilities/WebGL.js';
-export default{
+
+export default {
   name: 'Home',
-  components: { JarScene, JarSceneMobile },
   setup(){
-    const { width: windowWidth, height: windowHeight } = useWindowSize();
-    let isMobile = ref(false);
-    if(windowWidth.value < 764){
-      isMobile.value = true;
-    } else isMobile.value = false
-    console.log("WebGL AVAILABLE", WebGL.isWebGLAvailable())
-    console.log("Is mobile:", isMobile.value)
-    let showVideo = ref(false)
-    function showBg(){
+    const { isMobile } = inject('screenSize')
+
+    const globalStore = useGlobalStore()
+
+    let showVideo = ref(true)
+    let videoReady = ref(false)
+    let videoSource = ref(null)
+
+    function switchBackground(){
       showVideo.value = !showVideo.value
     }
-    return { homeVideoHQ, placeHolder, bgNew, showVideo, showBg, isMobile}
+
+    // use .default to access the default export of the module = src
+    async function loadVideo(speed) {
+      globalStore.showLoadingScreen = true;
+      globalStore.loadingProgress = 0;
+      if (isMobile.value) {
+        if (speed >= 3) {
+          videoSource.value = (await import('@/assets/pages/home/mobile_3mbps.mp4')).default;
+        } else if (speed >= 2) {
+          videoSource.value = (await import('@/assets/pages/home/mobile_2mbps.mp4')).default;
+        } else {
+          videoSource.value = (await import('@/assets/pages/home/mobile_1mbps.mp4')).default;
+        }
+      } else {
+        if (speed >= 10) {
+          videoSource.value = (await import('@/assets/pages/home/desktop_5mbps.mp4')).default;
+        } else if (speed > 2) {
+          videoSource.value = (await import('@/assets/pages/home/desktop_5mbps.mp4')).default;
+        } else if (speed > 1) {
+          videoSource.value = (await import('@/assets/pages/home/desktop_2mbps.mp4')).default;
+        } else {
+          videoSource.value = (await import('@/assets/pages/home/desktop_1mbps.mp4')).default;
+        }
+      }
+      videoReady.value = true;
+      globalStore.showLoadingScreen = false;
+    }
+
+    onMounted( async () => {
+      const networkSpeed = getNetworkSpeed()
+      console.log("NETWORKSPEED", networkSpeed)
+      if (networkSpeed !== null) {
+        await loadVideo(networkSpeed)
+        console.log("Current value = ", videoSource.value)
+      } else {
+        videoSource.value = await import('@/assets/pages/home/desktop_1mbps.mp4').default
+      }
+    })
+    return { 
+      showVideo, 
+      switchBackground, 
+      isMobile, 
+      videoSource, 
+      videoReady
+    }
   }
 }
 </script>
-
 <style lang="scss">
-.home-container{
+.home-container {
   display: flex;
   width: 100%;
-  max-height: 92%;
+  height: 100%;
   align-items: center;
   justify-content: flex-end;
   z-index: 3 !important;
-  .jar-sc-container{
-    z-index: 1 !important;
-    position: absolute;
-    top: 0;
-    left: 0;
+  @media(max-width: 768px){
+    align-items: flex-start;
+    justify-content: center;
   }
 }
-.show-vid-button{
-  position: absolute;
-  bottom: 0%;
-  left: 25%;
-  z-index: 20000;
-}
-.read-the-docs {
-  color: #888;
-}
-.video-cover{
-  background: linear-gradient(180deg, rgba(204, 204, 204, 0.50) 0%, rgba(255, 255, 255, 0.00) 100%);
-  z-index: 2;
+
+.video-container {
   position: absolute;
   top: 0;
   left: 0;
   width: 100vw;
   height: 100vh;
-  
+  overflow: hidden !important;
+  z-index: 1;
 }
-.background-video-container{
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: 100vw;
-  height: 100vh;
-  display: flex;
-  justify-content: flex-start;
-  align-items: flex-start;
-  z-index: 1 !important;
-  overflow:hidden;
-  .background-video{
-    width: 140vw;
+
+.background-video {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  overflow: hidden !important;
+  &.mobile{
+    max-height: 100vh;
+    width: auto !important;
+    height: 100%;
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    max-height: 100vh;
+    object-fit: fill;
   }
 }
+
 .texts-container{
+  position: absolute;
+  right: 15%;
+  top: 20%;
   display: flex;
   flex-direction: row;
   align-content: center;
   justify-content: center;
   z-index: 4;
-  .small-jar-home{
-    height: 400px !important; 
-    margin-right: 50px;
+  @media(max-width: 768px){
+    position: static;
+    margin-top: 10%;
   }
   .home-text-container{
     display: flex;
@@ -116,6 +153,9 @@ export default{
     justify-content: center;
     align-items: flex-start;
     // margin-top: -300px;
+    @media(max-width: 768px){
+      align-items: center;
+    }
     .home-text{
       display: flex;
       align-items: center;
@@ -126,22 +166,25 @@ export default{
       line-height: 82.6%;
       text-align: left;
       margin-bottom: 15px;
+      @media(max-width: 1440px){
+        font-size: 80px;
+      }
+      @media(max-width: 1366px){
+        font-size: 70px;
+      }
+      @media(max-width: 768px){
+        font-size: 60px;
+        text-align: center;
+      }
+    }
+    .route-button{
+      padding-left: 2px !important;
+      font-family: 'DM Serif';
+      @media(max-width: 768px){
+        text-align: center;
+      }
     }
   }
 }
-.video-container {
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  overflow: hidden;
-  z-index: 1; /* Ensure it's behind everything else but above the jar scene if needed */
-}
 
-.background-video {
-  width: 100%;
-  height: 100%;
-  object-fit: cover; /* This will cover the entire area without stretching the video */
-}
 </style>

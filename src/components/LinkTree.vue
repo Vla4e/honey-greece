@@ -1,7 +1,8 @@
 <template>
   <div :class="brand.disabled ? 'disabled' : ''" class="link-tree">
-    <span @click="goToPage(typedBrands.urlSlug)" class="tree-route" :class="currentBrandPage ? 'active': ''">
-      {{typedBrands.name}}
+    <span @click="goToPage(typedBrands.urlSlug, typedBrands.link)" class="tree-route" :class="currentBrandPage ? 'active': ''">
+      <OktoText :fontSize="16" v-if="typedBrands.name === 'Okto'"/>
+      <span v-else>{{typedBrands.name}}</span>
     </span>
     <div v-if="renderDropdownTree" class="dropdown-tree">
       <img :src="treeRoot" class="root"/>
@@ -51,7 +52,7 @@ export default {
         }
       })
       typedBrands.name = props.brand.name
-      typedBrands.link = props.brand.linkto
+      typedBrands.link = props.brand.linkTo
       typedBrands.urlSlug = props.brand.urlSlug
       if(!props.brand.lines.length){
         renderDropdownTree.value = false
@@ -74,9 +75,9 @@ export default {
       }
     }, { immediate: true });
 
-    function goToPage(brand){
-      // console.log("going to:", brand)
-      if(brand === 'All Products'){
+    function goToPage(brand, linkTo){
+      console.log("going to linktree:", brand, linkTo)
+      if(brand === 'All Products' || linkTo === '/all-products'){
         router.push({ name: 'AllProducts'}).catch(err => {
           console.log("error while routing", err)
         });

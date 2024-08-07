@@ -17,6 +17,7 @@
 import { ref, watch } from 'vue';
 import { useGlobalStore } from '@/store/global.js'
 import { storeToRefs } from 'pinia';
+
 export default {
   name: 'PageTransition',
   setup(){
@@ -24,10 +25,18 @@ export default {
     let showSlide2 = ref(false)
     let globalStore = useGlobalStore()
     let { playAnimationOnEnter } = storeToRefs(globalStore)
+
+    function adjustPosition () {
+      const currentScrollY = window.scrollY + 'px';
+      document.querySelector('.transition-slide-1').style.top = currentScrollY;
+      document.querySelector('.transition-slide-2').style.top = currentScrollY;
+    };
+
     //ROUTER TRANSITION
     watch(playAnimationOnEnter, (newVal) => {
       if (newVal) {
         requestAnimationFrame(() => {
+            adjustPosition(); // Adjust position of slides to current view.
             showSlide.value = true; // start first slide animation
           setTimeout(() => {
             showSlide2.value = true;
@@ -44,23 +53,7 @@ export default {
         });
       }
     });
-    // watch(playAnimationOnEnter, () => {
-    //   if(playAnimationOnEnter.value){
-    //       showSlide.value = true
-    //       setTimeout(()=> {
-    //         showSlide2.value = true
-    //       }, 600)
-    //       setTimeout(()=>{
-    //         showSlide.value = false
-    //       }, 2600)
-    //       setTimeout(()=>{
-    //         showSlide2.value = false
-    //       }, 2000)
-    //       setTimeout(()=>{
-    //         globalStore.changeAnimationFlag(false)
-    //       }, 3500)
-    //   }
-    // })
+    
     return { showSlide, showSlide2 }
   }
 }
@@ -69,27 +62,33 @@ export default {
 .transition-container{
   position: fixed;
   width: 100vw;
-  height: 100vw;
+  height: 100vh;
   z-index: 10000;
 }
 
 .slide-transition{
   overflow: hidden;
+  will-change: transform;
+  position: fixed;
+  width: 100vw;
+  height: 100vh;
+  z-index: 10001;
 }
 .transition-slide{
   position: absolute;
-  width: 100%;
-  height: 100%;
+  width: 100vw;
+  height: 100vh;
   overflow: hidden;
   display: flex;
   justify-content: center;
   align-items: center;
+  z-index: 10002;
   &-1{
-    z-index: 10000;
+    z-index: 10003;
     background-color: white;
   }
   &-2{
-    z-index: 10001;
+    z-index: 10004;
     background-color: #131313;
   }
 }
@@ -98,6 +97,10 @@ export default {
   font-size: 100px;
   font-weight: 600;
   color: white;
+  // z-index: 10050;
+  @media(max-width: 767px){
+    font-size: 50px;
+  }
 }
 
 // Slide animations - consider transition duration in setTimeouts above

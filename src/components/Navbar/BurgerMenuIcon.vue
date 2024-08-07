@@ -30,30 +30,34 @@ onUnmounted(()=>{
 
 <style lang="scss" scoped>
 .menu-icon {
-    width: 40px; /* Width of the hamburger menu */
-    height: 30px; /* Total height of the hamburger menu */
+    width: 50px !important;
+    height: 50px !important;
     display: flex;
     flex-direction: column;
-    justify-content: space-around;
+    justify-content: center;
+    align-items: center;
     cursor: pointer;
     z-index: 20000;
 }
 
 .bar {
     height: 2px;
-    width: 100%;
+    width: 80%;
     background-color: var(--navbar-color);
     transition: transform 0.4s ease, opacity 0.4s ease, width 0.4s ease;
+    margin-bottom: 7px;
     &:nth-child(1), &:nth-child(3){
-      width: 80%;
-      margin: auto;
+      width: 60%;
+    }
+    &:nth-child(3){
+      margin-bottom: 0px;
     }
 }
 
 .menu-icon.active .bar:nth-child(1) {
-    transform: translateY(8px) rotate(45deg);
-    width: 100% !important;
-    margin: none !important;
+    transform:  translateY(11px) rotate(45deg);
+    // width: 100% !important;
+    margin: 0 !important;
 }
 
 .menu-icon.active .bar:nth-child(2) {
@@ -62,9 +66,9 @@ onUnmounted(()=>{
 }
 
 .menu-icon.active .bar:nth-child(3) {
-    transform: translateY(-8px) rotate(-45deg);
-    width: 100% !important;
-    margin: none !important;
+    transform: rotate(-45deg);
+    // width: 100% !important;
+    margin: 0 !important;
 }
 
 </style>

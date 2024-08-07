@@ -1,9 +1,9 @@
 const oktoConfig = {
   brand: "Okto",
   urlSlug: "okto",
-  fullBrandName: "Okto",
+  fullBrandName: "Oktώ",
   jarSizes: ['450g', '300g'],
-  tagline: "Ultra Premium Greek Honey",
+  tagline: "Premium Greek Honey",
   productLines: ['Multiflorals', 'Monoflorals'],
   brandDescription: `Oktώ emerges as our esteemed premium brand, characterized by its exceptional quality and unwavering commitment to excellence. With a focus on delivering superior taste and consistency, Oktώ brings forth a range of premium honey selections, each bearing the hallmark of quality and authenticity that defines Hellenic Premium Honey.`,
   brandDescriptionShort: `Oktώ stands as our esteemed premium brand, known for its exceptional quality and unwavering commitment to excellence. Focused on superior taste and consistency, Oktώ offers a range of premium honey selections, each embodying the hallmark of quality and authenticity synonymous with Hellenic Premium Honey.`,

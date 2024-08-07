@@ -1,9 +1,11 @@
 <template>
   <div class="scene-container" ref="sceneContainer">
 
-    <canvas ref="webGl" class="webGl" />
+    <canvas v-show="!isLoading" ref="webGl" class="webGl" />
+    <LoadingIndicator style="width: 100px; height: 100px;" v-if="isLoading" class="jar-loading"/>
 
     <!-- <button class="reset-button" @click="resetScene">X</button> -->
+
     <div class="size-selection">
       <button v-if="currentBrand === 'okto'" @click="selectJarSize('large')" :class="currentJarSize === 'large' ? 'selected': ''" class="large-jar">
         450g
@@ -14,16 +16,11 @@
       <button v-if="currentBrand !== 'okto'" @click="selectJarSize('small')" :class="currentJarSize === 'small' ? 'selected': ''" class="small-jar">
         150g
       </button>
-      <!-- <button @click="changeMat()" style="position:absolute; top: 80%; left: 50%;">TEXTURE</button> -->
+      <!-- <button @click="triggerTextureTransition()" style="position:absolute; top: 80%; left: 50%;">TEXTURE</button> -->
     </div>
-    <div class="target" style="position: absolute; top: 5%; left: 6%; display: flex; width: 100%;">
-      <button style="margin-right: 10px;" @click="cycleMatcap(0)">prev</button>
-      <button style="margin-right: 10px;" @click="toggleShader()">toggle shader: {{ matcapType ? 'keep original color' : 'force honey color' }}</button>
-      <button style="margin-right: 10px;" @click="renderMatcap()">RENDER: {{ matcapId }}</button>
-      <button style="margin-right: 10px;" @click="cycleMatcap(1)">next</button>
-    </div>
+
     <div style="position: absolute; top: 0%; left: -50%; display: flex; width: 55%;">
-      <PositionSliders  class="target" :jarSmall="jarSmall" :jarMedium="jarMedium"/>
+      <!-- <PositionSliders  class="target" :jarSmall="jarSmall" :jarMedium="jarMedium"/> -->
       <!-- <div class="sliders">
         <label for="xSlider">X Position:</label>
         <input type="range" id="xSlider" min="-100" max="100" step="1" v-model="x" @input="updatePosition('x', x)">
@@ -35,6 +32,7 @@
         <input type="range" id="zSlider" min="-100" max="100" step="1" v-model="z" @input="updatePosition('z', z)">
       </div> -->
     </div>
+
   </div>
 </template>
 
@@ -63,18 +61,22 @@ import {
   AxesHelper,
   CameraHelper,
   BoxHelper,
-Clock,
-Color,
-ShaderMaterial,
-MeshMatcapMaterial
+  Clock,
+  Color,
+  ShaderMaterial,
+  CubeCamera,
+  WebGLCubeRenderTarget,
+  BackSide,
+  BoxGeometry,
+  SRGBColorSpace,
+  WebGLRenderTarget,
+  CubeTexture,
+  CanvasTexture,
+  EquirectangularReflectionMapping,
+  DoubleSide
 } from "three";
 
-import {
-  AnimationMixer,
-  LoopOnce,
-} from "three";
-
-import { watch, onMounted, onUnmounted,  ref, computed, nextTick, inject, toRaw  } from "vue";
+import { watch, onMounted, onUnmounted, onBeforeUnmount,  ref, computed, nextTick, inject, toRaw  } from "vue";
 import { get, objectEntries, useWindowSize } from "@vueuse/core";
 import { useProductStore } from '@/store/product.js';
 
@@ -101,11 +103,11 @@ import { EXRLoader } from 'three/addons/loaders/EXRLoader.js';
 
 import { debounce, parabolicPathCoordinate } from '@/helpers/globalFunctions.js'
 import { initiateObjectRotation } from '@/helpers/3DObjectPan.js'
-import TWEEN, { update } from '@tweenjs/tween.js';
 
 
 import Stats from "stats.js";
 import PositionSliders from "./PositionSliders.vue";
+import LoadingIndicator from "./LoadingIndicator.vue";
 
 
 /* "ENUMS" */
@@ -132,6 +134,14 @@ const cameraConfigs = Object.freeze({
   x: 0.35,
   y: 0.06,
   z: 0
+  // x: 0.56,
+  // y: 0,
+  // z: 0.045
+})
+const cameraConfigsMobile = Object.freeze({
+  x: 0.25,
+  y: 0.06,
+  z: 0
 })
 
 Cache.enabled = true;
@@ -141,6 +151,8 @@ export default {
     let jarMedium = ref([]);
     let jarSmall = ref([]);
 
+
+    let isLoading = ref(false)
     //--------------------------------------------------------- DELETE ABOVE
     let stats = new Stats();
     //ref to canvas, window size
@@ -148,10 +160,12 @@ export default {
     document.body.appendChild(stats.dom)
     let emitter = inject('emitter')
 
+    let globalOrbitControls;
+
     const webGl = ref();
     const sceneContainer = ref();
     const productStore = useProductStore();
-    let slugs = {
+    let textureUrlSlugs = {
       brand: 'haa',
       productLine: 'monoflorals',
       size: '300g',
@@ -165,6 +179,7 @@ export default {
     const containerHeight = ref(0);
 
     const aspectRatio = computed(() => {
+      console.log("COMPUTING AR")
       return containerWidth.value / containerHeight.value;
     });
     
@@ -243,6 +258,7 @@ export default {
     let currentJarScene = null;
     let upcomingJarScene = null;
     let currentJarSize = ref(jarConfigs.medium.name);
+    let currentJarSizeGrams = ref(null);
     let upcomingJarSize = ref('');
     let jarScenes = {}; // store loaded model to avoid reloading
 
@@ -262,55 +278,178 @@ export default {
     let loadedText = false;
     let labelTest;
     let matcapId = ref(1);
-    async function changeMat(){
-      let textureLoad = await loadTexture('/assets/label-textures-2/haa/monoflorals/300g/fir_limited.png')
-      textureLoad.flipY = false;
-      let textureLoad2 = await loadTexture('/assets/label-textures-2/haa/monoflorals/300g/pine_limited.png')
-      textureLoad2.flipY = false;
+    let globalTextureLoader = new TextureLoader()
+    const { isMobile } = inject('screenSize')
 
-      globalScene.traverse((obj)=>{
-        if(obj.isMesh){
-          if(obj.name.includes('150g')){
-            jarSmall.value.push(obj)
-          } else if (obj.name.includes('300g')){
-            jarMedium.value.push(obj)
-          }
-          if(obj.name === 'label_object_300g'){
-            labelTest = obj
-            labelTest.material = new ShaderMaterial({
-              uniforms: {
-                  textureA: { type: 't', value: textureLoad },
-                  textureB: { type: 't', value: textureLoad2 },
-                  linePosition: { type: 'f', value: 0.0 }
-              },
-              vertexShader: `
-                  varying vec2 vUv;
-                  void main() {
-                      vUv = uv;
-                      gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
-                  }
-              `,
-              fragmentShader: `
-                  uniform sampler2D textureA;
-                  uniform sampler2D textureB;
-                  uniform float linePosition;
-                  varying vec2 vUv;
-                  void main() {
-                      vec4 colorA = texture2D(textureA, vUv);
-                      vec4 colorB = texture2D(textureB, vUv);
-                      float blendFactor = step(linePosition, vUv.x);
-                      gl_FragColor = mix(colorA, colorB, blendFactor);
-                  }
-              `,
-              transparent: true
-            });
-          }
+
+///////////////////////////
+
+    // function sampleEnvironmentMap(direction) {
+    //     // Create a temporary scene and camera
+    //     const tempScene = new Scene();
+    //     const tempCamera = new CubeCamera(0.1, 10, 1);
+    //     console.log(!!globalScene.environment)
+    //     tempScene.background = globalScene.environment;
+
+    //     // Update the cube camera to the position we want to sample
+    //     tempCamera.position.copy(direction);
+    //     tempCamera.update(globalRenderer, tempScene);
+
+    //     // Create a render target
+    //     const renderTarget = new WebGLRenderTarget(1, 1);
+
+    //     // Render the scene
+    //     globalRenderer.setRenderTarget(renderTarget);
+    //     globalRenderer.render(tempScene, tempCamera);
+
+    //     // Read the pixel value
+    //     const pixelBuffer = new Uint8Array(4);
+    //     globalRenderer.readRenderTargetPixels(renderTarget, 0, 0, 1, 1, pixelBuffer);
+
+    //     // Convert to normalized RGB
+    //     const color = new Color(
+    //         pixelBuffer[0] / 255,
+    //         pixelBuffer[1] / 255,
+    //         pixelBuffer[2] / 255
+    //     );
+
+    //     // Clean up
+    //     renderTarget.dispose();
+
+    //     return color;
+    // }
+
+
+/////////////////////
+
+
+
+
+    async function changeMat(){
+      // let textureLoad = await loadTexture('/assets/label-textures-2/haa/monoflorals/300g/fir_limited.png')
+      // textureLoad.flipY = false;
+      // let textureLoad2 = await loadTexture('/assets/label-textures-2/haa/monoflorals/300g/pine_limited.png')
+      // textureLoad2.flipY = false;
+      console.log("BRAND CONFIGS", brandConfigs[textureUrlSlugs.brand.toUpperCase()].brandProductLines['Monoflorals'].flavours)
+      let tempFlavors = brandConfigs[textureUrlSlugs.brand.toUpperCase()].brandProductLines['Monoflorals'].flavours
+      let allTextures = []
+      async function loadAllTextures(){
+        console.log("TEXTURE URL SLUGS", textureUrlSlugs)
+        for (let i = 0; i<5; i++) {
+          console.log("Loading texture:", tempFlavors[i].urlSlug)
+          let tempTexture = await loadTexture(`/assets/label-textures-2/haa/monoflorals/300g/${tempFlavors[i].urlSlug}.png`)
+          console.log("FINISHED LOADING")
+          tempTexture.flipY = false
+          allTextures.push(tempTexture)
         }
-      })
-      console.log("SMALL", jarSmall.value)
-      console.log("MEDIUM", jarMedium.value)
+      }
+      await loadAllTextures();
+
+
+      // globalScene.traverse((obj)=>{
+      //   if(obj.isMesh){
+      //     if(obj.name.includes('150g')){
+      //       jarSmall.value.push(obj)
+      //     } else if (obj.name.includes('300g')){
+      //       jarMedium.value.push(obj)
+      //     }
+      //     if(obj.name === 'label_object_300g'){
+      //       labelTest = obj
+      //       labelTest.material = new ShaderMaterial({
+      //         uniforms: {
+      //             textureA: { type: 't', value: textureLoad },
+      //             textureB: { type: 't', value: textureLoad2 },
+      //             linePosition: { type: 'f', value: 0.0 }
+      //         },
+      //         vertexShader: `
+      //             varying vec2 vUv;
+      //             void main() {
+      //                 vUv = uv;
+      //                 gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+      //             }
+      //         `,
+      //         fragmentShader: `
+      //             uniform sampler2D textureA;
+      //             uniform sampler2D textureB;
+      //             uniform float linePosition;
+      //             varying vec2 vUv;
+      //             void main() {
+      //                 vec4 colorA = texture2D(textureA, vUv);
+      //                 vec4 colorB = texture2D(textureB, vUv);
+      //                 float blendFactor = step(linePosition, vUv.x);
+      //                 gl_FragColor = mix(colorA, colorB, blendFactor);
+      //             }
+      //         `,
+      //         transparent: true
+      //       });
+      //     }
+      //   }
+      // })
+      console.log("ALREADY ATTEMPTING AMTERIAL")
+      globalObj300g.material = new ShaderMaterial({
+        uniforms: {
+            textures: { value: allTextures },
+            currentTextureIndex: { type: 'i', value: 0 },
+            nextTextureIndex: { type: 'i', value: 1 },
+            transitionProgress: { type: 'f', value: 0.0 }
+        },
+        vertexShader: `
+            varying vec2 vUv;
+            void main() {
+                vUv = uv;
+                gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+            }
+        `,
+        fragmentShader: `
+            uniform sampler2D textures[10]; // Adjust size based on your needs
+            uniform int currentTextureIndex;
+            uniform int nextTextureIndex;
+            uniform float transitionProgress;
+            varying vec2 vUv;
+
+            void main() {
+                vec4 currentTextureColor = texture2D(textures[currentTextureIndex], vUv);
+                vec4 nextTextureColor = texture2D(textures[nextTextureIndex], vUv);
+                gl_FragColor = mix(currentTextureColor, nextTextureColor, transitionProgress);
+            }
+        `,
+        transparent: true,
+      });
+      globalObj300g.material.needsUpdate = true;
+      // const material2 = new ShaderMaterial({
+      //   uniforms: {
+      //       textures: { value: textures },
+      //       currentTextureIndex: { type: 'i', value: 0 },
+      //       nextTextureIndex: { type: 'i', value: 1 },
+      //       transitionProgress: { type: 'f', value: 0.0 }
+      //   },
+      //   vertexShader: `
+      //       varying vec2 vUv;
+      //       void main() {
+      //           vUv = uv;
+      //           gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+      //       }
+      //   `,
+      //   fragmentShader: `
+      //       uniform sampler2D textures[10]; // Adjust size based on your needs
+      //       uniform int currentTextureIndex;
+      //       uniform int nextTextureIndex;
+      //       uniform float transitionProgress;
+      //       varying vec2 vUv;
+
+      //       void main() {
+      //           vec4 currentTextureColor = texture2D(textures[currentTextureIndex], vUv);
+      //           vec4 nextTextureColor = texture2D(textures[nextTextureIndex], vUv);
+      //           gl_FragColor = mix(currentTextureColor, nextTextureColor, transitionProgress);
+      //       }
+      //   `,
+      //   transparent: true,
+      // });
+      // console.log("SMALL", jarSmall.value)
+      // console.log("MEDIUM", jarMedium.value)
       loadedText = true
     }
+
     let matcapType = ref(true);
     function toggleShader(){
       matcapType.value = !matcapType.value
@@ -320,351 +459,380 @@ export default {
 
     let matcapMaterial;
     function renderMatcap(){
-      if(matcapType.value){
-        changeMatcap(tempColor)
-      } else changeMatcap2(tempColor)
+      changeComplexMatcap()
+      return
     }
+
     let tempColor;
-    function switchColor(newColorHex) {
-      tempColor = new Color(newColorHex)
-      if (matcapMaterial) {
-        const newColor = new Color(newColorHex);
-        if (matcapType.value) {
-          changeMatcap(newColor);
-        } else {
-          changeMatcap2(newColor);
-        }
-      }
-    }
+    function createComplexMaterialOptions( 
+      density = 4.85, 
+      light = 0.091, 
+      viscosity = 1.03, 
+      hPosition = 0.50, 
+      hIntensity = 0.50, 
+      envMapIntensity = 1.00, 
+      viscosityWaviness = 14.00
+    ) {
+      // console.log("Applying with values: ", density, light, viscosity, hPosition, hIntensity, envMapIntensity, viscosityWaviness);
+      // console.log("GOT ENV?", globalScene.environment)
+      
+      const matcapTexture = globalTextureLoader.load(`/assets/matcaps/45.png`);
 
-    async function changeMatcap(color){
-      const textureLoader = new TextureLoader();
-      const matcapTexture = textureLoader.load(`/assets/matcaps/${matcapId.value}.png`);
-
-      // Step 2: Create a Shader Material with Color Adjustment
-      // const honeyColor = new Color(0xffc107); // Example color for honey (golden yellow)
-      const honeyColor = new Color(0xbf9000)
-
-      matcapMaterial = new ShaderMaterial({
-          uniforms: {
-              matcap: { value: matcapTexture },
-              colorAdjust: { value: color || new Color(0xbf9000) }
-          },
-          vertexShader: `
-              varying vec3 viewDir;
-              varying vec3 worldNormal;
-
-              void main() {
-                  vec4 mvPosition = modelViewMatrix * vec4(position, 1.0);
-                  viewDir = normalize(-mvPosition.xyz);
-
-                  vec4 worldPosition = modelMatrix * vec4(position, 1.0);
-                  worldNormal = normalize(mat3(modelMatrix) * normal);
-
-                  gl_Position = projectionMatrix * mvPosition;
-              }
-          `,
-          fragmentShader: `
-              uniform sampler2D matcap;
-              uniform vec3 colorAdjust; // RGB multiplier for color adjustment
-              varying vec3 viewDir;
-              varying vec3 worldNormal;
-
-              void main() {
-                  vec3 normal = normalize(worldNormal);
-                  vec3 reflected = reflect(viewDir, normal);
-
-                  float m = 2.0 * sqrt(reflected.z + 1.0);
-                  vec2 uv = reflected.xy / m + 0.5;
-
-                  vec4 texColor = texture2D(matcap, uv);
-                  // Apply the color adjustment
-                  vec3 tintedColor = texColor.rgb * colorAdjust;
-                  gl_FragColor = vec4(tintedColor, texColor.a);
-              }
-          `
-      });
-      globalObj300g.material = matcapMaterial
-      globalObj300g.material.needsUpdate = true;
-      globalObj150g.material = matcapMaterial
-      globalObj150g.material.needsUpdate = true;
-    }
-    async function changeMatcap6(){
-    const textureLoader = new TextureLoader();
-    const matcapTexture = textureLoader.load(`/assets/matcaps/${matcapId.value}.png`);
-
-    // Step 2: Create a Shader Material that uses the matcap's original color
-    matcapMaterial = new ShaderMaterial({
+      return new ShaderMaterial({
         uniforms: {
-            matcap: { value: matcapTexture }
+          matcap: { value: matcapTexture },
+          colorAdjust: { value: new Color("#f5ca2e")},
+          time: { value: 0 },
+          envMap: { value: globalScene.environment },
+          IOR: { value: density.value},
+          subSurfaceScatter: { value: light.value},
+          viscosity: { value: viscosity.value},
+          viscosityWaviness: { value: viscosityWaviness.value},
+          highlightPosition: { value: hPosition.value },
+          highlightIntensity: { value: hIntensity.value },
+          envMapIntensity: { value: envMapIntensity.value},
         },
         vertexShader: `
-            varying vec3 viewDir;
-            varying vec3 worldNormal;
+          varying vec3 vNormal;
+          varying vec3 vViewPosition;
+          varying vec3 vWorldPosition;
 
-            void main() {
-                vec4 mvPosition = modelViewMatrix * vec4(position, 1.0);
-                viewDir = normalize(-mvPosition.xyz);
-
-                vec4 worldPosition = modelMatrix * vec4(position, 1.0);
-                worldNormal = normalize(mat3(modelMatrix) * normal);
-
-                gl_Position = projectionMatrix * mvPosition;
-            }
+          void main() {
+            vNormal = normalize(normalMatrix * normal);
+            vec4 mvPosition = modelViewMatrix * vec4(position, 1.0);
+            vViewPosition = -mvPosition.xyz;
+            vWorldPosition = (modelMatrix * vec4(position, 1.0)).xyz;
+            gl_Position = projectionMatrix * mvPosition;
+          }
         `,
         fragmentShader: `
-            uniform sampler2D matcap;
-            varying vec3 viewDir;
-            varying vec3 worldNormal;
+          uniform sampler2D matcap;
+          uniform vec3 colorAdjust;
+          uniform float time;
+          uniform samplerCube envMap;
+          uniform float envMapIntensity;
+          uniform float IOR;
+          uniform float subSurfaceScatter;
+          uniform float viscosity;
+          uniform float highlightIntensity;
+          uniform float highlightPosition;
+          uniform float viscosityWaviness;
 
-            void main() {
-                vec3 normal = normalize(worldNormal);
-                vec3 reflected = reflect(viewDir, normal);
+          varying vec3 vNormal;
+          varying vec3 vViewPosition;
+          varying vec3 vWorldPosition;
 
-                float m = 2.0 * sqrt(reflected.z + 1.0);
-                vec2 uv = reflected.xy / m + 0.5;
+          vec3 getEnvironmentReflection(vec3 viewDir, vec3 normal) {
+            vec3 reflectVec = reflect(viewDir, normal);
+            return textureCube(envMap, reflectVec).rgb;
+          }
 
-                vec4 texColor = texture2D(matcap, uv);
+          void main() {
+            vec3 viewDir = normalize(vViewPosition);
+            vec3 normal = normalize(vNormal);
 
-                // Use the original color from the matcap texture
-                gl_FragColor = vec4(texColor.rgb, texColor.a);
-            }
+            // Refraction
+            vec3 refractColor = refract(viewDir, normal, 1.0 / IOR);
+            vec2 matcapUV = refractColor.xy * 0.5 + 0.5;
+            vec3 matcapColor = texture2D(matcap, matcapUV).rgb;
+
+            // Environment reflection with reduced intensity
+            vec3 reflColor = getEnvironmentReflection(viewDir, normal) * envMapIntensity;
+
+            // Adjusted Fresnel effect
+            float fresnelPower = 3.0;
+            float fresnel = pow(1.0 - dot(viewDir, normal), fresnelPower);
+
+            // Subsurface scattering approximation
+            vec3 scatterColor = colorAdjust * (1.0 - fresnel) * subSurfaceScatter;
+
+            // Viscosity simulation (subtle movement)
+            float viscosityEffect = sin(vWorldPosition.y * viscosityWaviness + time * 0.1) * viscosity;
+            matcapColor += vec3(viscosityEffect);
+
+            // Enhanced Vertical highlight
+            float verticalHighlight = smoothstep(highlightPosition - 0.1, highlightPosition + 0.1, abs(vWorldPosition.y));
+            verticalHighlight = pow(verticalHighlight, 2.0) * highlightIntensity * 2.0;
+
+            // Blend colors with adjusted weights
+            vec3 baseColor = mix(matcapColor, reflColor, fresnel * 0.5);
+            vec3 finalColor = mix(baseColor, colorAdjust, 0.5);
+            finalColor += scatterColor;
+
+            // Apply vertical highlight more prominently
+            finalColor += vec3(verticalHighlight);
+
+            // Color depth simulation
+            float depth = (vWorldPosition.y + 1.0) * 0.5; // Normalize to 0-1 range
+            finalColor *= mix(vec3(1.0), colorAdjust, depth);
+
+            // Enhance transparency effect with reduced environment map influence
+            float transparency = smoothstep(0.2, 0.8, abs(dot(viewDir, normal)));
+            finalColor = mix(finalColor, reflColor, transparency * 0.2);
+
+            gl_FragColor = vec4(finalColor, 1.0);
+          }
         `
-    });
-
-    // Apply the Shader Material to Your Mesh
-    globalObj300g.material = matcapMaterial;
-    globalObj300g.material.needsUpdate = true;
-    globalObj150g.material = matcapMaterial;
-    globalObj150g.material.needsUpdate = true;
-}
-    async function changeMatcap3(color){
-      console.log("DOING MATCAP3");
-      const textureLoader = new TextureLoader();
-      const matcapTexture = textureLoader.load(`/assets/matcaps/${matcapId.value}.png`);
-
-      // Step 2: Create a MeshMatcapMaterial with the loaded texture
-      const matcapMaterial = new MeshMatcapMaterial({
-          matcap: matcapTexture,
-          // color: new Color(0xBF9000) // Optional: set a base color if needed
       });
-
-      // Apply the new material to your objects
-      globalObj300g.material = matcapMaterial;
-      globalObj300g.material.needsUpdate = true;
-      globalObj150g.material = matcapMaterial;
-      globalObj150g.material.needsUpdate = true;
     }
-    
-    async function changeMatcap4(color){
-      const textureLoader = new TextureLoader();
-  const matcapTexture = textureLoader.load(`/assets/matcaps/${matcapId.value}.png`);
 
-  // Create a Shader Material with Full Color Override
-  const desiredColor = new Color(0xffc107); // Example color for honey (golden yellow)
 
-  matcapMaterial = new ShaderMaterial({
-      uniforms: {
+    async function testMaterial(
+      id
+    ) {
+
+      const idl = 11
+      const fixedGridPositionl = new Vector3(-0.55, 0.1, 0)
+      const densityl = 9.06;
+      const lightl = 0.7;
+      const viscosityl = 0.82
+      const hPositionl =  0.50
+      const hIntensityl = 0.50
+      const envMapIntensityl = 1.00
+      const viscosityWavinessl = 20.00
+      // console.log("Creating material with parameters:", 
+      //   idl,
+      //   densityl, 
+      //   lightl, 
+      //   viscosityl, 
+      //   hPositionl, 
+      //   hIntensityl, 
+      //   envMapIntensityl, 
+      //   viscosityWavinessl,
+      //   fixedGridPositionl
+      // )
+      try {
+        const matcapTexture = await globalTextureLoader.loadAsync(`/assets/matcaps/${idl}.png`);
+        console.log("TEXTURETEXTURE", matcapTexture)
+
+        console.log("Environment map:", globalScene.environment);
+
+        let testColor = new Color("#c17710");
+        return new ShaderMaterial({
+        uniforms: {
           matcap: { value: matcapTexture },
-          colorAdjust: { value: color || new Color(0xffc107) }
-      },
-      vertexShader: `
-          varying vec3 viewDir;
-          varying vec3 worldNormal;
-          varying vec2 vUv;
+          colorAdjust: { value: testColor },
+          time: { value: 0 },
+          envMap: { value: globalScene.environment },
+          IOR: { value: densityl },
+          subSurfaceScatter: { value: lightl },
+          viscosity: { value: viscosityl },
+          viscosityWaviness: { value: viscosityWavinessl },
+          highlightPosition: { value: hPositionl },
+          highlightIntensity: { value: hIntensityl },
+          envMapIntensity: { value: envMapIntensityl },
+          fixedGridPosition: { value: fixedGridPositionl } // New uniform
+        },
+        vertexShader: `
+          varying vec3 vNormal;
+          varying vec3 vViewPosition;
+          uniform vec3 fixedGridPosition;
 
           void main() {
-              vec4 mvPosition = modelViewMatrix * vec4(position, 1.0);
-              viewDir = normalize(-mvPosition.xyz);
-              vec4 worldPosition = modelMatrix * vec4(position, 1.0);
-              worldNormal = normalize(mat3(modelMatrix) * normal);
-
-              vUv = uv; // Pass UV coordinates to fragment shader
-
-              gl_Position = projectionMatrix * mvPosition;
+            vNormal = normalize(normalMatrix * normal);
+            vec4 mvPosition = modelViewMatrix * vec4(position, 1.0);
+            vViewPosition = -mvPosition.xyz;
+            gl_Position = projectionMatrix * mvPosition;
           }
-      `,
-      fragmentShader: `
+        `,
+        fragmentShader: `
           uniform sampler2D matcap;
-          uniform vec3 colorAdjust; // RGB color for full override
-          varying vec3 viewDir;
-          varying vec3 worldNormal;
-          varying vec2 vUv; // Receive UV coordinates
+          uniform vec3 colorAdjust;
+          uniform vec3 fixedGridPosition;
+          uniform float time;
+          uniform samplerCube envMap;
+          uniform float envMapIntensity;
+          uniform float IOR;
+          uniform float subSurfaceScatter;
+          uniform float viscosity;
+          uniform float highlightIntensity;
+          uniform float highlightPosition;
+          uniform float viscosityWaviness;
+
+          varying vec3 vNormal;
+          varying vec3 vViewPosition;
+
+          //OLD
+          // vec3 getEnvironmentReflection(vec3 viewDir, vec3 normal) {
+          //   vec3 reflectVec = reflect(viewDir, normal);
+          //   vec3 envMapCoord = fixedGridPosition + reflectVec * 20.0;
+          //   return textureCube(envMap, envMapCoord).rgb;
+          // }
+
+          vec3 getEnvironmentReflection(vec3 viewDir, vec3 normal) {
+            vec3 reflectVec = reflect(viewDir, normal);
+            // Use fixedGridPosition to determine the sampling direction, not as an offset
+            vec3 samplingDir = normalize(fixedGridPosition + reflectVec);
+            return textureCube(envMap, samplingDir).rgb;
+          }
 
           void main() {
-              vec3 normal = normalize(worldNormal);
-              vec3 reflected = reflect(viewDir, normal);
-              float m = 2.0 * sqrt(reflected.z + 1.0);
-              vec2 uv = reflected.xy / m + 0.5;
+            vec3 viewDir = normalize(vViewPosition);
+            vec3 normal = normalize(vNormal);
 
-              vec4 texColor = texture2D(matcap, uv);
-              float grayscale = dot(texColor.rgb, vec3(0.299, 0.587, 0.114));
+            // Refraction
+            vec3 refractColor = refract(viewDir, normal, 1.0 / IOR);
+            vec2 matcapUV = refractColor.xy * 0.5 + 0.5;
+            vec3 matcapColor = texture2D(matcap, matcapUV).rgb;
 
-              // Adjust brightness based on position
-              float brightness = 0.5 + 0.3 * sin(vUv.y * 3.14159); // Vertical gradient
-              brightness += 0.04 * (1.0 - 4.0 * abs(vUv.x - 0.5)); // Horizontal gradient
+            // Check matcapColor
+            if (any(isnan(matcapColor)) || any(isinf(matcapColor))) {
+              gl_FragColor = vec4(1.0, 0.0, 0.0, 1.0);
+              return;
+            }
 
-              vec3 fullyColored = brightness * grayscale * colorAdjust;
+            // Environment reflection
+            vec3 reflColor = getEnvironmentReflection(viewDir, normal) * envMapIntensity;
 
-              gl_FragColor = vec4(fullyColored, texColor.a);
+            // Check reflColor
+            if (any(isnan(reflColor)) || any(isinf(reflColor))) {
+              gl_FragColor = vec4(0.0, 1.0, 0.0, 1.0);
+              return;
+            }
+
+            // Fresnel effect
+            float fresnelPower = 3.0;
+            float fresnel = pow(1.0 - dot(viewDir, normal), fresnelPower);
+
+            // Subsurface scattering
+            vec3 scatterColor = colorAdjust * (1.0 - fresnel) * subSurfaceScatter;
+
+            // Viscosity effect
+            float viscosityEffect = sin(time * viscosityWaviness) * viscosity;
+            //OLD
+            //float viscosityEffect = sin(fixedGridPosition.y * viscosityWaviness + time * 0.1) * viscosity;
+            matcapColor += vec3(viscosityEffect);
+
+            // Vertical highlight
+            float verticalHighlight = smoothstep(highlightPosition - 0.1, highlightPosition + 0.1, fract(time * 0.1));
+            //OLD
+            //float verticalHighlight = smoothstep(highlightPosition - 0.1, highlightPosition + 0.1, abs(fixedGridPosition.y));
+            verticalHighlight = pow(verticalHighlight, 2.0) * highlightIntensity * 2.0;
+
+            // Blend colors
+            vec3 baseColor = mix(matcapColor, reflColor, fresnel * 0.8);
+            vec3 finalColor = mix(baseColor, colorAdjust, 0.5);
+            finalColor += scatterColor;
+            finalColor += vec3(verticalHighlight);
+
+            // Color depth simulation
+            float depth = 0.5 + sin(time * 0.1) * 0.5;
+            //OLD
+            //float depth = (fixedGridPosition.y + 1.0) * 0.5;
+            finalColor *= mix(vec3(1.0), colorAdjust, depth);
+
+            // Transparency effect
+            float transparency = smoothstep(0.2, 0.8, abs(dot(viewDir, normal)));
+            finalColor = mix(finalColor, reflColor, transparency * 0.2);
+
+            // Final check
+            if (any(isnan(finalColor)) || any(isinf(finalColor))) {
+              gl_FragColor = vec4(0.0, 0.0, 1.0, 1.0);
+              return;
+            }
+
+            gl_FragColor = vec4(finalColor, 1.0);
           }
-      `
-  });
-  // Apply the Shader Material to Your Mesh
-  // Assuming you have an existing mesh
-  globalObj300g.material = matcapMaterial;
-  globalObj300g.material.needsUpdate = true;
-  globalObj150g.material = matcapMaterial;
-  globalObj150g.material.needsUpdate = true;
-    }
-    async function changeMatcap5(color){
-  const textureLoader = new TextureLoader();
-  const matcapTexture = textureLoader.load(`/assets/matcaps/${matcapId.value}.png`);
-
-  // Create a Shader Material with Full Color Override
-  const desiredColor = new Color(0xffc107); // Example color for honey (golden yellow)
-
-  matcapMaterial = new ShaderMaterial({
-      uniforms: {
-          matcap: { value: matcapTexture },
-          colorAdjust: { value: color || new Color(0xffc107) }
-      },
-      vertexShader: `
-          varying vec3 viewDir;
-          varying vec3 worldNormal;
-          varying vec2 vUv;
-
-          void main() {
-              vec4 mvPosition = modelViewMatrix * vec4(position, 1.0);
-              viewDir = normalize(-mvPosition.xyz);
-              vec4 worldPosition = modelMatrix * vec4(position, 1.0);
-              worldNormal = normalize(mat3(modelMatrix) * normal);
-
-              vUv = uv; // Pass UV coordinates to fragment shader
-
-              gl_Position = projectionMatrix * mvPosition;
-          }
-      `,
-      fragmentShader: `
-          uniform sampler2D matcap;
-          uniform vec3 colorAdjust; // RGB color for full override
-          varying vec3 viewDir;
-          varying vec3 worldNormal;
-          varying vec2 vUv; // Receive UV coordinates
-
-          void main() {
-              vec3 normal = normalize(worldNormal);
-              vec3 reflected = reflect(viewDir, normal);
-              float m = 2.0 * sqrt(reflected.z + 1.0);
-              vec2 uv = reflected.xy / m + 0.5;
-
-              vec4 texColor = texture2D(matcap, uv);
-              float grayscale = dot(texColor.rgb, vec3(0.299, 0.587, 0.114));
-
-              // Calculate brightness based on vertical position and add horizontal light effects
-              float verticalGradient = 0.65 + 0.15 * sin(vUv.y * 3.14159); // Brighter at bottom and top, darker in middle
-              float horizontalGradient = 0.5 + 0.3 * pow(1.0 - abs(vUv.x - 0.5), 2.0); // Brighter towards the middle
-
-              float brightness = verticalGradient * horizontalGradient;
-
-              vec3 fullyColored = brightness * grayscale * colorAdjust;
-
-              gl_FragColor = vec4(fullyColored, texColor.a);
-          }
-      `
-  });
-  // Apply the Shader Material to Your Mesh
-  globalObj300g.material = matcapMaterial;
-  globalObj300g.material.needsUpdate = true;
-  globalObj150g.material = matcapMaterial;
-  globalObj150g.material.needsUpdate = true;
-}
-    async function changeMatcap2(color){
-      const textureLoader = new TextureLoader();
-      const matcapTexture = textureLoader.load(`/assets/matcaps/${matcapId.value}.png`);
-
-      // Step 2: Create a Shader Material with Full Color Override
-      const desiredColor = new Color(0xffc107); // Example color for honey (golden yellow)
-
-      matcapMaterial = new ShaderMaterial({
-          uniforms: {
-              matcap: { value: matcapTexture },
-              colorAdjust: { value: color || new Color(0xffc107) }
-          },
-          vertexShader: `
-              varying vec3 viewDir;
-              varying vec3 worldNormal;
-
-              void main() {
-                  vec4 mvPosition = modelViewMatrix * vec4(position, 1.0);
-                  viewDir = normalize(-mvPosition.xyz);
-
-                  vec4 worldPosition = modelMatrix * vec4(position, 1.0);
-                  worldNormal = normalize(mat3(modelMatrix) * normal);
-
-                  gl_Position = projectionMatrix * mvPosition;
-              }
-          `,
-          fragmentShader: `
-              uniform sampler2D matcap;
-              uniform vec3 colorAdjust; // RGB color for full override
-              varying vec3 viewDir;
-              varying vec3 worldNormal;
-
-              void main() {
-                  vec3 normal = normalize(worldNormal);
-                  vec3 reflected = reflect(viewDir, normal);
-
-                  float m = 2.0 * sqrt(reflected.z + 1.0);
-                  vec2 uv = reflected.xy / m + 0.5;
-
-                  vec4 texColor = texture2D(matcap, uv);
-
-                  // Convert to grayscale to extract lighting and shading info
-                  float grayscale = dot(texColor.rgb, vec3(0.299, 0.587, 0.114));
-
-                  // Apply the new color fully
-                  vec3 fullyColored = grayscale * colorAdjust;
-
-                  gl_FragColor = vec4(fullyColored, texColor.a);
-              }
           `
-      });
-      // Step 3: Apply the Shader Material to Your Mesh
-      // Assuming you have an existing mesh
-      globalObj300g.material = matcapMaterial;
-      globalObj300g.material.needsUpdate = true;
-      globalObj150g.material = matcapMaterial
-      globalObj150g.material.needsUpdate = true;
-    }
-    function cycleMatcap(direction) {
-      if (direction) {
-          matcapId.value = (matcapId.value % 44) + 1;
-      } else {
-          matcapId.value = (matcapId.value - 2 + 44) % 44 + 1;
+        });
+      } catch (e) {
+        console.log("Error while loading matcap texture", e)
       }
-      renderMatcap();
     }
+    // Define reactive variables
+    const density = ref(9.05);
+    const light = ref(0.74);
+    const viscosity = ref(0.82)
+    const hPosition =  ref(0.50)
+    const hIntensity = ref(0.50)
+    const envMapIntensity = ref(1.00)
+    const viscosityWaviness = ref(20.00)
+
+    // Replace changeMatcapFinal with a new function that uses createComplexMaterialOptions
+    async function changeComplexMatcap(id, color) {
+      let position = new Vector3(-0.55, 0.1, 0)
+      // let pos = new Vector3(0, 0, 0)
+      let testId = 41;
+      const tempPos = globalObj150g.position.clone()
+      globalObj150g.position.set(-0.55, 0.1, 0)
+
+
+      // let sampledEnvMapColor = sampleEnvironmentMap(position)
+      // function createUniformEnvironmentMap(color) {
+      //   const size = 1;
+      //   const canvas = document.createElement('canvas');
+      //   canvas.width = size;
+      //   canvas.height = size;
+      //   const ctx = canvas.getContext('2d');
+      //   ctx.fillStyle = `rgb(${color.r * 255},${color.g * 255},${color.b * 255})`;
+      //   ctx.fillRect(0, 0, size, size);
+
+      //   const uniformEnvMap = new CanvasTexture(canvas);
+      //   uniformEnvMap.mapping = EquirectangularReflectionMapping;
+      //   return uniformEnvMap;
+      // }
+      // globalGlass300g.material.envMap = createUniformEnvironmentMap(sampledEnvMapColor);
+      // globalGlass300g.material.needsUpdate = true;
+      const material2 = await testMaterial(
+        testId,
+        position,
+        density, 
+        light, 
+        viscosity, 
+        hPosition, 
+        hIntensity, 
+        envMapIntensity, 
+        viscosityWaviness // viscosityWaviness
+      )
+      
+      globalObj150g.position.copy(tempPos);
+      console.log("material2 Uniforms", material2)
+      
+      // const material = createComplexMaterialOptions(
+      //   density, 
+      //   light, 
+      //   viscosity, 
+      //   hPosition, 
+      //   hIntensity, 
+      //   envMapIntensity, 
+      //   viscosityWaviness
+      // );
+      // console.log("GOT MATERIAL", material2)
+      // Assuming globalObj300g and globalObj150g are defined elsewhere
+      if (globalObj300g) {
+        globalObj300g.material = material2;
+        globalObj300g.material.needsUpdate = true;
+      }
+      if (globalObj150g) {
+        globalObj150g.material = material2;
+        globalObj150g.material.needsUpdate = true;
+      }
+    }
+
     let labelMeshes;
     let globalObj300g;
     let globalObj150g;
+    let globalGlass150g;
+    let globalGlass300g;
+
     const setCanvas = async () => {
+
+      let tempSize = currentJarSize.value === 'medium' ? '300g' : currentJarSize.value === 'large' ? '450g' : '150g' //values used are in grams
       // Create Scene
+      isLoading.value = true
       globalScene = new Scene();
 
       // let jarPromise = await loadGlbReturnParts(loader, jarConfigs.medium.source)
-      let mediumSmallScene = await loadGlbReturnParts(loader, '/assets/glb/newJars/300-150-animation-choppy-v1.glb')
-      // let largeMediumScene = await loadGlbReturnParts(loader, '/assets/glb/newJars/450-300-animation-choppy-v1.glb')
-      labelMeshes = mediumSmallScene.labelMeshes
-      // for (let mesh of mediumSmallScene.meshes){
-      //     globalScene.add(mesh)
-      // }
+      let mediumSmallScene = await loadGlbReturnParts(loader, '/assets/glb/newJars/300-150-animation-choppy-v6.glb')
+      // let mediumSmallScene = await loadGlbReturnParts(loader, '/assets/glb/newJars/450-300-animation-choppy-v2.glb')
+      console.log("medium small scene", mediumSmallScene)
 
-      if(mediumSmallScene.jarSizes){
-        jarSizes = mediumSmallScene.jarSizes
-      }
       mixer = initializeMixer(mediumSmallScene.scene)
+      // mediumSmallScene.scene.position.set(0.25, -0.15, 0.1)
       globalScene.add(mediumSmallScene.scene)
+
+
+      // TEST remove label glass jar
       globalScene.traverse((obj)=>{
         if(obj.isMesh){
           if(obj.name === 'honey_object_300g'){
@@ -673,12 +841,29 @@ export default {
           } else if (obj.name === 'honey_object_150g'){
             globalObj150g = obj;
           } else if (obj.name.includes('jar')){
-            // console.log("OBJ TRANSMISSION", obj.material.transmission)
+            console.log("OBJ TRANSMISSION", obj.name)
+            if(obj.name === "jar_object_150g"){
+              globalGlass150g = obj
+            } else {
+              globalGlass300g = obj
+            }
             // obj.material.transparent = true;
             // obj.material.opacity = 0;
           }
+          if(obj.name.includes('150g')){
+            jarSmall.value.push(obj)
+          } else if (obj.name.includes('300g')){
+            jarMedium.value.push(obj)
+          }
+          if(obj.name.includes('label')){
+            // obj.material.opacity = 0;
+            if(obj.name.includes(tempSize)){
+              currentJarLabel = obj
+            } else upcomingJarLabel = obj
+          }
         }
       })
+
       let setupAnimationProps = setupAnimations(mixer, mediumSmallScene.gltf.animations)
       // destructuring makes globalScene.add throw error?
       // ({ clipActions, animationState } = setupAnimations(mixer, jarAnimation3.gltf.animations))
@@ -690,15 +875,8 @@ export default {
 
       jarScenes[currentJarSize.value] = currentJarScene; 
 
-      // let behindJarScene = await loadGlbReturnParts(loader, jarConfigs.large.source)
-      // behindJarScene.scene.position.set(-0.8, 0, -0.1)
-      // // await updateTexture()
-      // // globalScene.add(behindJarScene.scene)
-      // // setTimeout(()=>{
-      // //   jarBackToFront(behindJarScene.scene, 1200, 800)
-      // // }, 2000)
+
       let meshes = currentJarScene.children;
-      console.log("MESHES", meshes)
       let targetMesh = meshes[1]
 
       //Add jar scene to global scene
@@ -710,12 +888,21 @@ export default {
 
       // Camera
       globalCamera = new PerspectiveCamera(25, aspectRatio.value, 0.001, 5);
+      if( isMobile.value ){
+        // console.log("ISMOBILE")
+        globalCamera = new PerspectiveCamera(25, aspectRatio.value, 0.001, 3);
+        // globalCamera.initialZoom = 1.4;
+        globalCamera.position.set(cameraConfigsMobile.x, cameraConfigsMobile.y, cameraConfigsMobile.z)
+        // globalCamera.position.set(cameraConfigs.x, cameraConfigs.y, cameraConfigs.z);
+        // globalCamera.lookAt(0, 1, 0)
+      } else {
+        globalCamera.position.set(cameraConfigs.x, cameraConfigs.y, cameraConfigs.z); // Position the camera in front of the mesh
+      }
+      globalCamera.lookAt(0, cameraConfigs.y , 0)
       // globalCamera.zoomFactor = 10;
       let axesHelper2 = new AxesHelper(5);
       axesHelper2.setColors('blue', 'green', 'red')
       // targetMesh.add(axesHelper2)
-      globalCamera.position.set(cameraConfigs.x, cameraConfigs.y, cameraConfigs.z); // Position the camera in front of the mesh
-      globalCamera.lookAt(0, cameraConfigs.y , 0)
       // globalCamera.add(globalPointLight); //add pointlight to camera
       globalScene.add(globalCamera);
 
@@ -736,7 +923,13 @@ export default {
       // globalRenderer.setScissorTest( true );
       globalRenderer.shadowMap.enabled = false;
       globalRenderer.render(globalScene, globalCamera);
-      
+      updateTexture()
+      // globalOrbitControls = new OrbitControls(globalCamera, canvas);
+      // globalOrbitControls.enableDamping = true; // Add smooth damping
+      // globalOrbitControls.dampingFactor = 0.05;
+      // globalOrbitControls.minDistance = 0.1;
+      // globalOrbitControls.maxDistance = 10;
+      // globalOrbitControls.maxPolarAngle = Math.PI / 2;
       await setLightingEXR(globalRenderer)
       // await setLighting(globalRenderer)
     };
@@ -744,68 +937,31 @@ export default {
     async function computeTexture() {
       isFirstLoad = false;
       const baseTextureUrl = '/assets/label-textures-2';
-      isLoadingTexture = true;
 
-      // initialize nested object CACHE IS ENABLED - dont need this unless manual control
-      // if (!jarTextures[slugs.brand]) {
-      //     jarTextures[slugs.brand] = {};
-      // }
-      // if (!jarTextures[slugs.brand][slugs.productLine]) {
-      //     jarTextures[slugs.brand][slugs.productLine] = {};
-      // }
-      // if (!jarTextures[slugs.brand][slugs.productLine][slugs.size]) {
-      //     jarTextures[slugs.brand][slugs.productLine][slugs.size] = {};
-      // }
-
-      // // check if texture exists, return it
-      // if (jarTextures[slugs.brand][slugs.productLine][slugs.size][slugs.flavour]) {
-      //     return jarTextures[slugs.brand][slugs.productLine][slugs.size][slugs.flavour];
-      // }
 
       // load if not
       let jarTexturesLocal = []
       for (const size of jarSizes) {
-        let textureUrl = `${baseTextureUrl}/${slugs.brand}/${slugs.productLine}/${size}/${slugs.flavour}.png`;
+        let textureUrl = `${baseTextureUrl}/${textureUrlSlugs.brand}/${textureUrlSlugs.productLine}/${size}/${textureUrlSlugs.flavour}.png`;
         let texture = await loadTexture(textureUrl);
         texture.flipY = false;
         texture.generateMipMaps = true;
         texture.needsUpdate = true;
         jarTexturesLocal.push({ texture, size });
       }
-      // jarSizes.forEach(async (size) => {
-      //   let textureUrl = `${baseTextureUrl}/${slugs.brand}/${slugs.productLine}/${size}/${slugs.flavour}.png`;
-      //   let texture = await loadTexture(textureUrl);
-      //   texture.flipY = false;
-      //   texture.generateMipMaps = true
-      //   texture.needsUpdate = true;
-      //   jarTexturesLocal.push({texture, size})
-      // })
-      // let textureUrl = `${baseTextureUrl}/${slugs.brand}/${slugs.productLine}/${slugs.size}/${slugs.flavour}.png`;
-      // let texture = await loadTexture(textureUrl);
-      // texture.flipY = false;
-      // texture.generateMipMaps = true
-      // texture.needsUpdate = true;
-      // jarTextures[slugs.brand][slugs.productLine][slugs.size][slugs.flavour] = texture;
+
       return jarTexturesLocal
-      return texture;
     }
 
-    async function updateTexture(preLoadedTexture = null) {
-      let stopLoading = preLoadedTexture ? true : false;
-      if(isLoadingTexture && stopLoading) return
-      let labelMesh = null;
+    async function updateTexture() {
+      isLoadingTexture = true;
 
-      let tempSize = currentJarSize.value === 'medium' ? '300g' : currentJarSize.value === 'large' ? '450g' : '150g' 
-      currentJarScene.traverse((obj) => {
-        if(obj.isMesh){
-          if(obj.name.includes('label')){
-            if(obj.jarSize === tempSize){
-              currentJarLabel = obj
-            } else upcomingJarLabel = obj.clone()
-          }
-        }
-      })
-      
+      //
+      if(!currentJarScene){
+        isLoadingTexture = false
+        return
+      }
+
       // Check if the mesh and its material support textures
       if (currentJarLabel) {
         if (currentJarLabel.material && currentJarLabel.material.map) {
@@ -813,34 +969,27 @@ export default {
           currentJarLabel.material.map.dispose();
         }
       } else return
+
       if (upcomingJarLabel) {
         if (upcomingJarLabel.material && upcomingJarLabel.material.map) {
           // Dispose of the current texture to free up memory
           upcomingJarLabel.material.map.dispose();
         }
       } else return
+      
+      let textures = await computeTexture();
 
-      // Create a new texture loader
-      if(preLoadedTexture){
-        labelMesh.material.map = preLoadedTexture;
-        labelMesh.material.needsUpdate = true;
-        labelMesh.material.map = preLoadedTexture;
-        labelMesh.material.needsUpdate = true;
-      } else {
-        let textures = await computeTexture();
-        // texture.flipY = false;
-        textures.forEach((object) => {
-          if(object.size === tempSize){
-            currentJarLabel.material.map = object.texture
-            currentJarLabel.material.needsUpdate = true;
-          } else {
-            upcomingJarLabel.material.map = object.texture
-            upcomingJarLabel.material.needsUpdate = true;
-          }
-        })
+      textures.forEach((object) => {
+        if(object.size === currentJarSizeGrams.value){
+          currentJarLabel.material.map = object.texture
+          currentJarLabel.material.needsUpdate = true;
+        } else {
+          upcomingJarLabel.material.map = object.texture
+          upcomingJarLabel.material.needsUpdate = true;
+        }
+      })
         // labelMesh.material.map = texture;
         // labelMesh.material.needsUpdate = true;
-      }
       isLoadingTexture = false
     }
 
@@ -851,7 +1000,7 @@ export default {
       if(size === currentJarSize.value){
         return
       } else {
-        slugs.size = size === 'small' ? '150g' : size === 'medium' ? '300g' : '450g'
+        textureUrlSlugs.size = size === 'small' ? '150g' : size === 'medium' ? '300g' : '450g'
         // let texture = await loadTexture()
         // let movement = calculateJarMovement(currentJarScene)
         // await prepareSceneForSwitch(size, movement)
@@ -913,9 +1062,47 @@ export default {
       // pmremGenerator.compileEquirectangularShader();
       globalScene.background = null;
       globalScene.environment = envMap;
+      globalScene.environmentIntensity = 0.2;
       pmremGenerator.dispose()
       exrTexture.dispose();
+      isLoading.value = false;
     }
+    // async function setLightingEXR(renderer, options = {}) {
+    //   const {
+    //     exrPath = "/assets/exr/brown_photostudio_02_1k.exr",
+    //     exposure = 1.0,
+    //     backgroundBlurriness = 0,
+    //     backgroundIntensity = 1.0,
+    //     useAsBackground = false,
+    //     maxTexSize = 256
+    //   } = options;
+
+    //   let pmremGenerator = new PMREMGenerator(renderer);
+    //   pmremGenerator.compileEquirectangularShader();
+    //   pmremGenerator.maxTexSize = maxTexSize;
+
+    //   let exrTexture = await new EXRLoader().loadAsync(exrPath);
+    //   exrTexture.colorSpace = SRGBColorSpace;
+
+    //   let envMap = pmremGenerator.fromEquirectangular(exrTexture).texture;
+
+    //   if (useAsBackground) {
+    //     globalScene.background = envMap;
+    //     globalScene.backgroundBlurriness = backgroundBlurriness;
+    //     globalScene.backgroundIntensity = backgroundIntensity;
+    //   } else {
+    //     globalScene.background = null;
+    //   }
+
+    //   globalScene.environment = envMap;
+    //   renderer.toneMappingExposure = exposure;
+
+    //   pmremGenerator.dispose();
+    //   exrTexture.dispose();
+
+    //   return envMap; // In case you need to use it elsewhere
+    // }
+
     async function setLighting(renderer){
       let pmremGenerator = new PMREMGenerator( renderer );
       // let rgbeTexture = await new RGBELoader().loadAsync('/assets/HDR/garden.hdr')
@@ -965,18 +1152,24 @@ export default {
 
     const clock = new Clock();
     const clockTexture = new Clock();
+    const testClock = new Clock()
+    testClock.start()
+    let isAnimating = false
+    let animateTextureChange = false;
+    let transitionDuration = 1.0; // Duration of the texture transition in seconds
+    let transitionStartTime = 0; // Start time of the transition
+    let isTransitioning = false;
     const animate = () => {
-      
+      if(!isAnimating) return
       stats.begin();
       if(labelTest){
-        if(loadedText){
+        if(loadedText){ //Honey loadedTexture, apply oscillations based on time through shader.
           const elapsedTime = clockTexture.getElapsedTime();
           const linePosition = (Math.sin(elapsedTime) + 1) / 2; // Oscillate between 0 and 1
           labelTest.material.uniforms.linePosition.value = linePosition;
         }
       }
       globalRenderer.render(globalScene, globalCamera);
-      TWEEN.update();
       let delta = clock.getDelta();
       if(!animationState.get(clipActions[0]).isFinished){
         mixer.update(delta);
@@ -984,9 +1177,40 @@ export default {
       if(LOGTIMER === 0 && animationDONE){
         LOGTIMER++
       }
+      
+
+      // if (animateTextureChange) {
+      //   if (!isTransitioning) {
+      //     transitionStartTime = clock.getElapsedTime();
+      //     isTransitioning = true;
+      //   }
+
+      //   // Calculate the current progress of the transition
+      //   let transitionProgress = (clock.getElapsedTime() - transitionStartTime) / transitionDuration;
+      //   if (transitionProgress < 1.0) {
+      //     globalObj300g.material.uniforms.transitionProgress.value = transitionProgress;
+      //   } else {
+      //     globalObj300g.material.uniforms.transitionProgress.value = 0.0;
+      //     isTransitioning = false;
+      //     animateTextureChange = false; // Reset the flag until it needs to be triggered again
+      //   }
+      // }
       stats.end()
+      // globalOrbitControls.update();
       requestAnimationFrame(animate);
     };
+    function triggerTextureTransition(newTextureIndex) {
+      // if (newTextureIndex === globalObj300g.material.uniforms.currentTextureIndex.value) {
+      //     console.warn("Already displaying this texture.");
+      //     return; // Avoid transitioning to the same texture
+      // }
+      newTextureIndex = 1
+      // Set the next texture index to the new target
+      globalObj300g.material.uniforms.nextTextureIndex.value = newTextureIndex;
+
+      // Flag to start the transition in the animation loop
+      animateTextureChange = true;
+    }
 
     function getDistanceFromCanvas(target) {
       const distanceToOrigin = globalCamera.position.distanceTo(target.position);
@@ -1024,7 +1248,6 @@ export default {
 
   
     onMounted( async () => {
-      emitter.on('applyColor', switchColor)
       await nextTick();
       updateContainerSize(); // Set initial size
       window.addEventListener('resize', debouncedUpdateSize);
@@ -1037,47 +1260,102 @@ export default {
       await nextTick()
       // getDistanceFromCanvas(globalScene.children[0].children[0])
       // initSliderInteraction();
+      isAnimating = true;
       animate();
-      changeMat();
+      // changeMat();
       renderMatcap()
     });
+
+    onBeforeUnmount(() => {
+      // stop animating, effectively stop requestAnimationFrame
+      isAnimating = false;
+    })
     onUnmounted(() => {
-      // Remove resize event listener
       window.removeEventListener('resize', debouncedUpdateSize);
 
-      if (globalRenderer) {
-        globalRenderer.dispose();
+      // animationMixer cleanup
+      if (mixer) {
+        mixer.stopAllAction();
+        mixer.uncacheRoot(mixer.getRoot());
+        mixer = null;
       }
 
-      // Dispose all materials, geometries, textures, etc.
-      if (globalScene) {
-        globalScene.traverse(function (object) {
-          if (object.isMesh) {
-            if (object.geometry) {
-              object.geometry.dispose();
-            }
-            if (object.material) {
-              if (Array.isArray(object.material)) {
-                object.material.forEach(material => material.dispose());
-              } else {
-                object.material.dispose();
-              }
-            }
-            if (object.material && object.material.map) {
-              object.material.map.dispose();
-            }
+      // dispose of stats.js
+      if (stats && stats.dom && stats.dom.parentNode) {
+        stats.dom.parentNode.removeChild(stats.dom);
+      }
+
+      // dispose all scene nodes/materials
+      function disposeNode(node) {
+        if (node.geometry) {
+          node.geometry.dispose();
+        }
+
+        if (node.material) {
+          if (Array.isArray(node.material)) {
+            node.material.forEach(material => disposeMaterial(material));
+          } else {
+            disposeMaterial(node.material);
           }
-          if (object.isLight && object.shadow && object.shadow.map) {
-            object.shadow.map.dispose();
+        }
+      }
+
+      function disposeMaterial(material) {
+        Object.keys(material).forEach(prop => {
+          if (!material[prop]) return;
+          if (material[prop] !== null && typeof material[prop].dispose === 'function') {
+            material[prop].dispose();
           }
         });
+        material.dispose();
       }
 
+      if (globalScene) {
+        globalScene.traverse(disposeNode);
+        globalScene = null;
+      }
 
-      // Clear the internal three.js caches
+      // dispose renderer, force WebGL context loss
+      if (globalRenderer) {
+        const gl = globalRenderer.getContext();
+        if (gl && gl.getExtension('WEBGL_lose_context')) {
+          gl.getExtension('WEBGL_lose_context').loseContext();
+        }
+        globalRenderer.dispose();
+        globalRenderer = null;
+      }
+
+      if (globalCamera) {
+        globalCamera = null;
+      }
+
+      // threejs given cache clear method
       Cache.clear();
-      if (stats.dom) {
-        document.body.removeChild(stats.dom);
+
+      // clear references
+      currentJarScene = null;
+      upcomingJarScene = null;
+      jarScenes = {};
+      currentJarLabel = null;
+      upcomingJarLabel = null;
+      globalPointLight = null;
+      cameraHelper = null;
+      axesHelper = null;
+      initialLeftWorld = null;
+      initialRightWorld = null;
+      globalQuaternion = null;
+      labelMeshes = null;
+      globalObj300g = null;
+      globalObj150g = null;
+      matcapMaterial = null;
+      tempColor = null;
+      labelTest = null;
+      clipActions = [];
+      animationState.clear();
+
+      // force garbage collection - only some browsers support this
+      if (window.gc) {
+        window.gc();
       }
     });
 
@@ -1086,65 +1364,46 @@ export default {
       flavour: productStore.getFlavourSlug,
       productLine: productStore.getProductLineSlug,
       brand: productStore.getBrandSlug,
-      size: currentJarSize.value  // Assuming currentJarSize is a ref or reactive
-    }), (currentValues) => {
-      // Update slugs if changed
-      let tempSize = currentValues.size === 'large' ? '450g' : currentValues.size === 'medium' ? '300g' : '150g';
-      // Check if only the flavour slug has changed
-      if (
-        currentValues.flavour !== slugs.flavour &&
-        currentValues.brand === slugs.brand &&
-        currentValues.productLine === slugs.productLine &&
-        tempSize === slugs.size &&
-        !isFirstLoad
-      ) {
-          slugs.flavour = currentValues.flavour;
-          if(currentJarScene){
-            animateJarOutY(currentJarScene)
-            return
-          } else {
-            let interval = setInterval(() => {
-              if(currentJarScene && !isAnimationYActive){
-                animateJarOutY(currentJarScene)
-                isAnimationYActive = true;
-                clearInterval(interval)
-                return
-              }
-            }, 250)
-          }
-        // Call your specific function here if needed
-      }
+      size: currentJarSize.value
+    }), (currentValues, previousValues) => {
 
-      if (currentValues.productLine !== slugs.productLine) {
-        slugs.productLine = currentValues.productLine;
-      }
+      //Set local size to grams, set global values of jar sizes
+      let gramSize = currentValues.size === 'large' ? '450g' : currentValues.size === 'medium' ? '300g' : '150g';
+      currentJarSize.value = currentValues.size
+      currentJarSizeGrams.value = gramSize
+      if(currentValues.brand === 'okto'){
+        jarSizes = ['450g', '300g']
+      } else jarSizes = ['300g', '150g']
 
-      if (currentValues.brand !== slugs.brand) {
-        slugs.brand = currentValues.brand;
-        currentBrand.value = currentValues.brand;
-      }
+      // console.log("JSIZES", jarSizes)
+      // console.log("PROPS WATCHER ===============================");
+      // console.log("flavour |", currentValues.flavour, textureUrlSlugs.flavour, currentValues.flavour !== textureUrlSlugs.flavour);
+      // console.log("brand |", currentValues.brand, textureUrlSlugs.brand, currentValues.brand !== textureUrlSlugs.brand);
+      // console.log("productLine |", currentValues.productLine, textureUrlSlugs.productLine, currentValues.productLine !== textureUrlSlugs.productLine);
+      // console.log("size |", gramSize, textureUrlSlugs.size, gramSize !== textureUrlSlugs.size);
+      // console.log("PROPS WATCHER ===============================");
 
-      if (tempSize !== slugs.size) {
+      if ( 
+        currentValues.flavour !== textureUrlSlugs.flavour ||
+        currentValues.productLine !== textureUrlSlugs.productLine ||
+        currentValues.brand !== textureUrlSlugs.brand ||
+        gramSize !== textureUrlSlugs.size 
+      )
+      {
+        textureUrlSlugs = {
+          flavour: currentValues.flavour,
+          productLine: currentValues.productLine,
+          brand: currentValues.brand,
+          size: gramSize
+        };
+        updateTexture();
       }
-      
-      if (currentValues.flavour !== slugs.flavour) {
-        slugs.flavour = currentValues.flavour;
-        if (currentJarScene) {
-          // updateTexture();
-        } else {
-          let interval = setInterval(() => {
-            if (currentJarScene) {
-              // updateTexture();
-              clearInterval(interval);
-            }
-          }, 250);
-        }
-      }
-
-    }, {
+    }, 
+    {
       immediate: true,
       deep: true
     });
+
 
 
     return { 
@@ -1156,17 +1415,14 @@ export default {
       selectJarSize,
       updateTexture,
       changeMat,
-      changeMatcap2,
-      changeMatcap3,
-      changeMatcap4,
-      changeMatcap5,
-      cycleMatcap,
       matcapId,
       toggleShader,
       renderMatcap,
       matcapType,
       jarSmall,
-      jarMedium
+      jarMedium,
+      isLoading,
+      triggerTextureTransition
     };
   },
 };
@@ -1177,6 +1433,10 @@ export default {
   position: relative;
   width: 100%;
   height: 80%;
+  @media(max-width: 767px){
+    height: 100% !important;
+    min-height: 300px !important;
+  }
 }
 .reset-button{
   position: absolute;
@@ -1225,6 +1485,10 @@ export default {
 .webGl{
   width: 100%;
   height: 100%;
+  @media(max-width: 767px){
+    // min-height: 350px;
+    margin-bottom: 30px;
+  }
 }
 // .slider-container{
 //   width: 100%;

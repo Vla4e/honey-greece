@@ -13,7 +13,7 @@
       <div
         ref="carouselContent"
         class="carousel-content"
-        :class="carouselDirection === 'row' ? 'row' : 'column'"
+        :class="computedCarouselDirection === 'row' ? 'row' : 'column'"
         :style="{ transform: `translateX(${translateValue}px)` }"
       >
         <div
@@ -41,7 +41,7 @@ export default {
 </script>
 
 <script setup>
-import { ref, onMounted, onBeforeUnmount, watchEffect } from 'vue';
+import { ref, onMounted, onBeforeUnmount, watchEffect, inject, computed } from 'vue';
 
 const props = defineProps({
   brand: {
@@ -60,6 +60,13 @@ const props = defineProps({
   }
 });
 
+const { isMobile } = inject('screenSize')
+
+let computedCarouselDirection = computed(() => {
+  console.log("ISMOBILE", isMobile.value)
+  if(isMobile.value) return 'column'
+  else return 'row'
+})
 const carouselAnimationContainer = ref(null);
 const carouselContent = ref(null);
 
@@ -110,6 +117,7 @@ onBeforeUnmount(() => {
 });
 
 function startDrag(event) {
+  if(isMobile.value ) return
   event.preventDefault();
   isDragging.value = true;
   startX.value = event.type === 'touchstart' ? event.touches[0].clientX : event.clientX;
@@ -238,6 +246,13 @@ function preventDefaultSelection(event) {
   }
 }
 
+.fade-overflow{
+  &-right, &-left{
+    @media(max-width: 767px){
+      display: none;
+    }
+  }
+}
 .fade-overflow-right{
   position: absolute;
   right: 0;

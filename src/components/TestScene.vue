@@ -64,7 +64,14 @@ import {
 Clock,
 Color,
 sRGBEncoding,
-SRGBColorSpace
+SRGBColorSpace,
+//
+ACESFilmicToneMapping,
+CineonToneMapping,
+ReinhardToneMapping,
+LinearToneMapping,
+NoToneMapping,
+
 } from "three";
 
 import { InstancedMesh, Object3D, Matrix4, Group, ShaderMaterial, MeshMatcapMaterial } from 'three';
@@ -122,7 +129,7 @@ export default {
   setup() {
 
     
-    let honeyColor = '#ffc107'; //STARTING COLOR
+    let honeyColor = new Color('#ffc107'); //STARTING COLOR
     // let honeyColor = '#ff0000'; //STARTING COLOR
 
     let jarMedium = ref([]);
@@ -203,7 +210,10 @@ export default {
     let loadedText = false;
 
     const globalTextureLoader = new TextureLoader();
+    let jarPositions = []
+    let worldPosition = new Vector3(0.15000002, -0.1, 0.0)
     function createMatcapGrid(gridWidth = 12, gridHeight = 5, spacing = 0.1) {
+      console.log("CREATING GRID NOW")
       if (!globalScene || !currentJarScene) {
         console.error("Scene or jar scene not initialized");
         return;
@@ -227,9 +237,11 @@ export default {
             
             
             jarClone.position.set(xPos, yPos, 0);
+            jarPositions.push(jarClone.position)
             jarClone.traverse((obj) => {
               if (obj.isMesh && obj.name === 'honey_object_300g') {
                 const matcapId = idx;
+                
                 if(useMaterial.value === 'fixed'){
                   obj.material = createFixedMaterial(idx)
                   if(!honeyObject){
@@ -243,6 +255,7 @@ export default {
                     console.log("THIS IS THE HONEYOBJ", honeyObject.name)
                   }
                 } else if( useMaterial.value === 'complexOptions'){
+                  // console.log("CREATING COMPELXMATOPT", idx)
                   obj.material = createComplexMaterialOptions(idx,  density.value, light.value, viscosity.value, hPosition.value, hIntensity.value, envMapIntensity.value, viscosityWaviness.value)
                   if(!honeyObject){
                     honeyObject = obj
@@ -258,15 +271,14 @@ export default {
                 obj.name = `matcapped-${matcapId}`
                 idx++
               }
-            });
+            })
             jarGroup.add(jarClone);
             iterations++;
           } else {}
         }
       }
-
       globalScene.add(jarGroup);
-
+      console.log("JARPOS", jarPositions)
       // Adjust camera to view the vertical grid
       const gridWidthSize = (gridWidth - 1) * spacing;
       const gridHeightSize = (gridHeight - 1) * spacing;
@@ -358,7 +370,7 @@ export default {
       light = 1.03, 
       viscosity = 0.01
     ) {
-      console.log("Applying with values: ", density, light, viscosity)
+      // console.log("Applying with values: ", density, light, viscosity)
       
       const matcapTexture = globalTextureLoader.load(`/assets/matcaps/${id+1}.png`);
 
@@ -448,9 +460,9 @@ export default {
       hPosition = 0.50, 
       hIntensity = 0.50, 
       envMapIntensity = 1.00, 
-      viscosityWaviness = 20.00
+      viscosityWaviness = 20.00,
     ) {
-      console.log("Applying with values: ", density, light, viscosity, hPosition, hIntensity, envMapIntensity, viscosityWaviness)
+      // console.log("Applying with values: ", worldPosition)
       
       const matcapTexture = globalTextureLoader.load(`/assets/matcaps/${id+1}.png`);
 
@@ -468,12 +480,12 @@ export default {
           highlightPosition: { value: hPosition },
           highlightIntensity: { value: hIntensity },
           envMapIntensity: { value: envMapIntensity},
+          idealPosition: { value: worldPosition }
         },
         vertexShader: `
           varying vec3 vNormal;
           varying vec3 vViewPosition;
           varying vec3 vWorldPosition;
-
           void main() {
             vNormal = normalize(normalMatrix * normal);
             vec4 mvPosition = modelViewMatrix * vec4(position, 1.0);
@@ -485,6 +497,7 @@ export default {
         fragmentShader: `
           uniform sampler2D matcap;
           uniform vec3 colorAdjust;
+          uniform vec3 idealPosition;
           uniform float time;
           uniform samplerCube envMap;
           uniform float envMapIntensity;
@@ -495,13 +508,15 @@ export default {
           uniform float highlightPosition;
           uniform float viscosityWaviness;
 
+
           varying vec3 vNormal;
           varying vec3 vViewPosition;
           varying vec3 vWorldPosition;
 
           vec3 getEnvironmentReflection(vec3 viewDir, vec3 normal) {
             vec3 reflectVec = reflect(viewDir, normal);
-            return textureCube(envMap, reflectVec).rgb;
+            vec3 envMapCoord = idealPosition + reflectVec * 20.0; // Adjust the 10.0 as needed
+            return textureCube(envMap, envMapCoord).rgb;
           }
 
           void main() {
@@ -532,7 +547,7 @@ export default {
             verticalHighlight = pow(verticalHighlight, 2.0) * highlightIntensity * 2.0;
 
             // Blend colors with adjusted weights
-            vec3 baseColor = mix(matcapColor, reflColor, fresnel * 0.5);
+            vec3 baseColor = mix(matcapColor, reflColor, fresnel * 0.8);
             vec3 finalColor = mix(baseColor, colorAdjust, 0.5);
             finalColor += scatterColor;
 
@@ -552,13 +567,13 @@ export default {
         `
       });
     }
-    const density = ref(16.53);
-    const light = ref(1.03);
-    const viscosity = ref(0.01)
+    const density = ref(4.85);
+    const light = ref(0.09);
+    const viscosity = ref(1.03)
     const hPosition =  ref(0.50)
     const hIntensity = ref(0.50)
-    const envMapIntensity = ref(1.00)
-    const viscosityWaviness = ref(20.00)
+    const envMapIntensity = ref(0.01)
+    const viscosityWaviness = ref(14.00)
     function cycleMaterial() {
       switch (useMaterial.value) {
         case 'fixed':
@@ -580,6 +595,7 @@ export default {
       let idx = 0;
       globalScene.traverse((obj) => {
         if (obj.isMesh && obj.name.includes('matcapped')) {
+          console.log("inside APPLY", idx)
           if(useMaterial.value === 'fixed'){
             obj.material = createFixedMaterial(idx)
           } else if( useMaterial.value === 'matcap'){
@@ -601,7 +617,7 @@ export default {
     
 
     let matcapMaterial;
-    let useMaterial = ref('fixed')
+    let useMaterial = ref('complexOptions')
     function switchColor(newColorHex) {
       console.log("Got new hex", newColorHex)
       honeyColor = new Color(newColorHex)
@@ -664,7 +680,7 @@ export default {
       globalScene = new Scene();
 
       // let jarPromise = await loadGlbReturnParts(loader, jarConfigs.medium.source)
-      let mediumSmallScene = await loadGlbReturnParts(loader, '/assets/glb/newJars/300-150-animation-choppy-v3.glb')
+      let mediumSmallScene = await loadGlbReturnParts(loader, '/assets/glb/newJars/300-150-animation-choppy-v6.glb')
       // let largeMediumScene = await loadGlbReturnParts(loader, '/assets/glb/newJars/450-300-animation-choppy-v1.glb')
       labelMeshes = mediumSmallScene.labelMeshes
       // for (let mesh of mediumSmallScene.meshes){
@@ -809,7 +825,18 @@ export default {
       let envMap = pmremGenerator.fromEquirectangular(exrTexture).texture;
       // pmremGenerator.compileEquirectangularShader();
       globalScene.background = null;
+      console.log("ENVMAP", envMap)
       globalScene.environment = envMap;
+      globalScene.environmentIntensity = 1.0;
+      globalScene.toneMappingExposure = 1.0;
+      // renderer.toneMapping = ACESFilmicToneMapping;
+      // renderer.toneMapping = ReinhardToneMapping;
+      // renderer.toneMapping = NoToneMapping;
+      // renderer.toneMapping = LinearToneMapping;
+      // renderer.toneMapping = CineonToneMapping;
+      // renderer.toneMapping = AgXToneMapping;
+      // renderer.toneMapping = NeutralToneMapping;
+
       pmremGenerator.dispose()
       exrTexture.dispose();
     }
@@ -830,9 +857,13 @@ export default {
       }
       const elapsedTime = clock.getElapsedTime();
       if (honeyObject && honeyObject.material.uniforms) {
+        // console.log("inside HObject")
         if(honeyObject.material.uniforms.time){
-          if(honeyObject.material.uniforms.time.value){
-            console.log("elapsedTime", elapsedTime, honeyObject.name)
+          // console.log("inside TIME", honeyObject.material.uniforms.time.value)
+          if(honeyObject.material.uniforms.time.value || honeyObject.material.uniforms.time.value === 0){
+            
+        // console.log("inside HObject")
+            // console.log("elapsedTime", elapsedTime, honeyObject.name)
             honeyObject.material.uniforms.time.value = elapsedTime;
           }
         }
@@ -846,7 +877,7 @@ export default {
       requestAnimationFrame(animate);
     };
 
-  
+    let isSceneReady = ref(false)
     onMounted( async () => {
       emitter.on('applyColor', switchColor)
       setTimeout(() => {
@@ -858,6 +889,11 @@ export default {
       window.addEventListener('resize', debouncedUpdateSize);
       await setCanvas();
       await nextTick()
+      isSceneReady.value = true;
+      if(useMaterial.value === 'complexOptions'){
+        console.log("CALLING APPLY MAT CHANGES")
+        applyMaterialChanges()
+      }
       animate();
       createMatcapGrid()
     });

@@ -1,18 +1,23 @@
 <template>
-  <nav v-if="!isMobile" class="navbar" :class="navbarFloating ? 'floating': ''">
+  <nav class="navbar" :class="navbarFloating ? 'floating': ''">
     <div class="links-container">
+
       <div class="burger-icon-container">
+        <BurgerMenuIcon @click="toggleSidebar" class="burger-icon"/>
         <!-- <img :src="sidebar" @click="toggleSidebar" class="burger-icon"/> -->
       </div>
-      <div class="blend-links-container">
+
+      <div v-if="!isMobile && (!showSidebar || isMobile)" class="blend-links-container">
         <LinkTree v-for="brand in brands" :brand="brand"/>
       </div>
-      <div class="inquire-container">
+
+      <div v-if="!isMobile && (!showSidebar || isMobile)" class="inquire-container">
         <span class="blend-link" @click="toggleContactForm()">
           Inquire
         </span>
       </div>
-      <router-link class="logo-link" to="/">
+
+      <router-link class="logo-link home" to="/">
         <img v-if="currentNavbarColor === 'white'" :src="homeIconWhite" class="home-icon"/>
         <img v-else :src="homeIcon" class="home-icon" />
       </router-link>
@@ -21,11 +26,13 @@
 </template>
 
 <script>
-import { inject, ref, computed, onMounted, onUnmounted } from 'vue'
+import { inject, ref, computed, onMounted, onUnmounted, watch } from 'vue'
 import { useNavbarStore } from '@/store/navbar.js'
-import { useWindowSize } from '@vueuse/core'
+import { useSidebarStore } from '@/store/sidebar.js'
+
 import logoUrl from '@/assets/images/main-logo.png'
 import burgerIcon from '@/assets/images/burger-icon.svg'
+
 import homeIcon from '@/assets/images/home-icon.svg'
 import homeIconWhite from '@/assets/images/home-icon-white.svg'
 
@@ -34,19 +41,32 @@ import brandConfigs from "@/assets/brand-information/index.js"
 export default {
   name: 'NavbarComponent',
   setup() {
-    const { width: windowWidth, height: windowHeight } = useWindowSize();
-    let isMobile = ref(false);
-    if(windowWidth.value < 764){
-      isMobile.value = true;
-    } else isMobile.value = false
 
     let emitter = inject('emitter')
+    const { isMobile } = inject('screenSize')
+
+    const sidebarStore = useSidebarStore()
+    let showSidebar = computed(() => sidebarStore.getSidebarStatus)
+    let localSidebar = ref(false)
     
     const navbarStore = useNavbarStore();
+
     let navbarFloating = computed(() => navbarStore.getNavbarFloating)
-    
-    let currentNavbarColor = ref('white')
-    //"Map" brandConfigs to brands variable
+    //Nav color
+    let currentNavbarColor = computed(()  =>  {
+      console.log("COMPUTING", isMobile, navbarStore.getNavbarColor)
+      if(isMobile){
+        return navbarStore.getNavbarColor.mobile
+      } else return navbarStore.getNavbarColor.desktop
+    })
+
+    let originalNavbarColor = ref(currentNavbarColor.value);
+
+    watch(currentNavbarColor, (newColor) => {
+      document.documentElement.style.setProperty('--navbar-color', newColor);
+    });
+
+    //TODO: map brandConfigs to brands variable
     let brands = []
     Object.keys(brandConfigs).forEach((brand) => {
       let tempBrand = brandConfigs[brand]
@@ -79,7 +99,7 @@ export default {
           },
           {
             text: 'All products',
-            linkTo: 'products'
+            linkTo: '/all-products'
           }
         ]
       },
@@ -95,22 +115,36 @@ export default {
     })
 
     function toggleContactForm(){
-      console.log("TOGGLING")
+      console.log("Called toggle contact form")
       emitter.emit('toggleContactForm')
     }
 
-    function switchTextColor(colorString = 'black'){
-      console.log("Switching color 1111111111111111111111111111111111111111")
-      document.documentElement.style.setProperty('--navbar-color', `${colorString}`);
-      currentNavbarColor.value = colorString === 'black' ? 'black' : 'white'
+    function toggleSidebar() {
+      emitter.emit('toggleSidebar');
+      sidebarStore.setSidebarStatus(!showSidebar.value)
+      // showSidebar.value = !showSidebar.value;
+      if (showSidebar.value) {
+        originalNavbarColor.value = currentNavbarColor.value; // Store the original color
+        navbarStore.setNavbarColor({desktop: 'black', mobile: 'white'});
+        // switchTextColor('black');
+      } else {
+        navbarStore.setNavbarColor({desktop: originalNavbarColor.value, mobile: originalNavbarColor.value}); // Revert to original color
+        // switchTextColor(originalNavbarColor.value);
+      }
     }
 
+    // function switchTextColor(colorString = 'black'){
+    //   console.log("Switching color 1111111111111111111111111111111111111111", colorString)
+    //   document.documentElement.style.setProperty('--navbar-color', `${colorString}`);
+    //   currentNavbarColor.value = colorString === 'black' ? 'black' : 'white'
+    // }
+
     onMounted(() => {
-      emitter.on('switchTextColor', switchTextColor)
+      // emitter.on('switchTextColor', switchTextColor)
     })
 
     onUnmounted(() => {
-      emitter.off('switchTextColor')
+      // emitter.off('switchTextColor')
     })
     return { 
       logo: logoUrl,
@@ -118,9 +152,11 @@ export default {
       homeIconWhite,
       currentNavbarColor,
       sidebar: burgerIcon,
+      showSidebar,
       brands,
       navbarFloating,
       toggleContactForm,
+      toggleSidebar,
       isMobile
     };
   },
@@ -134,15 +170,24 @@ export default {
   flex-direction: column;
   width: 100vw;
   min-height: 10%;
+  @media(max-width: 767px){
+    height: 80px;
+  }
   background: transparent;
   position: relative;
   // margin-bottom: 2%;
   z-index: 2;
-  background: linear-gradient(to top, transparent 0%, #13131310 100%);
+  background: linear-gradient(to bottom, rgba(128, 128, 128, 0.1) 0%, transparent 100%);
   &.floating{
-    position: absolute;
+    min-height: 80px;
+    height: 80px;
+    position: fixed;
     top: 0;
-    left: 0;
+    left: 0; // Ensuring it aligns to the left edge
+    right: 0; // Ensuring it spans the entire width
+    width: 100%; // Overrides any other width properties
+    background: linear-gradient(to bottom, rgba(128, 128, 128, 0.7) 0%, rgba(128, 128, 128, 0) 100%);
+    // background: red;
   }
 }
 .blend-link{
@@ -180,11 +225,11 @@ export default {
   display: flex;
   flex-grow: 1;
   justify-content: space-between;
-  height: 0px;
-  padding: 0 2% 2% 2%;
+  height: 100%;
+  padding: 2% 4% 2% 4%;
   .burger-icon{
-    height: 50px;
-    width: 50px;
+    height: 35px;
+    width: 35px;
     cursor: pointer;
   }
   .burger-icon-container{
@@ -193,14 +238,19 @@ export default {
     justify-content: flex-start;
     align-items: center;
     z-index: 11;
+    @media(max-width: 767px){
+      // justify-content: center;
+      .burger-icon{
+        width: 30px;
+        height: 30px;
+        z-index: 100000;
+      }
+    }
     :hover{
       transform: scale(1.1);
       transition: all ease-in-out 0.3s;
     }
     .burger-icon{
-      position: absolute;
-      top: 2%;
-      left: 2%;
     }
   }
   .blend-links-container{

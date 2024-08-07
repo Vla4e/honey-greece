@@ -8,6 +8,9 @@ import PageTransition from './Transitions/PageTransition.vue'
 import BurgerMenuIcon from './Navbar/BurgerMenuIcon.vue'
 import Carousel from './Carousel.vue'
 import ColorPicker from './ColorPicker.vue'
+import OktoText from './OktoText.vue'
+import LoadingIndicator from './LoadingIndicator.vue'
+import LoadingScreen from './LoadingScreen.vue'
 
 import PositionSliders from './PositionSliders.vue'
 export default [
@@ -21,5 +24,8 @@ export default [
     BurgerMenuIcon,
     Carousel,
     ColorPicker,
-    PositionSliders
+    PositionSliders,
+    OktoText,
+    LoadingIndicator,
+    LoadingScreen
 ]

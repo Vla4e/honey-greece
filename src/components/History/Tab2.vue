@@ -46,11 +46,11 @@
 <script>
 export default {
   name: 'Tab2',
-  phases: 2,
+  phases: 2, // 0 indexed
 }
 </script>
 <script setup>
-import {ref, computed, inject, defineProps } from 'vue';
+import {ref, computed, inject } from 'vue';
 import router from '@/router/index.js'
 import { stringifyQuery } from 'vue-router';
 import quoteStart from '@/assets/pages/history/quote-start.png'

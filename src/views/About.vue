@@ -1,8 +1,20 @@
 <template>
 <div class="about-page">
-  <h1 id="floating-heading" class="floating-heading">Antonios' Team</h1>
+  <h1 v-if="!isMobile" id="floating-heading" class="floating-heading">Antonios' Team</h1>
+  <div v-else class="hero-section">
+    <h1 class="hero-heading">
+      Hellenic
+      <br/>
+      Premium Honey
+    </h1>
+    <p class="hero-text">
+      Allow us the pleasure of introducing the remarkable individuals who comprise our esteemed team, 
+      each contributing their unique expertise and passion to our collective endeavor.
+    </p>
+  </div>
+  <h2 v-if="isMobile" class="team-heading">Our Esteemed Team</h2>
   <div class="image-grid">
-    <div id="textContainer" class="text-container">
+    <div v-if="!isMobile" id="textContainer" class="text-container">
       <span class="name">{{ currentlySelected.name }}</span>
       <span class="description">{{ currentlySelected.text }}</span>
     </div>
@@ -10,18 +22,41 @@
       v-for="(person, index) in personnel"
       :key="index"
       class="image-item"
-      :class="currentlySelected.name === person.name ? 'selected' : ''"
+      :class="[currentlySelected.name === person.name ? 'selected' : '', `image-item-${person.name}`]"
       @click="selectPerson(person, index)"
     >
       <slot :name="index">
         <!-- <span class="role">owner</span> -->
         <img 
-        :src="person.url" 
-        :draggable="false"
-        :id="`image${index}`"
-        class="image" 
+          v-if="!isMobile"
+          :src="person.url" 
+          :draggable="false"
+          :id="`image${index}`"
+          class="image" 
         />
-        <span class="name">{{ person.name.toUpperCase() }}</span>
+        <span 
+          v-if="!isMobile"
+          class="name"
+        >
+          {{ person.name.toUpperCase() }}
+        </span>
+
+        <div v-if="isMobile" class="image-section">
+          <img 
+            :src="person.url" 
+            :draggable="false"
+            :id="`image${index}`"
+            class="image" 
+          />
+          <div :class="person.name"  class="floating-container">
+            <span class="name">{{ person.name }}</span>
+            <span class="role" v-html="person.role"></span>
+          </div>
+        </div>
+        <div v-if="isMobile" class="text-container">
+          <span class="description">{{ person.text }}</span>
+        </div>
+
       </slot>
     </div>
   </div>
@@ -29,7 +64,9 @@
 </template>
 
 <script setup>
-import { ref, onMounted, onUnmounted, nextTick } from 'vue';
+import { ref, onMounted, onUnmounted, nextTick, inject } from 'vue';
+
+const { isMobile } = inject('screenSize')
 
 const imageModules = import.meta.glob('@/assets/pages/about/*.png', {eager: true});
 let personnelTexts = {
@@ -40,13 +77,22 @@ let personnelTexts = {
   'eleni': `Eleni, the heart of our company, tirelessly coordinates all purchasing activities and oversees the seamless progression of sales from inception to completion. We are deeply grateful for her unwavering dedication and invaluable contributions to our team.`,
   'vaia': ` Vaia, our meticulous artisan, fills each jar with precision and crafts our delectable spreads in our small kitchen, ensuring every jar is handled with the utmost care and attention to detail. We are proud of her dedication to maintaining the highest standards of quality in every step of our production process.`
 }
+let personnelRoles = {
+  'antonios': `company<br/>owner`,
+  'christos': `beekeeper`,
+  'klion': `beekeeper`,
+  'kostas': `dedicated<br/>driver`,
+  'eleni': `heart of<br/>our company`,
+  'vaia': `meticulous<br/>artisan`
+}
 let personnel = Object.keys(imageModules).map((path) => {
   let splitPath = path.split('/')
   let name = splitPath[5].substring(0, splitPath[5].length-4)
   return {
     name,
     url: path,
-    text: personnelTexts[name]
+    text: personnelTexts[name],
+    role: personnelRoles[name]
   }
 })
 
@@ -70,7 +116,7 @@ function selectPerson(person, idx){
 function calculateTextPosition() {
   const largeImage = document.getElementById(`image${currentlySelectedIdx.value}`);
   const textContainer = document.getElementById('textContainer');
-
+  if(!textContainer) return;
   let smallImage;
   let leftHalf = (currentlySelectedIdx.value + 1) > (personnel.length / 2) ? false : true;
   if (leftHalf) {
@@ -214,6 +260,171 @@ onUnmounted(() => {
       .description{
         color: black;
         text-align: left;
+      }
+    }
+  }
+  @media(max-width: 767px){
+    width: 85%;
+    margin: auto;
+    display: flex;
+    flex-direction: column;
+    .hero-section{
+      display: flex;
+      flex-direction: column;
+      .hero-heading{
+        font-family: "DMSans";
+        font-size: 15px;
+        font-weight: 700;
+        text-align: left;
+        color: black;
+      }
+      .hero-text{
+        font-family: "DMSans";
+        font-size: 13px;
+        font-weight: 400;
+        text-align: left;
+        color: black;
+      }
+    }
+
+    .team-heading{
+      font-family: "DM Serif";
+      font-size: 32px;
+      font-weight: 400;
+      text-align: left;
+      color: black;
+      margin-bottom: 50px;
+      align-self: flex-start;
+    }
+
+    .image-grid{
+      flex-direction: column;
+      .image-item{
+        display: flex;
+        flex-direction: column;
+        width: 100% !important;
+        margin-bottom: 40px;
+
+        .image{
+          width: 60%;
+          // margin-bottom: 15px;
+          z-index: 1;
+        }
+        .text-container{
+          width: 100%;
+          position: static;
+        }
+        .image-section{
+          width: 100%;
+          height: 100%;
+          display: flex;
+          flex-direction: column;
+          position: relative;
+          margin-bottom: 15px;
+          .floating-container{
+            display: flex;
+            height: 100%;
+            position: absolute;
+            bottom: 0;
+            z-index: 3;
+            align-items: flex-end;
+            .name, .role{
+              font-family: "DMSans";
+              text-align: left;
+              line-height: 45px;
+              writing-mode: vertical-rl;
+              transform: rotate(180deg);
+              color: #F0F4F5;
+              text-transform: uppercase;
+              word-break: break-word;
+              text-align: left;
+            }
+            .name{
+              font-size: 42px;
+              font-weight: 700;
+              align-self: flex-end;
+            }
+            .role{
+              font-size: 36px;
+              font-weight: 400;
+            }
+          }
+        }
+        &-antonios{
+          .image{
+            align-self: flex-end;
+          }
+          .text-container{
+            .description{
+              text-align: right;
+            }
+          }
+        }
+
+        &-christos{
+          .image{
+            align-self: center;
+          }
+          .text-container{
+            .description{
+              text-align: right;
+            }
+          }
+          .floating-container{
+            right: 0;
+          }
+        }
+
+        &-klion{
+          .image{
+            align-self: center;
+          }
+          .text-container{
+            .description{
+              text-align: left;
+            }
+          }
+        }
+
+        &-eleni{
+          .image{
+            align-self: flex-end;
+          }
+          .text-container{
+            .description{
+              text-align: right;
+            }
+          }
+        }
+
+        &-kostas{
+          .image{
+            align-self: center;
+            margin-right: 20%;
+          }
+          .text-container{
+            .description{
+              text-align: left;
+            }
+          }
+          .floating-container{
+            right: 0;
+          }
+        }
+        
+        &-vaia{
+          .image{
+            align-self: flex-start;
+          }
+          .text-container{
+            .description{
+              text-align: left;
+            }
+          }
+          .floating-container{
+            right: 0;
+          }
+        }
       }
     }
   }

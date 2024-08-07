@@ -1,0 +1,439 @@
+<template>
+  <div class="tab-mobile-column">
+    <div class="section section-history">
+      <h1 class="heading">Our History</h1>
+      <p class="text">
+        For over 40 years, the Montouris family has been dedicated to the timeless craft of beekeeping, producing some of the finest honey in Greece. 
+        Today, we proudly continue this rich tradition, with Antonios Montouris at the helm, steering the course towards an even sweeter future.
+      </p>
+    </div>
+    <div class="section section-boxes-vertical">
+      <h2 class="floating-heading">
+        A Tradition of
+        <br/>
+        Excellence
+      </h2>
+      <img :src="gridImage1" class="image boxes-vertical" alt="honey boxes"/>
+      <p class="text">
+        It all began four decades ago, when the Montouris family established their honey business. 
+        What started as a humble endeavor grew into a labor of love and a testament to unwavering commitment.
+      </p>
+    </div>
+    <div class="section section-boxes-horizontal">
+      <img :src="image1" class="image boxes-horizontal" alt="honey boxes"/>
+      <p class="text">
+        When Antonios Montouris took the reins after his father's passing, 
+        he didn't just inherit a business; he inherited a legacy. 
+        His vision was clear – to expand, to innovate, 
+        and to share the exquisite honey from their hives with the world.
+      </p>
+    </div>
+    <div class="section section-beekeeper">
+      <span class="floating-heading">
+        Our journey
+        <br/>of honey
+      </span>
+      <img :src="image2" class="image beekeeper" alt="beekeeper"/>
+    </div>
+    <div class="section section-journey">
+        <span class="quote-container">
+          <img class="quote quote-start" :src="quoteStart"/>
+          <span class="text-between-quotes">
+            Our journey began with a simple premise
+          </span>
+          <img class="quote quote-end" :src="quoteEnd"/>
+        </span>
+        <p class="text">
+          Direct sales from our premises. 
+          The sheer quality of our honey garnered attention, and it was soon recognized as a benchmark for excellence. 
+          The demand for our golden nectar inspired us to diversify our offerings.
+        </p>
+        <span class="floating-heading">
+          Hellenic
+          <br/>premium
+          <br/>honey
+        </span>
+    </div>
+    <div class="section section-brands">
+      <span class="heading">Today, we are proud to introduce three distinct product series</span>
+      <h2 class="floating-heading">
+        honey
+        <br/>
+        product
+        <br/>
+        series
+      </h2>
+      <div class="haa-container row">
+        <img class="logo" :src="haa" alt="honey apiary academy">
+        <span class="description">
+          The epitome of honey perfection, this series offers the purest, most exquisite honey nature has to offer. 
+          Our bees roam pristine Greek landscapes, collecting nectar from a rich tapestry of flowers, resulting in a honey that is unparalleled in quality.
+        </span>
+      </div>
+      <div class="okto-container row">
+        <img class="logo" :src="okto" alt="okto">
+        <span class="description">
+          For those who seek the best, our Premium Honey series combines the rich flavors of the Greek countryside with a touch of tradition. 
+          This is honey that carries a piece of our heritage in every drop.
+        </span>
+      </div>
+      <div class="melculum-container row">
+        <img class="logo" :src="melculum" alt="melculum">
+        <span class="description">
+          Our honey spreads and other delightful creations are a testament to our creativity and passion. 
+          Here, we blend the beauty of diversity with the art of taste, crafting unique and delicious honey-based products that you'll love.
+        </span>
+      </div>
+    </div>
+    <!-- <div class="background-container">
+    </div> -->
+    <div class="section section-greece">
+      <img class="image greece" :src="background" alt="greece"/>
+      <h2 class="floating-heading">Greece</h2>
+      <div class="quote-container">
+          <img class="quote quote-start" :src="quoteStart"/>
+          <span class="text-between-quotes">
+            our beloved home
+          </span>
+          <img class="quote quote-end" :src="quoteEnd"/>
+      </div>
+    </div>
+    <div class="section section-description">
+      <h2 class="floating-heading">
+        Antonios Montouris Honey
+      </h2>
+      <p class="text">
+          A long-standing tradition of producing high-quality honey with an intense aroma. 
+          From the blossoms of the Peloponnesian orchards to the wild herbs of Crete, our bees are nature's gifted artisans, 
+          capturing the essence of the Greek landscape in every jar.
+          <br/>
+          <br/>
+          As we celebrate our heritage and our honey's journey from our hives to your homes, 
+          we invite you to savor the magic of honey in all its glory. Not only is honey a delectable natural sweetener, 
+          but it also offers a plethora of health benefits. Packed with antioxidants, vitamins, and minerals, honey is a true elixir of wellness, 
+          enhancing both the palate and the body.
+        </p>
+    </div>
+    <div class="section section-quote">
+        <p class="quote-container">
+          <img class="quote quote-start" :src="quoteStart"/>
+          <span class="text-between-quotes">
+            where tradition, innovation, 
+            <br/>
+            and the purest honey meet
+          </span>
+          <img class="quote quote-end" :src="quoteEnd"/>
+        </p>
+    </div>
+    <div class="section section-cta">
+      <router-link :to="'/products'" class="cta">Discover the range of honey products </router-link>
+    </div>
+  </div>
+</template>
+
+<script>
+export default {
+  name: 'TabMobile',
+  phases: 3, // 0 indexed
+}
+</script>
+<script setup>
+import { ref, watch, onMounted, nextTick, toRaw } from 'vue';
+import { useWindowSize } from "@vueuse/core";
+
+import gridImage1 from '@/assets/pages/history/boxes-vertical-mobile.png'
+import image1 from '@/assets/pages/history/boxes-horizontal-mobile.png'
+import image2 from '@/assets/pages/history/beekeeper-mobile.png'
+import okto from '@/assets/pages/history/okto.png'
+import haa from '@/assets/pages/history/haa.png'
+import melculum from '@/assets/pages/history/melculum.png'
+import quoteStart from '@/assets/pages/history/quote-start.png'
+import quoteEnd from '@/assets/pages/history/quote-end.png'
+import background from '@/assets/pages/history/greece-mobile.png';
+
+</script>
+
+<style lang="scss" scoped>
+
+.tab-mobile-column{
+  display: flex !important;
+  flex-direction: column;
+  background-color: white;
+  overflow-x: hidden !important;
+  align-items: center;
+  .floating-heading{
+    // position: absolute;
+    font-family: "DMSans";
+    font-size: 75px;
+    font-weight: 700;
+    line-height: 61.25px;
+    letter-spacing: 0.06em;
+    text-align: right;
+    text-transform: uppercase;
+    // white-space: nowrap;
+    color: #F0F4F5;
+    display: flex;
+    margin: 0px;
+    writing-mode: vertical-rl;
+    transform: rotate(180deg);
+    position: absolute;
+    // left: 10%;
+    z-index: 1;
+    @media(max-width: 380px){
+      font-size: 65px;
+    }
+  }
+  .heading{
+    font-family: "DM Serif";
+    font-size: 32px;
+    font-weight: 400;
+    text-align: left;
+    color: #000000;
+    z-index: 2;
+  }
+  .text{
+    font-family: "DMSans";
+    font-size: 13px;
+    font-weight: 400;
+    line-height: 22px;
+    text-align: center;
+    color: #000000;
+    z-index: 2;
+  }
+
+  .quote-container{
+    width: 100%;
+    z-index: 2;
+    .text-between-quotes{
+      font-family: "Alex Brush";
+      font-size: 32px;
+      font-weight: 400;
+      line-height: 40px;
+      text-align: center;
+      color: #000000;
+    }
+    .quote{
+      font-family: "AbyssinicaSIL";
+      font-size: 40px;
+      font-weight: 400;
+      line-height: 50px;
+      text-align: center;
+      width: 25px;
+    }
+  }
+  .image{
+    max-width: 100%;
+    z-index: 2;
+  }
+  .section{
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+    max-width: 100%;
+    margin-bottom: 30px !important;
+    // border-bottom: 1px solid gray;
+    position: relative;
+    background-color: white;
+    width: 90% !important;
+    // overflow: hidden !important;
+
+    &-history{
+      width: 85%;
+      margin: auto;
+      margin-top: 80px;
+      .text{
+        text-align: left !important;
+        width: 80%;
+      }
+    }
+
+    &-boxes-vertical{
+      width: 85%;
+      margin: auto;
+      // padding-right: 1%;
+      margin-bottom: 120px !important;
+      .image{
+        width: 75%;
+        align-self: flex-end;
+        // margin-right: -10px;
+      }
+      .floating-heading{
+        white-space: nowrap;
+        z-index: 3;
+      }
+      .text{
+        width: 60%;
+        align-self: flex-end;
+        text-align: left;
+        margin-top: 30px;
+      }
+    }
+
+    &-boxes-horizontal{
+      .image{
+        width: 100%;
+        height: auto;
+        align-self: center;
+      }
+      .text{
+        width: 90%;
+        text-align: center;
+        align-self: center
+      }
+    }
+
+    &-beekeeper{
+      margin-bottom: 100px !important;
+      .floating-heading{
+        z-index: 3;
+        font-size: 65px;
+      }
+      .image{
+        width: 80%;
+        align-self: flex-end;
+        // margin-left: 35px;
+      }
+      .floating-heading{
+        white-space: nowrap;
+      }
+
+    }
+
+    &-journey{
+      margin-bottom: 60px !important;
+      height: 350px !important;
+      .floating-heading{
+        right: 0;
+        top: -30px;
+      }
+    }
+
+    &-brands{
+      .heading{
+        font-style: italic;
+        font-size: 16px;
+        width: 70%;
+        margin: auto;
+        text-align: center;
+        margin-bottom: 30px;
+      }
+      .floating-heading{
+        text-align: right;
+        font-size: 80px;
+        letter-spacing: 0.1em;
+        bottom: 28%;
+        @media(max-width: 380px){
+          font-size: 70px;
+        }
+
+      }
+      .row{
+        display: flex;
+        flex-direction: column;
+        margin-bottom: 90px;
+        padding: 0 5% 0 5%;
+        z-index: 2;
+        .logo{
+          width: 50%;
+          margin-bottom: 25px;
+        }
+        .description{
+          font-family: "DMSans";
+          font-size: 13px;
+          font-weight: 400;
+          line-height: 22px;
+          color: black;
+        }
+        &.haa-container{
+          .logo{
+            align-self: center;
+          }
+          .description{
+            text-align: center;
+          }
+        }
+        &.okto-container{
+          .logo{
+            align-self: center;
+          }
+          .description{
+            text-align: center;
+          }
+        }
+        &.melculum-container{
+          .logo{
+            align-self: center;
+          }
+          .description{
+            text-align: center;
+          }
+
+        }
+      }
+    }
+
+    &-greece{
+      .image{
+        width: 100%;
+        margin: auto;
+        margin-bottom: 45px;
+      }
+      .floating-heading{
+        right: -20px;
+        z-index: 3;
+      }
+      .quote-container{
+        display: flex;
+        // min-height: 120px;
+        justify-content: center;
+        margin-bottom: 50px;
+        margin-left: -20px;
+        .quote-start{
+          align-self: flex-start;
+        }
+        .quote-end{
+          align-self: flex-end;
+        }
+        .text-between-quotes{
+          text-transform: capitalize;
+          margin: 5px 10px 5px 10px;
+        }
+      }
+    }
+    &-description{
+      .text{
+        width: 85%;
+        margin: auto;
+      }
+      .floating-heading{
+        top: 30%;
+        text-align: left;
+      }
+    }
+    &-quote{
+      min-height: 220px;
+      justify-content: flex-end;
+      @media(min-height: 850px ){
+        margin-bottom: 50px !important;
+      }
+    }
+
+    &-cta{
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin-bottom: 0px !important;
+      min-height: 80px;
+      background: #F2F2F2;
+      .cta{
+        font-family: "DMSans";
+        font-size: 14px;
+        font-weight: 500;
+        text-align: center;
+        color: black;
+        text-transform: uppercase;
+      }
+    }
+  }
+}
+</style>

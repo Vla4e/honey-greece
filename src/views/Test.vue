@@ -34,5 +34,8 @@ export default {
   width: 100% !important;
   max-width: 100% !important;
   height: 100%;
+  .product-viewer{
+    width: 100%;
+  }
 }
 </style>

@@ -291,13 +291,6 @@ export default {
       console.log("calledSetCanvas");
       scene = new Scene();
 
-      //jarscene.glb
-      //no_compression.glb
-      //low_res_no_compression.glb
-      //low_res_10_compression.glb
-      // let loaderPromise = await loadGlb("assets/glb/huge.glb");
-      // let loaderPromise = await loadGlb("assets/glb/jarscene-v6.glb");
-      // let loaderPromise = await loadGlb("assets/glb/jarscene-realtime.glb");
       let loaderPromise = await loadGlb("assets/glb/newJars/jarscene-render.glb");
       scene.add(loaderPromise.scene)
 
