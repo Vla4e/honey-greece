@@ -17,14 +17,15 @@
         :style="{ transform: `translateX(${translateValue}px)` }"
       >
         <div
-          v-for="(image, index) in brand.imageUrls"
+          v-for="(obj, index) in currentBrand"
           :key="index"
           class="carousel-item"
+          @click="goToItem(obj)"
         >
           <slot :name="index">
-            <img :src="image" class="jar-image" :draggable="false"/>
-            <span class="name">master blender selection</span>
-            <span class="product-line">Blend Series</span>
+            <img :src="obj.path" class="jar-image" :draggable="false"/>
+            <span class="name"> {{obj.flavourData.flavour.name}} </span>
+            <span class="product-line"> {{obj.flavourData.lineName}} </span>
           </slot>
         </div>
       </div>
@@ -41,7 +42,8 @@ export default {
 </script>
 
 <script setup>
-import { ref, onMounted, onBeforeUnmount, watchEffect, inject, computed } from 'vue';
+import { ref, onMounted, onBeforeMount, onBeforeUnmount, watchEffect, inject, computed, toRaw } from 'vue';
+import router from '@/router/index.js'
 
 const props = defineProps({
   brand: {
@@ -57,16 +59,43 @@ const props = defineProps({
     type: Number,
     required: false,
     default: 4 // Default to 4 visible items if not specified
+  },
+  brandsData:{
+    type: Object,
+    required: false
   }
 });
 
 const { isMobile } = inject('screenSize')
 
+// Assign currentBrand values from props to fetch imageurls and texts
+let currentBrand = ref(null)
+onBeforeMount(() => {
+  currentBrand.value = props.brandsData[props.brand.name]
+})
+
+
+function goToItem(val){
+  console.log(toRaw(val))
+  console.log()
+  router.push({ 
+    name: 'Product', 
+    params: { selectedBrand: props.brand.name},
+    // query: {
+    //   line: val.flavourData.lineName
+    // }
+  })
+    .catch(err => {
+    console.log("error while routing", err)
+  });
+}
+
 let computedCarouselDirection = computed(() => {
-  console.log("ISMOBILE", isMobile.value)
   if(isMobile.value) return 'column'
   else return 'row'
 })
+
+
 const carouselAnimationContainer = ref(null);
 const carouselContent = ref(null);
 
@@ -106,7 +135,6 @@ function updateTranslateBounds() {
   // Translate value is never lower than minTranslate (right direction) and higher than maxTranslate (left direction)
   translateValue.value = Math.max(Math.min(translateValue.value, maxTranslate), minTranslate);
 }
-
 onMounted(() => {
   calculateItemWidth();
   window.addEventListener('resize', calculateItemWidth);
@@ -116,14 +144,16 @@ onBeforeUnmount(() => {
   window.removeEventListener('resize', calculateItemWidth);
 });
 
+let moved = ref(false)
 function startDrag(event) {
   if(isMobile.value ) return
   event.preventDefault();
   isDragging.value = true;
   startX.value = event.type === 'touchstart' ? event.touches[0].clientX : event.clientX;
   previousTranslate.value = translateValue.value;
+  moved.value = false;
 
-  // document.body.classList.add('dragging');
+  document.body.classList.add('dragging');
   carouselContent.value.style.transition = 'none';
 
   document.addEventListener('mousemove', onMouseMove);
@@ -138,12 +168,20 @@ function startDrag(event) {
 
 function onMouseMove(event) {
   if (!isDragging.value) return;
-  event.preventDefault();
+  // event.preventDefault();
 
   const clientX = event.type === 'touchmove' ? event.touches[0].clientX : event.clientX;
   const deltaX = clientX - startX.value;
   translateValue.value = previousTranslate.value + deltaX;
-
+  if (Math.abs(deltaX) > 5) { // threshold to consider it a drag
+    moved.value = true;
+  } else {
+    moved.value = false;
+  }
+  if(moved.value){
+    
+    event.preventDefault()
+  }
   // Calculate the velocity
   const currentTime = performance.now();
   const deltaTime = currentTime - lastTime.value;
@@ -152,9 +190,14 @@ function onMouseMove(event) {
   lastTime.value = currentTime;
 }
 
-function endDrag() {
+function endDrag(event) {
   if (!isDragging.value) return;
   isDragging.value = false;
+
+  if (moved.value) {
+    event.preventDefault(); // prevent default only if it was a drag
+  } else {
+  }
 
   document.body.classList.remove('dragging');
 
@@ -197,12 +240,14 @@ function preventDefaultSelection(event) {
 
 .carousel-animation-container {
   width: 100%;
+  height: 100%;
   overflow: hidden;
   cursor: grab;
   position: relative;
 }
 
 .carousel-content {
+  height: 100%;
   display: flex;
   will-change: transform; /* Hint to the browser for better performance during transitions */
   &.row {
@@ -214,7 +259,13 @@ function preventDefaultSelection(event) {
     justify-content: center;
   }
 }
-
+.dragging{
+  .carousel-item{
+    .jar-image{
+      cursor: grab !important;
+    }
+  }
+}
 .carousel-item {
   flex: 0 0 25%; /* Adjust based on the number of items visible */
   text-align: center;
@@ -222,11 +273,13 @@ function preventDefaultSelection(event) {
   display: flex;
   flex-direction: column;
   align-items: center;
-  justify-content: center;
+  justify-content: flex-start;
+  height: 100%;
   .jar-image {
     width: 100%;
     /* Disable drag behavior on the image */
-    pointer-events: none;
+    // pointer-events: none;
+    cursor: pointer;
   }
   .name{
     font-family:"DMSans";

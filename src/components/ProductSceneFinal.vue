@@ -1025,6 +1025,7 @@ export default {
       globalRenderer.render(globalScene, globalCamera);
     };
     const debouncedUpdateSize = debounce(function() {
+      if(isMobile) return
       updateContainerSize();
       if (containerWidth.value && containerHeight.value) {
         updateCamera(containerWidth.value, containerHeight.value);
@@ -1177,24 +1178,7 @@ export default {
       if(LOGTIMER === 0 && animationDONE){
         LOGTIMER++
       }
-      
-
-      // if (animateTextureChange) {
-      //   if (!isTransitioning) {
-      //     transitionStartTime = clock.getElapsedTime();
-      //     isTransitioning = true;
-      //   }
-
-      //   // Calculate the current progress of the transition
-      //   let transitionProgress = (clock.getElapsedTime() - transitionStartTime) / transitionDuration;
-      //   if (transitionProgress < 1.0) {
-      //     globalObj300g.material.uniforms.transitionProgress.value = transitionProgress;
-      //   } else {
-      //     globalObj300g.material.uniforms.transitionProgress.value = 0.0;
-      //     isTransitioning = false;
-      //     animateTextureChange = false; // Reset the flag until it needs to be triggered again
-      //   }
-      // }
+    
       stats.end()
       // globalOrbitControls.update();
       requestAnimationFrame(animate);

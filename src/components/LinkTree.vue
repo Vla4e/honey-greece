@@ -1,7 +1,7 @@
 <template>
   <div :class="brand.disabled ? 'disabled' : ''" class="link-tree">
     <span @click="goToPage(typedBrands.urlSlug, typedBrands.link)" class="tree-route" :class="currentBrandPage ? 'active': ''">
-      <OktoText :fontSize="16" v-if="typedBrands.name === 'Okto'"/>
+      <OktoText :fontSize="16" v-if="typedBrands.name === 'Oktώ'"/>
       <span v-else>{{typedBrands.name}}</span>
     </span>
     <div v-if="renderDropdownTree" class="dropdown-tree">
@@ -224,6 +224,9 @@ export default {
     cursor: pointer;
     &.active{
       font-weight: 700;
+    }
+    .okto-text{
+      line-height: 0px !important;
     }
   }
   &.disabled{

@@ -40,6 +40,7 @@
         <Carousel
           class="carousel"
           :brand="brand"
+          :brandsData="matchedData"
         />
         <router-link v-if="isMobile" :to="`/product/${currentlySelectedBrand}`" class="explore-link">
           <span>Explore complete range</span>
@@ -55,43 +56,113 @@ import { ref, onMounted, toRaw, inject, computed } from 'vue';
 import rightArrow from '@/assets/pages/all-products/right-arrow.svg'
 import brandConfigs from '@/assets/brand-information/index.js'
 
-console.log("Brandconf", brandConfigs)
+
+let haaConfig = brandConfigs['HAA']
+let oktoConfig = brandConfigs['Okto']
+// console.log("Brandconf", brandConfigs)
 
 let emitter = inject('emitter')
 emitter.emit('switchTextColor')
 
 const imageModules = import.meta.glob('@/assets/images/jar-labels/**/*.png', {eager: true});
 let categorizedImageUrls;
+let matchedData = {};
 
 async function fillCategorizedImageUrls(){
   //Fill categorizedImageUrls with paths to images
   let imageUrls = {}
   let allImageUrls = {}
-  Object.keys(imageModules).forEach(path => {
-    let splitPath = path.split('/');
-    
+  let infoObject = {}
+  Object.values(imageModules).forEach(path => {
+    let splitPath = path.default.split('/');
+    // // console.log("Splitpath", splitPath)
     let brand = splitPath[5];
     let line = splitPath[6];
     let size = splitPath[7];
+    let flavour = splitPath[8];
+    // console.log("Current brand", brand)
+    // if (!imageUrls[brand]) {
+    //   imageUrls[brand] = {};
+    //   allImageUrls[brand] = [];
+    // }
   
-    if (!imageUrls[brand]) {
-      imageUrls[brand] = {};
-      allImageUrls[brand] = [];
-    }
+    // if (!imageUrls[brand][line]) {
+    //   imageUrls[brand][line] = {};
+    // }
+    // if (!imageUrls[brand][line][size]) {
+    //   imageUrls[brand][line][size] = [];
+    // }
   
-    if (!imageUrls[brand][line]) {
-      imageUrls[brand][line] = {};
+    // imageUrls[brand][line][size].push({
+    //   path,
+    //   flavour: flavour.split('.')[0]
+    // });
+
+    let flavourData = findFlavourData(brand, line, flavour);
+    if (flavourData) {
+      if(size === '300g'){
+        if(matchedData[brand]){
+          matchedData[brand].push({
+            path: path.default,
+            flavourData: flavourData,
+            line: line
+          });
+        } else {
+          matchedData[brand] = []
+          matchedData[brand].push({
+            path: path.default,
+            flavourData: flavourData,
+            line: line
+          })
+        }
+      }
     }
-    if (!imageUrls[brand][line][size]) {
-      imageUrls[brand][line][size] = [];
-    }
-  
-    imageUrls[brand][line][size].push(path);
     if(size === '300g'){
-      allImageUrls[brand].push(path)
+      if(allImageUrls[brand]){
+        allImageUrls[brand].push({
+          path: path.default,
+          flavour: flavour.split('.')[0],
+          line: line
+        })
+      } else {
+        allImageUrls[brand] = []
+        allImageUrls[brand].push({
+          path: path.default,
+          flavour: flavour.split('.')[0],
+          line: line
+        })
+      }
     }
   })
-  return {imageUrls, allImageUrls}
+  
+  // console.log('tempObjArr', infoObject)
+  // console.log("MATCHED DATA", matchedData)
+  return {allImageUrls, infoObject}
+}
+// Helper function to find flavour data from brandConfigs based on brand, line, and flavour slug
+function findFlavourData(brandSlug, lineSlug, flavourSlug) {
+  let brandConfig = [];
+  // console.log("config lineslug", lineSlug)
+  if(brandSlug==='haa'){
+    brandConfig = haaConfig
+  } else {
+    brandConfig = oktoConfig
+  }
+  if (!brandConfig) return null;
+
+  let lineConfig = brandConfig.brandProductLines[lineSlug.charAt(0).toUpperCase() + lineSlug.slice(1)];
+  // console.log("LINE CONF", lineConfig)
+  let lineName = lineConfig.name
+  if (!lineConfig) return null;
+
+  let flavour = lineConfig.flavours.find(f => f.urlSlug === flavourSlug.split('.')[0]);
+  if(flavour){
+    let dataObject = {
+      flavour,
+      lineName
+    }
+    return dataObject; // Return the flavour object or null if not found
+  } else return null
 }
 
 const { isMobile } = inject('screenSize')
@@ -102,7 +173,7 @@ let computedVisibility = computed(() => {
   } else return () => true
 })
 function computeVisibility(brandName) {
-  console.log("COMPUTING VISIBILITY", brandName, toRaw(currentlySelectedBrand.value), toRaw(isMobile.value))
+  // console.log("COMPUTING VISIBILITY", brandName, toRaw(currentlySelectedBrand.value), toRaw(isMobile.value))
   if(isMobile.value){
     return currentlySelectedBrand.value === brandName; // return function to pass brand.name argument into
   } else return true
@@ -118,10 +189,11 @@ const carouselItems = [
   { id: 6, slotName: 'item4', content: 'S Item: Last one, hope you had fun!' },
   { id: 7, slotName: 'item4', content: 'SE Item: Last one, hope you had fun!' }
 ];
+
 let brands = ref([])
 onMounted(async () => {
   let imageUrls = await fillCategorizedImageUrls()
-  console.log("IMAGEURLS", imageUrls)
+  // console.log("IMAGEURLS", imageUrls)
   categorizedImageUrls = imageUrls.allImageUrls
   brands.value = [
     {
@@ -193,6 +265,9 @@ onMounted(async () => {
     display: flex;
     justify-content: space-between;
     align-items: center;
+    @media(min-width: 768px){
+      height: 40%;
+    }
     .brand-info-container{
       width: 25%;
       display: flex;
@@ -227,6 +302,7 @@ onMounted(async () => {
     }
     .carousel{
       width: 75%;
+      height: 100%;
     }
   }
   
