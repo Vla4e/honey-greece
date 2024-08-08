@@ -157,7 +157,7 @@ export default {
     let stats = new Stats();
     //ref to canvas, window size
     stats.showPanel(0);
-    document.body.appendChild(stats.dom)
+    // document.body.appendChild(stats.dom)
     let emitter = inject('emitter')
 
     let globalOrbitControls;

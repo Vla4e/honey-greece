@@ -85,9 +85,14 @@ let personnelRoles = {
   'eleni': `heart of<br/>our company`,
   'vaia': `meticulous<br/>artisan`
 }
-let personnel = Object.values(imageModules).map((path) => {
+
+let paths = Object.keys(imageModules).map((path) => {
+  console.log("PATH DEF", path)
+  return path
+})
+let personnel = Object.values(imageModules).map((path, idx) => {
   console.log("PATH", path.default)
-  let splitPath = path.default.split('/')
+  let splitPath = paths[idx].split('/')
   let name = splitPath[5].substring(0, splitPath[5].length-4)
   return {
     name,

@@ -65,6 +65,9 @@ let emitter = inject('emitter')
 emitter.emit('switchTextColor')
 
 const imageModules = import.meta.glob('@/assets/images/jar-labels/**/*.png', {eager: true});
+let imagePaths = Object.keys(imageModules).map((path) => {
+  return path
+})
 let categorizedImageUrls;
 let matchedData = {};
 
@@ -73,8 +76,8 @@ async function fillCategorizedImageUrls(){
   let imageUrls = {}
   let allImageUrls = {}
   let infoObject = {}
-  Object.values(imageModules).forEach(path => {
-    let splitPath = path.default.split('/');
+  Object.values(imageModules).forEach((path, idx) => {
+    let splitPath = imagePaths[idx].split('/');
     // // console.log("Splitpath", splitPath)
     let brand = splitPath[5];
     let line = splitPath[6];

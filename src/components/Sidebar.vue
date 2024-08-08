@@ -50,6 +50,9 @@
         <span class="link-heading">About</span>
         <span class="link-subheading">Unveiling Our Hive: Meet our Team</span>
       </router-link>
+      <router-link v-if="isMobile" class="sidebar-link" to="/all-products">
+        <span class="link-heading">All products</span>
+      </router-link>
     </div>
   </div>
 </template>
