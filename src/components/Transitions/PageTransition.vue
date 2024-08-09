@@ -14,9 +14,11 @@
 </template>
 
 <script>
-import { ref, watch } from 'vue';
+import { ref, watch, toRaw } from 'vue';
 import { useGlobalStore } from '@/store/global.js'
 import { storeToRefs } from 'pinia';
+
+import { useRoute } from 'vue-router'
 
 export default {
   name: 'PageTransition',
@@ -26,33 +28,81 @@ export default {
     let globalStore = useGlobalStore()
     let { playAnimationOnEnter } = storeToRefs(globalStore)
 
+    let route = useRoute()
+    let lastRouteName = ref(null)
+    let transitionIterator;
+    let firstSlideTransitionStatus = ref(false);
+    let secondSlideTransitionStatus = ref(false);
+
+    function* handleTransition() {
+      // Trigger enter animation
+      requestAnimationFrame(() => {
+        adjustPosition();
+        showSlide.value = true;
+        setTimeout(() => {
+          showSlide2.value = true;
+        }, 300);
+        setTimeout(() => { // 300ms delay + 500ms duration = finished after 800ms
+          firstSlideTransitionStatus.value = true
+        }, 800)
+      });
+
+      yield;
+
+      // Trigger exit animation
+      requestAnimationFrame(() => {
+        showSlide2.value = false;
+        setTimeout(() => {
+          showSlide.value = false;
+        }, 300);
+        setTimeout(() => {
+          secondSlideTransitionStatus.value = true
+        }, 800)
+        setTimeout(() => {
+          globalStore.changeAnimationFlag(false);
+        }, 850);
+      })
+    }
+
+    function startTransition() {
+      console.log("Beginning transition")
+      // Initialize and start the generator
+      transitionIterator = handleTransition();
+      transitionIterator.next(); // Start the generator
+    }
+
+    watch(route, (newVal) => {
+      if(newVal.name !== lastRouteName.value){
+        lastRouteName.value = newVal.name
+        if (transitionIterator) {
+          let interval = setInterval(() => { //Check whether firstSlide animation is finished.
+            if(firstSlideTransitionStatus.value){
+              transitionIterator.next();
+              clearInterval(interval)
+            }
+          }, 50)
+        }
+      }
+    }, {
+      immediate: true
+    })
+
+
+    //ROUTER TRANSITION
+    watch(playAnimationOnEnter, (newVal) => {
+      if (newVal) {
+        firstSlideTransitionStatus.value = false;
+        startTransition()
+      }
+    });
+
+    
+
     function adjustPosition () {
       const currentScrollY = window.scrollY + 'px';
       document.querySelector('.transition-slide-1').style.top = currentScrollY;
       document.querySelector('.transition-slide-2').style.top = currentScrollY;
     };
-
-    //ROUTER TRANSITION
-    watch(playAnimationOnEnter, (newVal) => {
-      if (newVal) {
-        requestAnimationFrame(() => {
-            adjustPosition(); // Adjust position of slides to current view.
-            showSlide.value = true; // start first slide animation
-          setTimeout(() => {
-            showSlide2.value = true;
-          }, 300); // start second slide animation
-          setTimeout(() => {
-            showSlide.value = false;
-          }, 1800); // hide first slide after delay
-          setTimeout(() => {
-            showSlide2.value = false;
-          }, 1500); // hide the second slide
-          setTimeout(() => {
-            globalStore.changeAnimationFlag(false);
-          }, 2000); // reset the animation flag
-        });
-      }
-    });
     
     return { showSlide, showSlide2 }
   }

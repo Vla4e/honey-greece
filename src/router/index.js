@@ -156,7 +156,7 @@ function processRouteTransition(to, next) {
 router.beforeEach((to, from, next) => {
   emitter.emit('toggleSidebarRoute') //for burger menu icon
 
-  console.log("Routing to History page: ", to)
+  console.log("Routing to: ", to)
   const navbarStore = useNavbarStore();
   const globalStore = useGlobalStore();
   const sidebarStore = useSidebarStore();
