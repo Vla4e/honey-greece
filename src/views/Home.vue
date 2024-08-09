@@ -50,19 +50,19 @@ export default {
       globalStore.showLoadingScreen = true;
       globalStore.loadingProgress = 0;
       if (isMobile.value) {
-        if (speed >= 3) {
+        if (speed >= 9) {
           videoSource.value = (await import('@/assets/pages/home/mobile_3mbps.mp4')).default;
-        } else if (speed >= 2) {
+        } else if (speed >= 6) {
           videoSource.value = (await import('@/assets/pages/home/mobile_2mbps.mp4')).default;
         } else {
           videoSource.value = (await import('@/assets/pages/home/mobile_1mbps.mp4')).default;
         }
       } else {
-        if (speed >= 10) {
+        if (speed >= 25) {
+          videoSource.value = (await import('@/assets/pages/home/desktop_10mbps.mp4')).default;
+        } else if (speed >=10) {
           videoSource.value = (await import('@/assets/pages/home/desktop_5mbps.mp4')).default;
-        } else if (speed > 2) {
-          videoSource.value = (await import('@/assets/pages/home/desktop_5mbps.mp4')).default;
-        } else if (speed > 1) {
+        } else if (speed >= 6) {
           videoSource.value = (await import('@/assets/pages/home/desktop_2mbps.mp4')).default;
         } else {
           videoSource.value = (await import('@/assets/pages/home/desktop_1mbps.mp4')).default;
