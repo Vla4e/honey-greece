@@ -212,7 +212,7 @@ export default {
     const globalTextureLoader = new TextureLoader();
     let jarPositions = []
     let worldPosition = new Vector3(0.15000002, -0.1, 0.0)
-    function createMatcapGrid(gridWidth = 12, gridHeight = 5, spacing = 0.1) {
+    function createMatcapGrid(gridWidth = 12, gridHeight = 5, spacing = 0.115) {
       console.log("CREATING GRID NOW")
       if (!globalScene || !currentJarScene) {
         console.error("Scene or jar scene not initialized");
@@ -239,7 +239,7 @@ export default {
             jarClone.position.set(xPos, yPos, 0);
             jarPositions.push(jarClone.position)
             jarClone.traverse((obj) => {
-              if (obj.isMesh && obj.name === 'honey_object_300g') {
+              if (obj.isMesh && obj.name === 'honey_object_450g') {
                 const matcapId = idx;
                 
                 if(useMaterial.value === 'fixed'){
@@ -680,7 +680,7 @@ export default {
       globalScene = new Scene();
 
       // let jarPromise = await loadGlbReturnParts(loader, jarConfigs.medium.source)
-      let mediumSmallScene = await loadGlbReturnParts(loader, '/assets/glb/newJars/300-150-animation-choppy-v6.glb')
+      let mediumSmallScene = await loadGlbReturnParts(loader, '/assets/glb/newJars/450-300-animation-choppy-v2.glb')
       // let largeMediumScene = await loadGlbReturnParts(loader, '/assets/glb/newJars/450-300-animation-choppy-v1.glb')
       labelMeshes = mediumSmallScene.labelMeshes
       // for (let mesh of mediumSmallScene.meshes){
@@ -705,6 +705,10 @@ export default {
             // obj.material.opacity = 0;
           }
           if(obj.name.includes('150')){
+            // remove this obj
+            objToRemove.push(obj)
+          }
+          if(obj.name.includes('300')){
             // remove this obj
             objToRemove.push(obj)
           }

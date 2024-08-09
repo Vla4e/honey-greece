@@ -55,6 +55,7 @@
     <div class="product-viewer" ref="productViewer">
       <!-- <div class="pushdown" style="height: 15%; width: 100%;"></div> -->
       <ProductSceneFinal />
+      <!-- <ProductScene /> -->
     </div>
 
 
@@ -137,9 +138,10 @@ import chevronRight from '@/assets/images/arrow.svg';
 import brandConfigs from "@/assets/brand-information/index.js"
 import { useProductStore } from '@/store/product.js'
 import ProductSceneFinal from "../components/ProductSceneFinal.vue"
+import ProductScene from "../components/ProductScene.vue"
 
 export default {
-  components: { ProductSceneFinal },
+  components: { ProductSceneFinal, ProductScene },
   props: ['line', 'selectedBrand'],
 
   setup(props) {
@@ -170,10 +172,10 @@ export default {
     const seriesItem = ref()
     
     // onBeforeMount(()=>{
-    //   console.log("Before mount")
+    //   // console.log("Before mount")
     // })
     // onMounted(() => {
-    //   console.log("Mounting")
+    //   // console.log("Mounting")
     // })
 
 
@@ -186,7 +188,7 @@ export default {
     if(props.selectedBrand){
       selectedBrand.value = brandConfigs[props.selectedBrand]
       brandProductLines = ref(selectedBrand.value.brandProductLines)
-      console.log("route query", route.query?.line)
+      // console.log("route query", route.query?.line)
       if(route.query?.line){
         currentProductLine.value = brandProductLines.value[route.query.line]
       } else { // Default if no selectedLine was passed as query
@@ -208,21 +210,21 @@ export default {
           const imgUrl = new URL('@/assets/pages/tabs/tab2-larger.png', import.meta.url).href;
           return imgUrl;
         case 'HAA':
-          console.log("returnign HAA")
+          // console.log("returnign HAA")
           const imgUrl2 = new URL('@/assets/pages/tabs/tab1-larger.png', import.meta.url).href;
           return imgUrl2;
       }
     })
 
     async function fetchLogoUrl(){
-      console.log("Attempting to fetch logourl", selectedBrand.value.brand)
+      // console.log("Attempting to fetch logourl", selectedBrand.value.brand)
       let imgUrl = null
       switch(selectedBrand.value.brand){
         case 'Okto':
           imgUrl = (await import('@/assets/pages/tabs/tab2-larger.png')).default;
           return imgUrl;
         case 'HAA':
-          console.log("returnign HAA")
+          // console.log("returnign HAA")
           imgUrl = (await import('@/assets/pages/tabs/tab1-larger.png')).default;
           return imgUrl;
       }
@@ -267,29 +269,29 @@ export default {
         fontSize -= 20
       }
       if(isMobile.value){
-        console.log("DELETING 40px", fontSize)
+        // console.log("DELETING 40px", fontSize)
         fontSize -= 65
       }
-      console.log("Calculated fontsize", fontSize)
+      // console.log("Calculated fontsize", fontSize)
       let lineHeight = fontSize * 1.3
       return {fontSize, lineHeight}
     })
 
     const isSelected = function (brandProductLine){
-      // console.log("HUH", toRaw(brandProductLine.name), currentProductLine.value.name, toRaw(brandProductLine.name) === currentProductLine.value.name)
+      // // console.log("HUH", toRaw(brandProductLine.name), currentProductLine.value.name, toRaw(brandProductLine.name) === currentProductLine.value.name)
       return currentProductLine.value.name === brandProductLine.name ? 'selected' : '';
     }
 
     const displayStyle = function (brandProductLine) {
-      // console.log("DUH", toRaw(brandProductLine.name), currentProductLine.value.name)
+      // // console.log("DUH", toRaw(brandProductLine.name), currentProductLine.value.name)
       return { display: currentProductLine.value.name === brandProductLine.name ? 'flex' : 'none' };
     };
 
     watch(() => route.params, (params) => {
       if(params && params.selectedBrand){
-        // console.log("PARAMS === >", params.selectedBrand)
+        // // console.log("PARAMS === >", params.selectedBrand)
         if(params.selectedBrand !== selectedBrand.value.brand){
-          console.log("Not the same param")
+          // console.log("Not the same param")
           switchBrand()
         }
       }
@@ -304,7 +306,7 @@ export default {
     });
 
     watch(selectedBrand, async (newBrand) => {
-      // console.log("newBrand", toRaw(newBrand))
+      // // console.log("newBrand", toRaw(newBrand))
       brandProductLines.value = newBrand.brandProductLines
       currentProductLine.value = brandProductLines.value[route.query?.line ? route.query.line : 'Monoflorals']
       if(newBrand){
@@ -314,15 +316,15 @@ export default {
     }, {immediate: true})
 
     watch(currentProductLine, (newProductLine) => {
-      // console.log("newProductLine", toRaw(newProductLine))
-      // console.log("currentProductLine", toRaw(currentProductLine))
+      // // console.log("newProductLine", toRaw(newProductLine))
+      // // console.log("currentProductLine", toRaw(currentProductLine))
       if(newProductLine){
         productStore.setProductLine({name: newProductLine.name, urlSlug: newProductLine.urlSlug })
       }
     }, {immediate: true})
 
     watch(currentFlavour, (newFlavour) => {
-      // console.log("newFlavour", toRaw(newFlavour))
+      // // console.log("newFlavour", toRaw(newFlavour))
       if(newFlavour){
         productStore.setFlavour({name: newFlavour.name, urlSlug: newFlavour.urlSlug })
       }
@@ -330,7 +332,7 @@ export default {
     
     function selectProductLine(productLine) {
       if (productLine !== currentProductLine.value.name) {
-        console.log("Changing productLine Value", productLine)
+        // console.log("Changing productLine Value", productLine)
         currentProductLine.value = brandProductLines.value[productLine];
       } else 
       return
@@ -343,7 +345,7 @@ export default {
     }
 
     function switchBrand() {
-      console.log("Switching Brand");
+      // console.log("Switching Brand");
       // Determine the next brand
       const nextBrandKey = selectedBrand.value.brand === brandConfigs['Okto'].brand ? 'HAA' : 'Okto';
       const nextBrand = brandConfigs[nextBrandKey];
@@ -359,7 +361,7 @@ export default {
         // Default to 'Blends' or another default if 'Blends' is not available
         currentProductLine.value = nextBrand.brandProductLines['Blends'] || nextBrand.brandProductLines[Object.keys(nextBrand.brandProductLines)[0]];
       }
-      console.log("CPL", toRaw(currentProductLine.value))
+      // console.log("CPL", toRaw(currentProductLine.value))
       window.scrollTo({
         top: 0,
         behavior: "smooth",
@@ -367,7 +369,7 @@ export default {
     }
 
     function calculateLineWidths(edgeCoordinates){
-      console.log("Got EdgeDistance", edgeCoordinates.leftEdge, edgeCoordinates.rightEdge)
+      // console.log("Got EdgeDistance", edgeCoordinates.leftEdge, edgeCoordinates.rightEdge)
       if (productViewer.value) {
 
         const circleDetraction = 45; // Account for circle width, and imprecision in calculation
@@ -378,8 +380,8 @@ export default {
         let rightElementToCanvas = blendItem.value[0].getBoundingClientRect().left - productViewerPositionalData.right
         let leftLineDistance = leftElementToCanvas + edgeCoordinates.leftEdge - circleDetraction
         let rightLineDistance = rightElementToCanvas + edgeCoordinates.rightEdge - circleDetraction
-        console.log("DISTANCE LEFT", leftLineDistance)
-        console.log("DISTANCE RIGHT", rightLineDistance)
+        // console.log("DISTANCE LEFT", leftLineDistance)
+        // console.log("DISTANCE RIGHT", rightLineDistance)
         //Set variable value to calculated distance
         document.documentElement.style.setProperty('--pointer-line-width', `${leftLineDistance}px`);
         document.documentElement.style.setProperty('--pointer-line-right-width', `${rightLineDistance}px`);
@@ -389,7 +391,7 @@ export default {
 
     let circleToggled = ref(false)
     function toggleCircle(){
-      console.log("TOGGLING CIRCLE")
+      // console.log("TOGGLING CIRCLE")
       circleToggled.value = !circleToggled.value
     }
 

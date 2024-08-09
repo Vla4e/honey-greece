@@ -50,7 +50,7 @@ let fontSizeOmega = computed(() => {
     return props.fontSize * ratio
 });
 onMounted(() => {
-  console.log("OKTOTEXT", oktoText.value.style.fontSize)
+  // console.log("OKTOTEXT", oktoText.value.style.fontSize)
 })
 </script>
 

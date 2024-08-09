@@ -36,7 +36,7 @@ export default {
     const { isMobile, isTablet, isDesktop } = useScreenSize()
     provide('screenSize', { isMobile, isTablet, isDesktop })
     let route = useRoute()
-    console.log("CURRENT ROUTE => ", toRaw(route))
+    // console.log("CURRENT ROUTE => ", toRaw(route))
     let globalStore = useGlobalStore()
     let { playAnimationOnEnter } = storeToRefs(globalStore)
     let hideOverflow = ref(false)
@@ -80,9 +80,9 @@ export default {
       // })
 
       
-      // console.log("ISMOBILE", isMobile.value)
+      // // console.log("ISMOBILE", isMobile.value)
       // if(isMobile.value){
-      //   console.log("setting shownav", showNavbar.value)
+      //   // console.log("setting shownav", showNavbar.value)
       //   showNavbar.value = true
       // }
     })

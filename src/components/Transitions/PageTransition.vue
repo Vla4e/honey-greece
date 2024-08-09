@@ -65,7 +65,7 @@ export default {
     }
 
     function startTransition() {
-      console.log("Beginning transition")
+      // console.log("Beginning transition")
       // Initialize and start the generator
       transitionIterator = handleTransition();
       transitionIterator.next(); // Start the generator

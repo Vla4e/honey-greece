@@ -54,7 +54,7 @@ export default {
     let navbarFloating = computed(() => navbarStore.getNavbarFloating)
     //Nav color
     let currentNavbarColor = computed(()  =>  {
-      console.log("COMPUTING", isMobile, navbarStore.getNavbarColor)
+      // console.log("COMPUTING", isMobile, navbarStore.getNavbarColor)
       if(isMobile){
         return navbarStore.getNavbarColor.mobile
       } else return navbarStore.getNavbarColor.desktop
@@ -115,7 +115,7 @@ export default {
     })
 
     function toggleContactForm(){
-      console.log("Called toggle contact form")
+      // console.log("Called toggle contact form")
       emitter.emit('toggleContactForm')
     }
 
@@ -134,7 +134,7 @@ export default {
     }
 
     // function switchTextColor(colorString = 'black'){
-    //   console.log("Switching color 1111111111111111111111111111111111111111", colorString)
+    //   // console.log("Switching color 1111111111111111111111111111111111111111", colorString)
     //   document.documentElement.style.setProperty('--navbar-color', `${colorString}`);
     //   currentNavbarColor.value = colorString === 'black' ? 'black' : 'white'
     // }

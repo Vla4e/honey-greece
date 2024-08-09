@@ -8,15 +8,18 @@
 
 <script>
 import { computed, onMounted, watch, ref } from 'vue';
-import { useGlobalStore } from "@/store/global.js"
+import { useGlobalStore } from "@/store/global.js";
+import { useRoute } from 'vue-router'
 
 export default {
   name: 'LoadingScreen',
   setup() {
+    let route = useRoute()
+    
     const globalStore = useGlobalStore();
     const showSlide = computed(() => globalStore.showLoadingScreen);
     const textFillPercentage = computed(() => globalStore.loadingProgress);
-    let showSlideTimed = ref(true);
+    let showSlideTimed = ref(false);
     
     watch(() => globalStore.loadingProgress, (newProgress) => {
       if (newProgress >= 100) {
@@ -33,6 +36,15 @@ export default {
         beginProgressTracking()
       }
     });
+
+    
+    watch(() =>  route, (newRoute) => {
+      if(newRoute.name !== 'Home'){
+        showSlideTimed.value = false
+      }
+    }, {
+      immediate: true
+    })
 
     const textFillStyle = computed(() => ({
       background: `linear-gradient(to right, white ${textFillPercentage.value}%, gray ${textFillPercentage.value}%) 0/100% no-repeat, gray`,
