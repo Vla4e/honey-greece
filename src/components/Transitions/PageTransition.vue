@@ -61,6 +61,8 @@ export default {
 <style lang="scss" scoped>
 .transition-container{
   position: fixed;
+  top: 0;
+  left: 0;
   width: 100vw;
   height: 100vh;
   z-index: 10000;
@@ -70,6 +72,8 @@ export default {
   overflow: hidden;
   will-change: transform;
   position: fixed;
+  top: 0;
+  left: 0;
   width: 100vw;
   height: 100vh;
   z-index: 10001;

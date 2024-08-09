@@ -47,6 +47,7 @@ export default {
 
     // use .default to access the default export of the module = src
     async function loadVideo(speed) {
+      globalStore.showLoadingScreen = true;
       globalStore.loadingProgress = 0;
       if (isMobile.value) {
         if (speed >= 3) {

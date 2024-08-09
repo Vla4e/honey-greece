@@ -1,13 +1,13 @@
 <template>
   <Transition name="slide">
-    <div v-show="showSlide" class="loading-slide">
+    <div v-show="showSlideTimed" class="loading-slide">
       <span class="transition-text" :style="textFillStyle">Hellenic Premium Honey</span>
     </div>
   </Transition>
 </template>
 
 <script>
-import { computed, onMounted } from 'vue';
+import { computed, onMounted, watch, ref } from 'vue';
 import { useGlobalStore } from "@/store/global.js"
 
 export default {
@@ -16,6 +16,23 @@ export default {
     const globalStore = useGlobalStore();
     const showSlide = computed(() => globalStore.showLoadingScreen);
     const textFillPercentage = computed(() => globalStore.loadingProgress);
+    let showSlideTimed = ref(true);
+    
+    watch(() => globalStore.loadingProgress, (newProgress) => {
+      if (newProgress >= 100) {
+        setTimeout(() => {
+          showSlideTimed.value = false;
+          globalStore.loadingProgress = 0; // Reset progress here after hiding the slide
+        }, 50); // Optional delay to ensure users see the completion
+      }
+    });
+
+    watch(() => showSlide.value, (val) => {
+      showSlideTimed.value = val;
+      if(val){
+        beginProgressTracking()
+      }
+    });
 
     const textFillStyle = computed(() => ({
       background: `linear-gradient(to right, white ${textFillPercentage.value}%, gray ${textFillPercentage.value}%) 0/100% no-repeat, gray`,
@@ -23,17 +40,19 @@ export default {
       "color": "transparent"
     }));
 
-    onMounted(() => {
-      setInterval(() => {
-        globalStore.loadingProgress++;
-        if (globalStore.loadingProgress >= 100) {
+    function beginProgressTracking(){
+      let interval = setInterval(() => {
+        if (globalStore.loadingProgress < 100) {
+          globalStore.loadingProgress++;
+        } else {
           globalStore.loadingProgress = 0;
-          // clearInterval(interval);
+          clearInterval(interval); // Ensure we clear interval only when necessary
         }
-      }, 20);
-    });
+      }, 20)
+    }
 
-    return { showSlide, textFillStyle };
+
+    return { showSlide, textFillStyle, showSlideTimed };
   }
 }
 </script>

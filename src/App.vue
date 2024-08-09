@@ -3,6 +3,7 @@
     <!-- <div v-if="!showContactForm && !isMobile" class="burger-icon-container">
       <BurgerMenuIcon @click="toggleSidebar" class="burger-icon"/>
     </div> -->
+    <LoadingScreen></LoadingScreen>
     <NavbarComponent v-show="showNavbarComputed" id="nav"/>
 
     <Transition name="sidebar">
@@ -11,7 +12,6 @@
     <Transition name="contact-form">
       <ContactForm v-if="showContactForm"/>
     </Transition>
-    <LoadingScreen></LoadingScreen>
     <PageTransition></PageTransition>
     <RouterView class="page-container"/>
   </div>
