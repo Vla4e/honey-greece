@@ -23,7 +23,7 @@
 </template>
 
 <script>
-import { ref, inject, onMounted } from 'vue';
+import { ref, inject, onMounted, onBeforeMount } from 'vue';
 import { getNetworkSpeed } from '@/helpers/checkNetworkSpeed.js';
 import { useGlobalStore } from '@/store/global.js'
 
@@ -72,8 +72,10 @@ export default {
       globalStore.showLoadingScreen = false;
     }
 
-    onMounted( async () => {
+    onBeforeMount(() => {
       globalStore.showLoadingScreen = true;
+    })
+    onMounted( async () => {
       const networkSpeed = getNetworkSpeed()
       console.log("NETWORKSPEED", networkSpeed)
       if (networkSpeed !== null) {

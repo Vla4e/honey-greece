@@ -4,7 +4,7 @@ export const useGlobalStore = defineStore({
   id: 'global',
   state: () => ({
     playAnimationOnEnter: false,
-    showLoadingScreen: true,
+    showLoadingScreen: false,
     loadingProgress: 0,
   }),
   getters: {
