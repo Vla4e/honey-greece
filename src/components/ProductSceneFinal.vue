@@ -7,6 +7,7 @@
     <!-- <button class="reset-button" @click="resetScene">X</button> -->
 
     <div class="size-selection">
+    {{ currentBrand }} TEST
       <button v-if="currentBrand === 'okto'" @click="selectJarSize('large')" :class="currentJarSize === 'large' ? 'selected': ''" class="large-jar">
         450g
       </button>
@@ -179,7 +180,7 @@ export default {
     const containerHeight = ref(0);
 
     const aspectRatio = computed(() => {
-      console.log("COMPUTING AR")
+      // console.log("COMPUTING AR")
       return containerWidth.value / containerHeight.value;
     });
     
@@ -202,7 +203,7 @@ export default {
     let globalScene = null;
     let tempScene = ref(new Scene())
     watch(() => globalScene, (newValue) => {
-      console.log("NEW VALUE", newValue)
+      // console.log("NEW VALUE", newValue)
       tempScene.value = globalScene
     })
     let labelSceneL = null;
@@ -288,7 +289,7 @@ export default {
     //     // Create a temporary scene and camera
     //     const tempScene = new Scene();
     //     const tempCamera = new CubeCamera(0.1, 10, 1);
-    //     console.log(!!globalScene.environment)
+    //     // console.log(!!globalScene.environment)
     //     tempScene.background = globalScene.environment;
 
     //     // Update the cube camera to the position we want to sample
@@ -330,251 +331,33 @@ export default {
       // textureLoad.flipY = false;
       // let textureLoad2 = await loadTexture('/assets/label-textures-2/haa/monoflorals/300g/pine_limited.png')
       // textureLoad2.flipY = false;
-      console.log("BRAND CONFIGS", brandConfigs[textureUrlSlugs.brand.toUpperCase()].brandProductLines['Monoflorals'].flavours)
+      // console.log("BRAND CONFIGS", brandConfigs[textureUrlSlugs.brand.toUpperCase()].brandProductLines['Monoflorals'].flavours)
       let tempFlavors = brandConfigs[textureUrlSlugs.brand.toUpperCase()].brandProductLines['Monoflorals'].flavours
       let allTextures = []
       async function loadAllTextures(){
-        console.log("TEXTURE URL SLUGS", textureUrlSlugs)
+        // console.log("TEXTURE URL SLUGS", textureUrlSlugs)
         for (let i = 0; i<5; i++) {
-          console.log("Loading texture:", tempFlavors[i].urlSlug)
+          // console.log("Loading texture:", tempFlavors[i].urlSlug)
           let tempTexture = await loadTexture(`/assets/label-textures-2/haa/monoflorals/300g/${tempFlavors[i].urlSlug}.png`)
-          console.log("FINISHED LOADING")
+          // console.log("FINISHED LOADING")
           tempTexture.flipY = false
           allTextures.push(tempTexture)
         }
       }
       await loadAllTextures();
-
-
-      // globalScene.traverse((obj)=>{
-      //   if(obj.isMesh){
-      //     if(obj.name.includes('150g')){
-      //       jarSmall.value.push(obj)
-      //     } else if (obj.name.includes('300g')){
-      //       jarMedium.value.push(obj)
-      //     }
-      //     if(obj.name === 'label_object_300g'){
-      //       labelTest = obj
-      //       labelTest.material = new ShaderMaterial({
-      //         uniforms: {
-      //             textureA: { type: 't', value: textureLoad },
-      //             textureB: { type: 't', value: textureLoad2 },
-      //             linePosition: { type: 'f', value: 0.0 }
-      //         },
-      //         vertexShader: `
-      //             varying vec2 vUv;
-      //             void main() {
-      //                 vUv = uv;
-      //                 gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
-      //             }
-      //         `,
-      //         fragmentShader: `
-      //             uniform sampler2D textureA;
-      //             uniform sampler2D textureB;
-      //             uniform float linePosition;
-      //             varying vec2 vUv;
-      //             void main() {
-      //                 vec4 colorA = texture2D(textureA, vUv);
-      //                 vec4 colorB = texture2D(textureB, vUv);
-      //                 float blendFactor = step(linePosition, vUv.x);
-      //                 gl_FragColor = mix(colorA, colorB, blendFactor);
-      //             }
-      //         `,
-      //         transparent: true
-      //       });
-      //     }
-      //   }
-      // })
-      console.log("ALREADY ATTEMPTING AMTERIAL")
-      globalObj300g.material = new ShaderMaterial({
-        uniforms: {
-            textures: { value: allTextures },
-            currentTextureIndex: { type: 'i', value: 0 },
-            nextTextureIndex: { type: 'i', value: 1 },
-            transitionProgress: { type: 'f', value: 0.0 }
-        },
-        vertexShader: `
-            varying vec2 vUv;
-            void main() {
-                vUv = uv;
-                gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
-            }
-        `,
-        fragmentShader: `
-            uniform sampler2D textures[10]; // Adjust size based on your needs
-            uniform int currentTextureIndex;
-            uniform int nextTextureIndex;
-            uniform float transitionProgress;
-            varying vec2 vUv;
-
-            void main() {
-                vec4 currentTextureColor = texture2D(textures[currentTextureIndex], vUv);
-                vec4 nextTextureColor = texture2D(textures[nextTextureIndex], vUv);
-                gl_FragColor = mix(currentTextureColor, nextTextureColor, transitionProgress);
-            }
-        `,
-        transparent: true,
-      });
-      globalObj300g.material.needsUpdate = true;
-      // const material2 = new ShaderMaterial({
-      //   uniforms: {
-      //       textures: { value: textures },
-      //       currentTextureIndex: { type: 'i', value: 0 },
-      //       nextTextureIndex: { type: 'i', value: 1 },
-      //       transitionProgress: { type: 'f', value: 0.0 }
-      //   },
-      //   vertexShader: `
-      //       varying vec2 vUv;
-      //       void main() {
-      //           vUv = uv;
-      //           gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
-      //       }
-      //   `,
-      //   fragmentShader: `
-      //       uniform sampler2D textures[10]; // Adjust size based on your needs
-      //       uniform int currentTextureIndex;
-      //       uniform int nextTextureIndex;
-      //       uniform float transitionProgress;
-      //       varying vec2 vUv;
-
-      //       void main() {
-      //           vec4 currentTextureColor = texture2D(textures[currentTextureIndex], vUv);
-      //           vec4 nextTextureColor = texture2D(textures[nextTextureIndex], vUv);
-      //           gl_FragColor = mix(currentTextureColor, nextTextureColor, transitionProgress);
-      //       }
-      //   `,
-      //   transparent: true,
-      // });
-      // console.log("SMALL", jarSmall.value)
-      // console.log("MEDIUM", jarMedium.value)
+      
       loadedText = true
     }
 
     let matcapType = ref(true);
-    function toggleShader(){
-      matcapType.value = !matcapType.value
-      renderMatcap()
-    }
     
 
-    let matcapMaterial;
     function renderMatcap(){
       changeComplexMatcap()
       return
     }
 
     let tempColor;
-    function createComplexMaterialOptions( 
-      density = 4.85, 
-      light = 0.091, 
-      viscosity = 1.03, 
-      hPosition = 0.50, 
-      hIntensity = 0.50, 
-      envMapIntensity = 1.00, 
-      viscosityWaviness = 14.00
-    ) {
-      // console.log("Applying with values: ", density, light, viscosity, hPosition, hIntensity, envMapIntensity, viscosityWaviness);
-      // console.log("GOT ENV?", globalScene.environment)
-      
-      const matcapTexture = globalTextureLoader.load(`/assets/matcaps/45.png`);
-
-      return new ShaderMaterial({
-        uniforms: {
-          matcap: { value: matcapTexture },
-          colorAdjust: { value: new Color("#f5ca2e")},
-          time: { value: 0 },
-          envMap: { value: globalScene.environment },
-          IOR: { value: density.value},
-          subSurfaceScatter: { value: light.value},
-          viscosity: { value: viscosity.value},
-          viscosityWaviness: { value: viscosityWaviness.value},
-          highlightPosition: { value: hPosition.value },
-          highlightIntensity: { value: hIntensity.value },
-          envMapIntensity: { value: envMapIntensity.value},
-        },
-        vertexShader: `
-          varying vec3 vNormal;
-          varying vec3 vViewPosition;
-          varying vec3 vWorldPosition;
-
-          void main() {
-            vNormal = normalize(normalMatrix * normal);
-            vec4 mvPosition = modelViewMatrix * vec4(position, 1.0);
-            vViewPosition = -mvPosition.xyz;
-            vWorldPosition = (modelMatrix * vec4(position, 1.0)).xyz;
-            gl_Position = projectionMatrix * mvPosition;
-          }
-        `,
-        fragmentShader: `
-          uniform sampler2D matcap;
-          uniform vec3 colorAdjust;
-          uniform float time;
-          uniform samplerCube envMap;
-          uniform float envMapIntensity;
-          uniform float IOR;
-          uniform float subSurfaceScatter;
-          uniform float viscosity;
-          uniform float highlightIntensity;
-          uniform float highlightPosition;
-          uniform float viscosityWaviness;
-
-          varying vec3 vNormal;
-          varying vec3 vViewPosition;
-          varying vec3 vWorldPosition;
-
-          vec3 getEnvironmentReflection(vec3 viewDir, vec3 normal) {
-            vec3 reflectVec = reflect(viewDir, normal);
-            return textureCube(envMap, reflectVec).rgb;
-          }
-
-          void main() {
-            vec3 viewDir = normalize(vViewPosition);
-            vec3 normal = normalize(vNormal);
-
-            // Refraction
-            vec3 refractColor = refract(viewDir, normal, 1.0 / IOR);
-            vec2 matcapUV = refractColor.xy * 0.5 + 0.5;
-            vec3 matcapColor = texture2D(matcap, matcapUV).rgb;
-
-            // Environment reflection with reduced intensity
-            vec3 reflColor = getEnvironmentReflection(viewDir, normal) * envMapIntensity;
-
-            // Adjusted Fresnel effect
-            float fresnelPower = 3.0;
-            float fresnel = pow(1.0 - dot(viewDir, normal), fresnelPower);
-
-            // Subsurface scattering approximation
-            vec3 scatterColor = colorAdjust * (1.0 - fresnel) * subSurfaceScatter;
-
-            // Viscosity simulation (subtle movement)
-            float viscosityEffect = sin(vWorldPosition.y * viscosityWaviness + time * 0.1) * viscosity;
-            matcapColor += vec3(viscosityEffect);
-
-            // Enhanced Vertical highlight
-            float verticalHighlight = smoothstep(highlightPosition - 0.1, highlightPosition + 0.1, abs(vWorldPosition.y));
-            verticalHighlight = pow(verticalHighlight, 2.0) * highlightIntensity * 2.0;
-
-            // Blend colors with adjusted weights
-            vec3 baseColor = mix(matcapColor, reflColor, fresnel * 0.5);
-            vec3 finalColor = mix(baseColor, colorAdjust, 0.5);
-            finalColor += scatterColor;
-
-            // Apply vertical highlight more prominently
-            finalColor += vec3(verticalHighlight);
-
-            // Color depth simulation
-            float depth = (vWorldPosition.y + 1.0) * 0.5; // Normalize to 0-1 range
-            finalColor *= mix(vec3(1.0), colorAdjust, depth);
-
-            // Enhance transparency effect with reduced environment map influence
-            float transparency = smoothstep(0.2, 0.8, abs(dot(viewDir, normal)));
-            finalColor = mix(finalColor, reflColor, transparency * 0.2);
-
-            gl_FragColor = vec4(finalColor, 1.0);
-          }
-        `
-      });
-    }
 
 
     async function testMaterial(
@@ -590,7 +373,7 @@ export default {
       const hIntensityl = 0.50
       const envMapIntensityl = 1.00
       const viscosityWavinessl = 20.00
-      // console.log("Creating material with parameters:", 
+      // // console.log("Creating material with parameters:", 
       //   idl,
       //   densityl, 
       //   lightl, 
@@ -603,9 +386,9 @@ export default {
       // )
       try {
         const matcapTexture = await globalTextureLoader.loadAsync(`/assets/matcaps/${idl}.png`);
-        console.log("TEXTURETEXTURE", matcapTexture)
+        // console.log("TEXTURETEXTURE", matcapTexture)
 
-        console.log("Environment map:", globalScene.environment);
+        // console.log("Environment map:", globalScene.environment);
 
         let testColor = new Color("#c17710");
         return new ShaderMaterial({
@@ -736,7 +519,7 @@ export default {
           `
         });
       } catch (e) {
-        console.log("Error while loading matcap texture", e)
+        // console.log("Error while loading matcap texture", e)
       }
     }
     // Define reactive variables
@@ -786,19 +569,8 @@ export default {
       )
       
       globalObj150g.position.copy(tempPos);
-      console.log("material2 Uniforms", material2)
+      // console.log("material2 Uniforms", material2)
       
-      // const material = createComplexMaterialOptions(
-      //   density, 
-      //   light, 
-      //   viscosity, 
-      //   hPosition, 
-      //   hIntensity, 
-      //   envMapIntensity, 
-      //   viscosityWaviness
-      // );
-      // console.log("GOT MATERIAL", material2)
-      // Assuming globalObj300g and globalObj150g are defined elsewhere
       if (globalObj300g) {
         globalObj300g.material = material2;
         globalObj300g.material.needsUpdate = true;
@@ -810,47 +582,67 @@ export default {
     }
 
     let labelMeshes;
-    let globalObj300g;
+    let labelMeshesClones;
+    let glassMeshes;
+
     let globalObj150g;
+    let globalObj300g;
+    let globalObj450g;
+
     let globalGlass150g;
     let globalGlass300g;
+    let globalGlass450g;
+
 
     const setCanvas = async () => {
+      console.log("ATTEMPTING SETCANVAS ==================================================")
 
       let tempSize = currentJarSize.value === 'medium' ? '300g' : currentJarSize.value === 'large' ? '450g' : '150g' //values used are in grams
+
       // Create Scene
       isLoading.value = true
       globalScene = new Scene();
 
-      // let jarPromise = await loadGlbReturnParts(loader, jarConfigs.medium.source)
-      let mediumSmallScene = await loadGlbReturnParts(loader, '/assets/glb/newJars/300-150-animation-choppy-v6.glb')
-      // let mediumSmallScene = await loadGlbReturnParts(loader, '/assets/glb/newJars/450-300-animation-choppy-v2.glb')
-      console.log("medium small scene", mediumSmallScene)
+      let sceneUrl = currentBrand.value === 'okto' ?  
+      '/assets/glb/newJars/300-150-animation-choppy-v6.glb' : 
+      '/assets/glb/newJars/450-300-animation-choppy-v2.glb'
 
-      mixer = initializeMixer(mediumSmallScene.scene)
-      // mediumSmallScene.scene.position.set(0.25, -0.15, 0.1)
-      globalScene.add(mediumSmallScene.scene)
+      let currentScene = await loadGlbReturnParts(loader, sceneUrl)
+
+      // reference to mesh within loaded Scene - changes affect scene directly
+      labelMeshes = currentScene.labelMeshes
+      glassMeshes = currentScene.glassMeshes
+      labelMeshesClones = currentScene.labelMeshesClones
+      console.log("LABEL MESHES +++++++++++++++++++++++++++++++++++++++++++++++++++++", labelMeshes)
+      console.log("GLASS MESHES -----------------------------------------------------", glassMeshes)
+
+      mixer = initializeMixer(currentScene.scene)
+      // currentScene.scene.position.set(0.25, -0.15, 0.1)
+      globalScene.add(currentScene.scene)
 
 
       // TEST remove label glass jar
       globalScene.traverse((obj)=>{
         if(obj.isMesh){
+          if(obj.name.includes('honey_object')){
+            // label
+          }
           if(obj.name === 'honey_object_300g'){
             // changeMatcap(obj)
-            globalObj300g = obj
+            // globalObj300g = obj
           } else if (obj.name === 'honey_object_150g'){
-            globalObj150g = obj;
+            // globalObj150g = obj;
           } else if (obj.name.includes('jar')){
-            console.log("OBJ TRANSMISSION", obj.name)
+            // console.log("OBJ TRANSMISSION", obj.name)
             if(obj.name === "jar_object_150g"){
-              globalGlass150g = obj
+              // globalGlass150g = obj
             } else {
-              globalGlass300g = obj
+              // globalGlass300g = obj
             }
             // obj.material.transparent = true;
             // obj.material.opacity = 0;
           }
-          if(obj.name.includes('150g')){
+          if(obj.name.includes('150g')){ // used for targeting of position sliders
             jarSmall.value.push(obj)
           } else if (obj.name.includes('300g')){
             jarMedium.value.push(obj)
@@ -864,14 +656,14 @@ export default {
         }
       })
 
-      let setupAnimationProps = setupAnimations(mixer, mediumSmallScene.gltf.animations)
+      let setupAnimationProps = setupAnimations(mixer, currentScene.gltf.animations)
       // destructuring makes globalScene.add throw error?
       // ({ clipActions, animationState } = setupAnimations(mixer, jarAnimation3.gltf.animations))
       clipActions = setupAnimationProps.clipActions
       animationState = setupAnimationProps.animationState
       
 
-      currentJarScene = mediumSmallScene.scene; //Scene to be loaded
+      currentJarScene = currentScene.scene; //Scene to be loaded
 
       jarScenes[currentJarSize.value] = currentJarScene; 
 
@@ -889,7 +681,7 @@ export default {
       // Camera
       globalCamera = new PerspectiveCamera(25, aspectRatio.value, 0.001, 5);
       if( isMobile.value ){
-        // console.log("ISMOBILE")
+        // // console.log("ISMOBILE")
         globalCamera = new PerspectiveCamera(25, aspectRatio.value, 0.001, 3);
         // globalCamera.initialZoom = 1.4;
         globalCamera.position.set(cameraConfigsMobile.x, cameraConfigsMobile.y, cameraConfigsMobile.z)
@@ -1331,7 +1123,7 @@ export default {
       labelMeshes = null;
       globalObj300g = null;
       globalObj150g = null;
-      matcapMaterial = null;
+      // matcapMaterial = null;
       tempColor = null;
       labelTest = null;
       clipActions = [];
@@ -1349,23 +1141,28 @@ export default {
       productLine: productStore.getProductLineSlug,
       brand: productStore.getBrandSlug,
       size: currentJarSize.value
-    }), (currentValues, previousValues) => {
-
+    }), async (currentValues) => {
+      console.log("IN WATCHER RECEIVED VAL")
       //Set local size to grams, set global values of jar sizes
       let gramSize = currentValues.size === 'large' ? '450g' : currentValues.size === 'medium' ? '300g' : '150g';
       currentJarSize.value = currentValues.size
       currentJarSizeGrams.value = gramSize
+      if(currentValues.brand !== currentBrand.value){
+        console.log("HMph")
+        // await setCanvas()
+      }
       if(currentValues.brand === 'okto'){
         jarSizes = ['450g', '300g']
+        currentBrand.value = currentValues.brand
       } else jarSizes = ['300g', '150g']
 
-      // console.log("JSIZES", jarSizes)
-      // console.log("PROPS WATCHER ===============================");
-      // console.log("flavour |", currentValues.flavour, textureUrlSlugs.flavour, currentValues.flavour !== textureUrlSlugs.flavour);
-      // console.log("brand |", currentValues.brand, textureUrlSlugs.brand, currentValues.brand !== textureUrlSlugs.brand);
-      // console.log("productLine |", currentValues.productLine, textureUrlSlugs.productLine, currentValues.productLine !== textureUrlSlugs.productLine);
-      // console.log("size |", gramSize, textureUrlSlugs.size, gramSize !== textureUrlSlugs.size);
-      // console.log("PROPS WATCHER ===============================");
+      // // console.log("JSIZES", jarSizes)
+      // // console.log("PROPS WATCHER ===============================");
+      // // console.log("flavour |", currentValues.flavour, textureUrlSlugs.flavour, currentValues.flavour !== textureUrlSlugs.flavour);
+      // // console.log("brand |", currentValues.brand, textureUrlSlugs.brand, currentValues.brand !== textureUrlSlugs.brand);
+      // // console.log("productLine |", currentValues.productLine, textureUrlSlugs.productLine, currentValues.productLine !== textureUrlSlugs.productLine);
+      // // console.log("size |", gramSize, textureUrlSlugs.size, gramSize !== textureUrlSlugs.size);
+      // // console.log("PROPS WATCHER ===============================");
 
       if ( 
         currentValues.flavour !== textureUrlSlugs.flavour ||
@@ -1400,7 +1197,6 @@ export default {
       updateTexture,
       changeMat,
       matcapId,
-      toggleShader,
       renderMatcap,
       matcapType,
       jarSmall,

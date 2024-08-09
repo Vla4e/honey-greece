@@ -150,6 +150,10 @@ export default {
   background-position: center;
   background-repeat: no-repeat;
   cursor: pointer;
+  transition: width 0.3s ease-in;
+  @media(max-width: 767px){
+    transition: height 0.3s ease-in;
+  }
 
   &-1 {
     background-image: url('@/assets/pages/tabs/bg-1.png'); 
@@ -222,6 +226,9 @@ export default {
       justify-content: flex-start;
       font-size: 12px;
       text-align: left;
+    }
+    @media(max-width: 376px){
+      font-size: 10px;
     }
   }
   

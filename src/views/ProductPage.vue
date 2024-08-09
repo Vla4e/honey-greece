@@ -268,7 +268,7 @@ export default {
       }
       if(isMobile.value){
         console.log("DELETING 40px", fontSize)
-        fontSize -= 50
+        fontSize -= 65
       }
       console.log("Calculated fontsize", fontSize)
       let lineHeight = fontSize * 1.3
@@ -806,6 +806,7 @@ export default {
         }
         .description-text{
           text-align: center;
+          width: 90%;
         }
       }
       .technical-sheet{

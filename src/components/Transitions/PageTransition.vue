@@ -100,6 +100,7 @@ export default {
   // z-index: 10050;
   @media(max-width: 767px){
     font-size: 50px;
+    // white-space: nowrap;
   }
 }
 

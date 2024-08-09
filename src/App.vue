@@ -1,5 +1,5 @@
 <template>
-  <div class="app-container" :style="hideOverflow ? 'overflow: hidden': ''">
+  <div class="app-container" :class="`app-container-${route.name}`" :style="hideOverflow ? 'overflow: hidden': ''">
     <!-- <div v-if="!showContactForm && !isMobile" class="burger-icon-container">
       <BurgerMenuIcon @click="toggleSidebar" class="burger-icon"/>
     </div> -->
@@ -18,12 +18,14 @@
 </template>
 
 <script>
-import { provide, inject, ref, computed, watch, onMounted, onUnmounted } from 'vue';
+import { provide, inject, ref, computed, watch, onMounted, onUnmounted, toRaw } from 'vue';
 
 import { useNavbarStore } from '@/store/navbar.js'
 import { useGlobalStore } from '@/store/global.js'
 import { useSidebarStore } from '@/store/sidebar.js'
 import { storeToRefs } from 'pinia';
+import { useRoute } from 'vue-router';
+
 
 import { useScreenSize } from './composables/useScreenSize'
 
@@ -33,7 +35,8 @@ export default {
   setup(){
     const { isMobile, isTablet, isDesktop } = useScreenSize()
     provide('screenSize', { isMobile, isTablet, isDesktop })
-
+    let route = useRoute()
+    console.log("CURRENT ROUTE => ", toRaw(route))
     let globalStore = useGlobalStore()
     let { playAnimationOnEnter } = storeToRefs(globalStore)
     let hideOverflow = ref(false)
@@ -96,7 +99,8 @@ export default {
       showNavbar, 
       burgerIcon, 
       isMobile, 
-      hideOverflow
+      hideOverflow,
+      route
     }
   }
 }
@@ -107,6 +111,12 @@ export default {
   min-height: 100vh;
   @media(min-width: 1024px){
     height: 100vh;
+  }
+  @media(max-width: 768px){
+    
+    &-Tabs{
+      height: 100vh;
+    }
   }
   width: 100%;
   display: flex;

@@ -47,7 +47,6 @@ export default {
 
     // use .default to access the default export of the module = src
     async function loadVideo(speed) {
-      globalStore.showLoadingScreen = true;
       globalStore.loadingProgress = 0;
       if (isMobile.value) {
         if (speed >= 3) {
@@ -73,6 +72,7 @@ export default {
     }
 
     onMounted( async () => {
+      globalStore.showLoadingScreen = true;
       const networkSpeed = getNetworkSpeed()
       console.log("NETWORKSPEED", networkSpeed)
       if (networkSpeed !== null) {
