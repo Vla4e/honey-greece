@@ -13,7 +13,9 @@
       <ContactForm v-if="showContactForm"/>
     </Transition>
     <PageTransition></PageTransition>
-    <RouterView class="page-container"/>
+    <RouterView :key="route.fullPath" class="page-container"/>
+    <!-- REMOVE KEY when setCanvas has been fixed,
+    added to force rerender of components with same route/diff subroute -->
   </div>
 </template>
 

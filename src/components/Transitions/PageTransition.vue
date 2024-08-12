@@ -29,7 +29,7 @@ export default {
     let { playAnimationOnEnter } = storeToRefs(globalStore)
 
     let route = useRoute()
-    let lastRouteName = ref(null)
+    let lastRoutePath = ref(null)
     let transitionIterator;
     let firstSlideTransitionStatus = ref(false);
     let secondSlideTransitionStatus = ref(false);
@@ -72,8 +72,8 @@ export default {
     }
 
     watch(route, (newVal) => {
-      if(newVal.name !== lastRouteName.value){
-        lastRouteName.value = newVal.name
+      if(newVal.path !== lastRoutePath.value){
+        lastRoutePath.value = newVal.path
         if (transitionIterator) {
           let interval = setInterval(() => { //Check whether firstSlide animation is finished.
             if(firstSlideTransitionStatus.value){

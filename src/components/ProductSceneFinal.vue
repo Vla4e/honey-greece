@@ -17,7 +17,7 @@
       <button v-if="currentBrand !== 'okto'" @click="selectJarSize('150g')" :class="currentJarSize === '150g' ? 'selected': ''" class="small-jar">
         150g
       </button>
-      <!-- <button @click="triggerTextureTransition()" style="position:absolute; top: 80%; left: 50%;">TEXTURE</button> -->
+      <!-- <button @click="startWipe = !startWipe" style="position:absolute; top: 80%; left: 50%;">TEXTURE</button> -->
     </div>
 
     <div style="position: absolute; top: 0%; left: -50%; display: flex; width: 55%;">
@@ -180,7 +180,7 @@ export default {
     const containerHeight = ref(0);
 
     const aspectRatio = computed(() => {
-      // console.log("COMPUTING AR")
+      // // console.log("COMPUTING AR")
       return containerWidth.value / containerHeight.value;
     });
     
@@ -203,7 +203,7 @@ export default {
     let globalScene = null;
     let tempScene = ref(new Scene())
     watch(() => globalScene, (newValue) => {
-      // console.log("NEW VALUE", newValue)
+      // // console.log("NEW VALUE", newValue)
       tempScene.value = globalScene
     })
     let labelSceneL = null;
@@ -290,7 +290,7 @@ export default {
     //     // Create a temporary scene and camera
     //     const tempScene = new Scene();
     //     const tempCamera = new CubeCamera(0.1, 10, 1);
-    //     // console.log(!!globalScene.environment)
+    //     // // console.log(!!globalScene.environment)
     //     tempScene.background = globalScene.environment;
 
     //     // Update the cube camera to the position we want to sample
@@ -326,25 +326,30 @@ export default {
 
 
 
-
+    async function loadAllTextures(){
+      // console.log(textureUrlSlugs)
+      // console.log("TEXTURE URL SLUGS", brandConfigs[textureUrlSlugs.brand.toUpperCase()])
+      let tempFlavors = brandConfigs['Okto'].brandProductLines['Monoflorals'].flavours
+      let allTextures = []
+      for (let i = 0; i<5; i++) {
+        // // console.log("Loading texture:", tempFlavors[i].urlSlug)
+        let tempTexture = await loadTexture(`/assets/label-textures-2/okto/monoflorals/300g/${tempFlavors[i].urlSlug}.png`)
+        // // console.log("FINISHED LOADING")
+        tempTexture.name = tempFlavors[i].urlSlug
+        tempTexture.flipY = false
+        allTextures.push(tempTexture)
+      }
+      return allTextures
+    }
     async function changeMat(){
       // let textureLoad = await loadTexture('/assets/label-textures-2/haa/monoflorals/300g/fir_limited.png')
       // textureLoad.flipY = false;
       // let textureLoad2 = await loadTexture('/assets/label-textures-2/haa/monoflorals/300g/pine_limited.png')
       // textureLoad2.flipY = false;
-      // console.log("BRAND CONFIGS", brandConfigs[textureUrlSlugs.brand.toUpperCase()].brandProductLines['Monoflorals'].flavours)
+      // // console.log("BRAND CONFIGS", brandConfigs[textureUrlSlugs.brand.toUpperCase()].brandProductLines['Monoflorals'].flavours)
       let tempFlavors = brandConfigs[textureUrlSlugs.brand.toUpperCase()].brandProductLines['Monoflorals'].flavours
-      let allTextures = []
-      async function loadAllTextures(){
-        // console.log("TEXTURE URL SLUGS", textureUrlSlugs)
-        for (let i = 0; i<5; i++) {
-          // console.log("Loading texture:", tempFlavors[i].urlSlug)
-          let tempTexture = await loadTexture(`/assets/label-textures-2/haa/monoflorals/300g/${tempFlavors[i].urlSlug}.png`)
-          // console.log("FINISHED LOADING")
-          tempTexture.flipY = false
-          allTextures.push(tempTexture)
-        }
-      }
+
+      
       await loadAllTextures();
       
       loadedText = true
@@ -365,7 +370,7 @@ export default {
       id
     ) {
       
-      console.log("Creating material")
+      // console.log("Creating material")
       // const idl = 11
       // const fixedGridPositionl = new Vector3(-0.55, 0.1, 0)
       // const densityl = 9.06;
@@ -387,7 +392,7 @@ export default {
       const hIntensityl = 0.50
       const envMapIntensityl = 1.00
       const viscosityWavinessl = 17.00
-      // // console.log("Creating material with parameters:", 
+      // // // console.log("Creating material with parameters:", 
       //   idl,
       //   densityl, 
       //   lightl, 
@@ -400,9 +405,9 @@ export default {
       // )
       try {
         const matcapTexture = await globalTextureLoader.loadAsync(`/assets/matcaps/${idl}.png`);
-        // console.log("TEXTURETEXTURE", matcapTexture)
+        // // console.log("TEXTURETEXTURE", matcapTexture)
 
-        // console.log("Environment map:", globalScene.environment);
+        // // console.log("Environment map:", globalScene.environment);
 
         // let testColor = new Color("#c17710");
         let testColor = new Color("#fbac23");
@@ -533,10 +538,10 @@ export default {
           }
           `
         });
-        console.log("returning mat", material)
+        // console.log("returning mat", material)
         return material
       } catch (e) {
-        // console.log("Error while loading matcap texture", e)
+        // // console.log("Error while loading matcap texture", e)
       }
     }
     // Define reactive variables
@@ -551,9 +556,10 @@ export default {
     // Replace changeMatcapFinal with a new function that uses createComplexMaterialOptions
     async function changeComplexMatcap(id, color) {
       let tempFixed = new Vector3(
-    0.6325000000000001,
-    0.23,
-    0)
+        0.6325000000000001,
+        0.23,
+        0
+      )
       let fixedPosition = new Vector3(-0.55, 0.1, 0)
       // let pos = new Vector3(0, 0, 0)
       let testId = 41;
@@ -570,7 +576,7 @@ export default {
         positionStore[mesh.size] = mesh.position.clone()
         // mesh.position.copy(fixedPosition)
       })
-      // console.log("STORED POS", positionStore)
+      // // console.log("STORED POS", positionStore)
       // let sampledEnvMapColor = sampleEnvironmentMap(position)
       // function createUniformEnvironmentMap(color) {
       //   const size = 1;
@@ -598,9 +604,9 @@ export default {
         envMapIntensity, 
         viscosityWaviness // viscosityWaviness
       )
-      console.log("Got material", material2)
+      // console.log("Got material", material2)
       Object.values(honeyMeshes).forEach((mesh) => {
-        console.log("MESH :", mesh)
+        // console.log("MESH :", mesh)
         mesh.material = material2;
         mesh.material.needsUpdate = true;
       })
@@ -654,7 +660,7 @@ export default {
 
 
     const setCanvas = async () => {
-      console.log("ATTEMPTING SETCANVAS ==================================================")
+      // console.log("ATTEMPTING SETCANVAS ==================================================")
 
       let tempSize = frontJarSize.value || '300g' //values used are in grams
 
@@ -673,8 +679,8 @@ export default {
       glassMeshes = sceneParts.glassMeshes
       labelMeshesClones = sceneParts.labelMeshesClones
       honeyMeshes = sceneParts.honeyMeshes
-      // console.log("LABEL MESHES +++++++++++++++++++++++++++++++++++++++++++++++++++++", labelMeshes)
-      // console.log("GLASS MESHES -----------------------------------------------------", glassMeshes)
+      // // console.log("LABEL MESHES +++++++++++++++++++++++++++++++++++++++++++++++++++++", labelMeshes)
+      // // console.log("GLASS MESHES -----------------------------------------------------", glassMeshes)
       setTrackingVariables(1)
 
       mixer = initializeMixer(sceneParts.scene)
@@ -687,6 +693,8 @@ export default {
         if(obj.isMesh){
           if(obj.name.includes('honey_object')){
             // label
+            // obj.material.transparent = true;
+            // obj.material.opacity = 0;
           }
           if(obj.name === 'honey_object_300g'){
             // changeMatcap(obj)
@@ -694,7 +702,9 @@ export default {
           } else if (obj.name === 'honey_object_150g'){
             // globalObj150g = obj;
           } else if (obj.name.includes('jar')){
-            // console.log("OBJ TRANSMISSION", obj.name)
+            // // console.log("OBJ TRANSMISSION", obj.name)
+            // obj.material.transparent = true;
+            // obj.material.opacity = 0;
             if(obj.name === "jar_object_150g"){
               // globalGlass150g = obj
             } else {
@@ -709,6 +719,7 @@ export default {
             jarMedium.value.push(obj)
           }
           if(obj.name.includes('label')){
+            // obj.material.transparent = true;
             // obj.material.opacity = 0;
             if(obj.name.includes(tempSize)){
               currentJarLabel = obj
@@ -742,7 +753,7 @@ export default {
       // Camera
       globalCamera = new PerspectiveCamera(25, aspectRatio.value, 0.001, 5);
       if( isMobile.value ){
-        // // console.log("ISMOBILE")
+        // // // console.log("ISMOBILE")
         globalCamera = new PerspectiveCamera(25, aspectRatio.value, 0.001, 3);
         // globalCamera.initialZoom = 1.4;
         globalCamera.position.set(cameraConfigsMobile.x, cameraConfigsMobile.y, cameraConfigsMobile.z)
@@ -786,7 +797,13 @@ export default {
       await setLightingEXR(globalRenderer)
       // await setLighting(globalRenderer)
     };
+    
 
+    /* TEXTURE */
+    let currentTexture = null;
+    let upcomingTexture = null;
+    // let currentTexture = { textures: [], name: "" };
+    // let upcomingTexture = { textures: [], name: "" };
     async function computeTexture() {
       isFirstLoad = false;
       const baseTextureUrl = '/assets/label-textures-2';
@@ -796,24 +813,204 @@ export default {
       let jarTexturesLocal = []
       for (const size of jarSizes) {
         let textureUrl = `${baseTextureUrl}/${textureUrlSlugs.brand}/${textureUrlSlugs.productLine}/${size}/${textureUrlSlugs.flavour}.png`;
+        console.log("url - > ", textureUrl)
         let texture = await loadTexture(textureUrl);
+        texture.name = textureUrlSlugs.flavour
         texture.flipY = false;
         texture.generateMipMaps = true;
         texture.needsUpdate = true;
-        jarTexturesLocal.push({ texture, size });
+        jarTexturesLocal.push({ texture, size, name: textureUrlSlugs.flavour });
       }
 
       return jarTexturesLocal
     }
+    async function createTextureShader(previousTexture, nextTexture, clonedProperties){
+      console.log("CALLED CTS func")
+      // Copy glb mesh properties into shader
+      let tempEnv = globalScene.environment
+      let originalMaterial = clonedProperties;
+      let baseColor = originalMaterial.color;
+      let roughness = originalMaterial.roughness;
+      let metalness = originalMaterial.metalness;
+      let material = new ShaderMaterial({
+        uniforms: {
+            currentTexture: { value: previousTexture[0].texture },
+            nextTexture: { value: nextTexture[0].texture },
+            transitionProgress: { value: 0 },
+            envMap: { value: globalScene.environment },
+            roughness: { value: roughness },
+            metalness: { value: metalness },
+            baseColor: { value: baseColor },
+            envMapIntensity: { value: 1 },
+            side: DoubleSide
+        },
+        vertexShader: `
+          varying vec2 vUv;
+          varying vec3 vNormal;
+          varying vec3 vViewPosition;
+          varying float vSide;
 
+          void main() {
+              vUv = uv;
+              vec3 transformedNormal = normalMatrix * normal;
+              vNormal = normalize(transformedNormal);
+              vec4 mvPosition = modelViewMatrix * vec4(position, 1.0);
+              vViewPosition = -mvPosition.xyz;
+              gl_Position = projectionMatrix * mvPosition;
+              
+              // Determine if this is a front or back face
+              vSide = dot(transformedNormal, vViewPosition) > 0.0 ? -1.0 : 1.0;
+          }
+              `,
+        fragmentShader: `
+          uniform float transitionProgress;
+          uniform sampler2D currentTexture;
+          uniform sampler2D nextTexture;
+          uniform samplerCube envMap;
+          uniform float roughness;
+          uniform float metalness;
+          uniform vec3 baseColor;
+          uniform float envMapIntensity;
+
+          varying vec2 vUv;
+          varying vec3 vNormal;
+          varying vec3 vViewPosition;
+          varying float vSide;
+
+          void main() {
+              float alpha = step(vUv.x, transitionProgress);
+              vec4 texColorCurrent = texture2D(currentTexture, vUv);
+              vec4 texColorNext = texture2D(nextTexture, vUv);
+              vec4 texColor = mix(texColorCurrent, texColorNext, alpha);
+
+              vec3 color = baseColor * texColor.rgb;
+
+              vec3 normal = normalize(vNormal) * vSide;
+              vec3 viewDir = normalize(vViewPosition);
+              
+              // Calculate environment reflection
+              vec3 reflectVec = reflect(-viewDir, normal);
+              vec3 envColor = texture(envMap, reflectVec).rgb;
+
+              // Apply environment mapping
+              vec3 envMapColor = envColor * envMapIntensity;
+              
+              // Mix base color with environment reflection based on roughness and metalness
+              vec3 finalColor = mix(color, envMapColor, (1.0 - roughness) * metalness);
+              finalColor += envMapColor * (1.0 - metalness) * (1.0 - roughness) * 0.5;
+
+              // Use the alpha from the texture
+              float finalAlpha = texColor.a;
+
+              gl_FragColor = vec4(finalColor, finalAlpha);
+          }
+              `,
+              transparent: true,
+              alphaTest: 0.05,  // Adjust this value as needed
+      });
+
+      let material2 = new ShaderMaterial({
+        uniforms: {
+            currentTexture: { value: previousTexture[1].texture }, // Start with the first texture
+            nextTexture: { value: nextTexture[1].texture }, // Initially set to the second texture
+            transitionProgress: { value: 0 }, // Transition not started
+        envMap: { value: globalScene.environment },
+        roughness: { value: roughness },
+        metalness: { value: metalness },
+        baseColor: { value: baseColor },
+        envMapIntensity: { value: 1 },
+        side: DoubleSide
+        },
+        vertexShader: `
+          varying vec2 vUv;
+          varying vec3 vNormal;
+          varying vec3 vViewPosition;
+          varying float vSide;
+
+          void main() {
+              vUv = uv;
+              vec3 transformedNormal = normalMatrix * normal;
+              vNormal = normalize(transformedNormal);
+              vec4 mvPosition = modelViewMatrix * vec4(position, 1.0);
+              vViewPosition = -mvPosition.xyz;
+              gl_Position = projectionMatrix * mvPosition;
+              
+              // Determine if this is a front or back face
+              vSide = dot(transformedNormal, vViewPosition) > 0.0 ? -1.0 : 1.0;
+          }
+        `,
+        fragmentShader: `
+          uniform float transitionProgress;
+          uniform sampler2D currentTexture;
+          uniform sampler2D nextTexture;
+          uniform samplerCube envMap;
+          uniform float roughness;
+          uniform float metalness;
+          uniform vec3 baseColor;
+          uniform float envMapIntensity;
+
+          varying vec2 vUv;
+          varying vec3 vNormal;
+          varying vec3 vViewPosition;
+          varying float vSide;
+
+          void main() {
+              float alpha = step(vUv.x, transitionProgress);
+              vec4 texColorCurrent = texture2D(currentTexture, vUv);
+              vec4 texColorNext = texture2D(nextTexture, vUv);
+              vec4 texColor = mix(texColorCurrent, texColorNext, alpha);
+
+              vec3 color = baseColor * texColor.rgb;
+
+              vec3 normal = normalize(vNormal) * vSide;
+              vec3 viewDir = normalize(vViewPosition);
+              
+              // Calculate environment reflection
+              vec3 reflectVec = reflect(-viewDir, normal);
+              vec3 envColor = texture(envMap, reflectVec).rgb;
+
+              // Apply environment mapping
+              vec3 envMapColor = envColor * envMapIntensity;
+              
+              // Mix base color with environment reflection based on roughness and metalness
+              vec3 finalColor = mix(color, envMapColor, (1.0 - roughness) * metalness);
+              finalColor += envMapColor * (1.0 - metalness) * (1.0 - roughness) * 0.5;
+
+              // Use the alpha from the texture
+              float finalAlpha = texColor.a;
+
+              gl_FragColor = vec4(finalColor, finalAlpha);
+          }
+              `,
+              transparent: true,
+              alphaTest: 0.05,  // Adjust this value as needed
+      });
+      console.log("about to return mats")
+      return [
+        {material: material, size: previousTexture[0].size}, 
+        {material: material2, size: previousTexture[1].size}
+      ];
+    }
+
+    let firstTextureLoad = true;
     async function updateTexture() {
       isLoadingTexture = true;
-      //
+      
+
+      console.log("URL SLUGS:", textureUrlSlugs.flavour)
+      console.log("URL SLUGS:", textureUrlSlugs.brand)
+      console.log("URL SLUGS:", textureUrlSlugs.productLine)
+      console.log("URL SLUGS:", textureUrlSlugs.size)
       if(!currentJarScene){
+        console.log("EXITING")
         isLoadingTexture = false
         return
       }
 
+      let clonedProperties = null
+      Object.values(labelMeshesClones).forEach((clone) => {
+        clonedProperties = clone.material
+      })
       Object.values(labelMeshes).forEach((mesh) => {
         if (mesh.material && mesh.material.map) {
           // Dispose of the current texture to free up memory
@@ -822,21 +1019,46 @@ export default {
       })
       
       let textures = await computeTexture();
+      let shaderTextures = null;
+      console.log("IF FOR CREATING SHADER", currentTexture, textureUrlSlugs.flavour)
+      if(!currentTexture){
+        currentTexture = {textures, name: textureUrlSlugs.flavour}
+        shaderTextures = await createTextureShader(currentTexture.textures, currentTexture.textures, clonedProperties)
+      } else {
+        console.log("COMPARISON", currentTexture.name === textureUrlSlugs.flavour )
+        if(!(currentTexture.name === textureUrlSlugs.flavour)){
+          console.log("CREATING NEW SHADER TEXS", textures)
+          upcomingTexture = {textures, name: textureUrlSlugs.flavour}
+          shaderTextures = await createTextureShader(currentTexture.textures, upcomingTexture.textures, clonedProperties)
+          currentTexture = {textures, name: textureUrlSlugs.flavour}
+        }
+      }
+      // // console.log("TEXTURES", shaderTextures, currentTexture, upcomingTexture)
+      console.log("LABEL MESHES", !!labelMeshes)
+      console.log("SHADER MATS", shaderTextures)
       if(labelMeshes){
-        textures.forEach((object) => {
-            console.log("Object MEHSES", labelMeshes[object.size])
-            labelMeshes[object.size].material.map = object.texture;
-            labelMeshes[object.size].material.needsUpdate = true;
-        })
+        let mesh1 = labelMeshes[shaderTextures[0].size]
+        mesh1.material = shaderTextures[0].material
+        mesh1.material.side = DoubleSide;
+        mesh1.material.needsUpdate = true;
+        
+        let mesh2 = labelMeshes[shaderTextures[1].size]
+        mesh2.material = shaderTextures[1].material
+        mesh2.material.side = DoubleSide;
+        mesh2.material.needsUpdate = true;
       }
         // labelMesh.material.map = texture;
         // labelMesh.material.needsUpdate = true;
       isLoadingTexture = false
+      console.log("Before if for StartWipe", firstTextureLoad, startWipe.value)
+      if(!firstTextureLoad){
+        startWipe.value = true
+      } else {
+        firstTextureLoad = false
+      }
     }
 
-
-  
-
+    /* Jar size*/
     const selectJarSize = async (size) => {
       if(size === currentJarSize.value){
         return
@@ -905,6 +1127,7 @@ export default {
       globalScene.background = null;
       globalScene.environment = envMap;
       globalScene.environmentIntensity = 0.2;
+      // console.log("FINISHED SETTING LIGHTING ===========>")
       pmremGenerator.dispose()
       exrTexture.dispose();
       isLoading.value = false;
@@ -998,9 +1221,8 @@ export default {
     testClock.start()
     let isAnimating = false
     let animateTextureChange = false;
-    let transitionDuration = 1.0; // Duration of the texture transition in seconds
-    let transitionStartTime = 0; // Start time of the transition
-    let isTransitioning = false;
+    let startWipe = ref(false);
+    let wipeStep = 0.01;
     const animate = () => {
       if(!isAnimating) return
       stats.begin();
@@ -1011,7 +1233,28 @@ export default {
           labelTest.material.uniforms.linePosition.value = linePosition;
         }
       }
+
+      if (startWipe.value) {
+        // console.log("WIPING")
+        // Assuming you start the transitionProgress at 0
+        let label1 = labelMeshes[jarSizes[0]]
+        let label2 = labelMeshes[jarSizes[1]]
+        // // console.log("WIPING", label1.material.uniforms.transitionProgress.value)
+          label1.material.uniforms.transitionProgress.value += wipeStep;
+          label2.material.uniforms.transitionProgress.value += wipeStep;// Adjust this rate as needed
+
+          // Clamp the transition progress at 1 to stop the transition
+          if (label1.material.uniforms.transitionProgress.value > 1) {
+            // console.log("Progress done.")
+            label1.material.uniforms.transitionProgress.value = 1;
+            label2.material.uniforms.transitionProgress.value = 1;
+            startWipe.value = false; // Stop the wipe effect
+          }
+      }
+
       globalRenderer.render(globalScene, globalCamera);
+      
+
       let delta = clock.getDelta();
       if(!animationState.get(clipActions[0]).isFinished){
         mixer.update(delta);
@@ -1191,13 +1434,13 @@ export default {
       brand: productStore.getBrandSlug,
       size: currentJarSize.value
     }), async (newValues) => {
-      console.log("Triggered WATCHER:", newValues.brand)
+      console.log("Triggered WATCHER:", JSON.parse(JSON.stringify(newValues)))
       //Set local size to grams, set global values of jar sizes
       let gramSize = newValues.size
       currentJarSize.value = newValues.size
       currentJarSizeGrams.value = gramSize
       if(newValues.brand !== currentBrand.value){
-        console.log("HMph")
+        // console.log("HMph")
         if(newValues.brand === 'okto'){
           jarSizes = ['450g', '300g']
           currentLoadedJars = ['450g', '300g']
@@ -1213,29 +1456,46 @@ export default {
         } 
       }
 
-      // // console.log("JSIZES", jarSizes)
-      // // console.log("PROPS WATCHER ===============================");
-      // // console.log("flavour |", newValues.flavour, textureUrlSlugs.flavour, newValues.flavour !== textureUrlSlugs.flavour);
-      // // console.log("brand |", newValues.brand, textureUrlSlugs.brand, newValues.brand !== textureUrlSlugs.brand);
-      // // console.log("productLine |", newValues.productLine, textureUrlSlugs.productLine, newValues.productLine !== textureUrlSlugs.productLine);
-      // // console.log("size |", gramSize, textureUrlSlugs.size, gramSize !== textureUrlSlugs.size);
-      // // console.log("PROPS WATCHER ===============================");
+      // // // console.log("JSIZES", jarSizes)
+      // // // console.log("PROPS WATCHER ===============================");
+      // // // console.log("flavour |", newValues.flavour, textureUrlSlugs.flavour, newValues.flavour !== textureUrlSlugs.flavour);
+      // // // console.log("brand |", newValues.brand, textureUrlSlugs.brand, newValues.brand !== textureUrlSlugs.brand);
+      // // // console.log("productLine |", newValues.productLine, textureUrlSlugs.productLine, newValues.productLine !== textureUrlSlugs.productLine);
+      // // // console.log("size |", gramSize, textureUrlSlugs.size, gramSize !== textureUrlSlugs.size);
+      // // // console.log("PROPS WATCHER ===============================");
 
       if ( 
-        newValues.flavour !== textureUrlSlugs.flavour ||
-        newValues.productLine !== textureUrlSlugs.productLine ||
         newValues.brand !== textureUrlSlugs.brand ||
         gramSize !== textureUrlSlugs.size 
       )
       {
         textureUrlSlugs = {
-          flavour: newValues.flavour,
-          productLine: newValues.productLine,
+          ...textureUrlSlugs,
           brand: newValues.brand,
           size: gramSize
-        };
+        }
+        firstTextureLoad = true
+      }
+
+      if ( newValues.productLine !== textureUrlSlugs.productLine )
+      {
+        textureUrlSlugs = {
+          ...textureUrlSlugs,
+          productLine: newValues.productLine
+        }
+        firstTextureLoad = true
+        console.log("FTL", firstTextureLoad)
+      }
+
+      if(newValues.flavour !== textureUrlSlugs.flavour){
+        textureUrlSlugs = {
+          ...textureUrlSlugs,
+          flavour: newValues.flavour
+        }
+        console.log("SETTING TEXTUREURL SLUGS VALUES", newValues.flavour !== textureUrlSlugs.flavour)
         updateTexture();
       }
+      
     }, 
     {
       immediate: true,
@@ -1259,7 +1519,8 @@ export default {
       jarSmall,
       jarMedium,
       isLoading,
-      triggerTextureTransition
+      triggerTextureTransition,
+      startWipe
     };
   },
 };
