@@ -1,4 +1,5 @@
 import { defineStore } from 'pinia';
+import { ref } from 'vue';
 
 export const useGlobalStore = defineStore({
   id: 'global',
@@ -6,6 +7,7 @@ export const useGlobalStore = defineStore({
     playAnimationOnEnter: false,
     showLoadingScreen: false,
     loadingProgress: 0,
+    showLoadingCircle: false,
   }),
   getters: {
     getAnimationFlag: (state) => {
@@ -23,11 +25,15 @@ export const useGlobalStore = defineStore({
       // console.log("CHANGING ANIMATION FLAG VALUE", value)
       this.playAnimationOnEnter = value
     },
-    setLoadingScreenFlag: (value) => {
+    setLoadingScreenFlag(value){
       this.showLoadingScreen = value
     },
-    setLoadingProgress: (value) => {
+    setLoadingProgress(value){
       this.loadingProgress = value
+    },
+    toggleLoadingCircle(val){
+      // console.log("Toggling circle", val)
+      this.showLoadingCircle = val
     }
   }
 })

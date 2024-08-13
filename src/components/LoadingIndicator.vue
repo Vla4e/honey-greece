@@ -1,5 +1,5 @@
 <template>
-  <div v-if="true" class="loading-indicator">
+  <div v-if="isLoading" class="loading-indicator">
     <div class="spinner"></div>
   </div>
 </template>
@@ -10,15 +10,24 @@ export default {
 }
 </script>
 <script setup>
-import { onMounted, ref } from 'vue';
+import { onMounted, ref, watch } from 'vue';
+import { useGlobalStore } from '@/store/global.js';
+import { storeToRefs } from 'pinia'
 
 const isLoading = ref(true);
 
+const globalStore = useGlobalStore()
+let { showLoadingCircle } = storeToRefs(globalStore)
+watch(() => globalStore.showLoadingCircle, (val) => {
+  isLoading.value = val
+}, {
+  immediate: true
+})
 onMounted(() => {
   // Simulate loading time (remove this in production)
-  setTimeout(() => {
-    isLoading.value = false;
-  }, 1000);
+  // setTimeout(() => {
+  //   isLoading.value = false;
+  // }, 1000);
 });
 </script>
 

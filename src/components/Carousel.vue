@@ -78,16 +78,18 @@ onBeforeMount(() => {
 function goToItem(val){
   console.log(toRaw(val))
   console.log()
-  router.push({ 
-    name: 'Product', 
-    params: { selectedBrand: props.brand.name},
-    // query: {
-    //   line: val.flavourData.lineName
-    // }
-  })
+  if(!moved.value){
+    router.push({ 
+      name: 'Product', 
+      params: { selectedBrand: props.brand.name},
+      // query: {
+      //   line: val.flavourData.lineName
+      // }
+    })
     .catch(err => {
-    console.log("error while routing", err)
-  });
+      console.log("error while routing", err)
+    });
+  }
 }
 
 let computedCarouselDirection = computed(() => {
@@ -174,12 +176,14 @@ function onMouseMove(event) {
   const deltaX = clientX - startX.value;
   translateValue.value = previousTranslate.value + deltaX;
   if (Math.abs(deltaX) > 5) { // threshold to consider it a drag
+    console.log("It is a drag")
     moved.value = true;
   } else {
+    console.log("not a drag")
     moved.value = false;
   }
   if(moved.value){
-    
+    console.log("prevent from onMouseMouve")
     event.preventDefault()
   }
   // Calculate the velocity
@@ -194,6 +198,7 @@ function endDrag(event) {
   if (!isDragging.value) return;
   isDragging.value = false;
 
+  console.log("Moved enddrag", moved.value)
   if (moved.value) {
     event.preventDefault(); // prevent default only if it was a drag
   } else {
@@ -280,6 +285,9 @@ function preventDefaultSelection(event) {
     /* Disable drag behavior on the image */
     // pointer-events: none;
     cursor: pointer;
+    @media(min-width: 1440px){
+      width: 80%;
+    }
   }
   .name{
     font-family:"DMSans";
@@ -289,6 +297,9 @@ function preventDefaultSelection(event) {
     color: black;
     text-transform: uppercase;
     width: 80%;
+    @media(min-width: 768px) and (max-width: 1440px){
+      font-size: 12px;
+    }
   }
   .product-line{
     font-family:"DMSans";

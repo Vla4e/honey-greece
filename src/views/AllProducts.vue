@@ -269,7 +269,7 @@ onMounted(async () => {
     justify-content: space-between;
     align-items: center;
     @media(min-width: 768px){
-      height: 40%;
+      height: 50%;
     }
     .brand-info-container{
       width: 25%;

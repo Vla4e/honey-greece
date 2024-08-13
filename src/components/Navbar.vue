@@ -238,6 +238,10 @@ export default {
     justify-content: flex-start;
     align-items: center;
     z-index: 11;
+    
+    @media(max-width: 1366px){
+      width: 10%;
+    }
     @media(max-width: 767px){
       // justify-content: center;
       .burger-icon{
@@ -258,12 +262,18 @@ export default {
     justify-content: space-around;
     align-items: center;
     width: 50%;
+    @media(max-width: 1366px){
+      width: 75%;
+    }
   }
   .inquire-container{
     display: flex;
     justify-content: center;
     align-items: center;
     width: 25%;
+    @media(max-width: 1366px){
+      width: 10%;
+    }
   }
 }
 .links-container label {

@@ -6,12 +6,34 @@ const rotationFactorY = 0.005;
 const debounceInterval = 0; // milliseconds
 let mouseDown = false;
 
-function initiateObjectRotation(target, container){
+let rotationGroup = []
+let jarSizeLocal = '300g'
+let listenersActive = false;
+
+async function initiateObjectRotation(target, container, currentSize){
+  rotationGroup = [];
+  jarSizeLocal = currentSize
+  target.traverse((obj) => {
+    // console.log("ojb", obj)
+    if(obj.isMesh){
+      console.log("MESH", obj.name)
+      if(obj.name.includes(jarSizeLocal) && jarSizeLocal !== '450g'){
+        rotationGroup.push(obj)
+      }
+    }
+  })
+  // target.children.forEach(child => {
+  //   if(child.name.includes(jarSizeLocal)){
+  //     console.log("inside loop")
+  //     rotationGroup.push(child);
+  //   }
+  // });
+  console.log("Rotation group:", rotationGroup)
   registerEventListeners(target, container)
 }
 
 function registerEventListeners(target, container){
-
+  console.log("And event listeners")
   container.addEventListener("mousedown", () => {
     mouseDown = true;
   })
@@ -24,6 +46,8 @@ function registerEventListeners(target, container){
   container.addEventListener("mouseup", () => {
     mouseDown = false;
   })
+
+  listenersActive = true
 }
 
 function debouncedMouseMove (event, target){
@@ -49,7 +73,10 @@ function rotateObject(event, target){
   quaternionX.invert()
 
   // Apply the quaternion to the object
-  target.quaternion.multiplyQuaternions(quaternionY, target.quaternion)
+  rotationGroup.forEach((obj) => {
+    obj.quaternion.multiplyQuaternions(quaternionY, obj.quaternion)
+  })
+  // target.quaternion.multiplyQuaternions(quaternionY, target.quaternion)
   // target.quaternion.multiplyQuaternions(quaternionX, target.quaternion);
   // target.rotation.z += zRotation;
 }

@@ -4,7 +4,7 @@ import { KTX2Loader } from 'three/examples/jsm/loaders/KTX2Loader.js';
 import { TextureLoader } from 'three';
 import { MeshoptDecoder } from 'three/examples/jsm/libs/meshopt_decoder.module.js';
 import { RGBELoader } from 'three/examples/jsm/loaders/RGBELoader.js';
-
+import { Object3D } from 'three';
 // export const loader = new GLTFLoader();
 const textureLoader = new TextureLoader();
 const rgbeLoader = new RGBELoader();
@@ -48,13 +48,21 @@ export async function loadGlbReturnParts(loader, url){
     let glassMeshes = []
     let honeyMeshes = []
     let sizeDuringTraversal = '';
+    // let jar150 = new Object3D;
+    // let jar300 = new Object3D;
+    // let jar450 = new Object3D;
     scene.traverse((obj)=>{
       if(obj.isMesh){
         if(obj.name.includes('300')){
           sizeDuringTraversal = '300g'
+          // jar300.add(obj)
         } else if (obj.name.includes('450')){
           sizeDuringTraversal = '450g'
-        } else sizeDuringTraversal = '150g'
+          // jar450.add(obj)
+        } else {
+          sizeDuringTraversal = '150g'
+          // jar150.add(obj)
+        }
 
         if(obj.name.includes('label')){
           obj.trackingName = `label_${sizeDuringTraversal}`
@@ -92,7 +100,18 @@ export async function loadGlbReturnParts(loader, url){
     console.log("SIZES", jarSizes)
     // // console.log('meshNames', meshNames)
 
-    return { gltf: loaderPromise, scene, meshes, labelMeshes, labelMeshesClones, glassMeshes, honeyMeshes, targetMesh, meshNames, jarSizes, loaded: true }
+    return { 
+      gltf: loaderPromise, 
+      scene, 
+      meshes, 
+      labelMeshes, 
+      labelMeshesClones, 
+      glassMeshes, 
+      honeyMeshes, 
+      targetMesh, 
+      meshNames, 
+      jarSizes, 
+      loaded: true }
   } else return { loaded: false }
 }
 
