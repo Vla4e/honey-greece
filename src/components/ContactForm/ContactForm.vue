@@ -24,6 +24,10 @@
               </div>
             </div>
             <div class="form-group">
+              <label for="email">Email</label>
+              <input type="email" id="email" v-model="form.email" required>
+            </div>
+            <div class="form-group">
               <label for="subject">Subject</label>
               <input type="subject" id="subject" v-model="form.subject" required>
             </div>
@@ -31,11 +35,14 @@
               <label for="message">Message</label>
               <textarea id="message" v-model="form.message" required></textarea>
             </div>
+
             <button class="submit-button" type="submit">Submit</button>
+
           </form>
         </div>
       </div>
       <!-- close icon (X) -->
+
       <svg @click="toggleContactForm" class="close-icon" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
         <path d="M6 6L18 18M6 18L18 6" stroke="#131313" stroke-width="1" stroke-linecap="round" stroke-linejoin="round"/>
       </svg>
@@ -50,31 +57,60 @@
 </script>
 
 <script setup>
-import { reactive, ref, inject } from 'vue';
+import { reactive, ref, inject, onMounted, nextTick } from 'vue';
+
 const emitter = inject('emitter')
 const { isMobile } = inject('screenSize')
 
+//Recaptcha
+const siteKey = ref('6LeduiYqAAAAAM0sVYQ7IRkiObV6HU5w-ZPFkLbQ');
+
+//Form
 const form = reactive({
   firstName: '',
   lastName: '',
+  email: '',
   subject: '',
   message: ''
 });
+async function handleSubmit() {
+  grecaptcha.ready(async () => {
+    grecaptcha.execute(siteKey.value, {action: 'submit'}).then(async (captchaToken) => {
+      await submitForm(captchaToken);
+    }).catch(error => {
+      console.error('reCAPTCHA execution failed:', error);
+      alert('reCAPTCHA verification failed. Please try again.');
+    });
+  });
+}
 
-function handleSubmit() {
-  // Using mailto protocol to open the default mail application
-  const subject = form.subject;
-  const body = `
-    First Name: ${form.firstName}
-    Last Name: ${form.lastName}
-    Message: ${form.message}
-  `;
-  
-  const mailtoLink = `mailto:info@premiumhoney.gr?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
-  window.location.href = mailtoLink; // This will open the user's default email client
-  setTimeout(()=> {
-    emitter.emit('toggleContactForm')
-  }, 1500)
+async function submitForm(captchaToken) {
+  const formData = {
+    ...form,
+    captchaToken
+  };
+
+  try {
+    const response = await fetch('http://localhost:3000/send-email', {
+      method: 'POST',
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(formData)
+    });
+
+    if (response.ok) {
+      alert('Email sent successfully');
+      setTimeout(() => {
+        emitter.emit('toggleContactForm');
+      }, 1500);
+    } else {
+      alert('Failed to send email. Please try again.');
+    }
+  } catch (error) {
+    console.error('Error sending email:', error);
+    alert('Error sending email');
+  }
 }
 
 function toggleContactForm(){
