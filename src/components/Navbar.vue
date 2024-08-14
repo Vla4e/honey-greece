@@ -7,11 +7,11 @@
         <!-- <img :src="sidebar" @click="toggleSidebar" class="burger-icon"/> -->
       </div>
 
-      <div v-if="!isMobile && (!showSidebar || isMobile)" class="blend-links-container">
+      <div v-if="!isMobile && !showSidebar" class="blend-links-container">
         <LinkTree v-for="brand in brands" :brand="brand"/>
       </div>
 
-      <div v-if="!isMobile && (!showSidebar || isMobile)" class="inquire-container">
+      <div v-if="!isMobile && !showSidebar" class="inquire-container">
         <span class="blend-link" @click="toggleContactForm()">
           Inquire
         </span>

@@ -309,7 +309,7 @@ watch(() => props.currentPhase, (newPhase) => {
       width: 100%;
       height: 100%;
       position: absolute;
-      top: 5%;
+      top: 10%;
       .brand-text{
         font-family: "DM Serif";
         font-size: 24px;

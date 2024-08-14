@@ -37,7 +37,8 @@
             where tradition, innovation, 
             <br/>and the purest honey meet
             <img class="quote quote-end" :src="quoteEnd"/>
-          </p>
+          </p>    
+          <router-link :to="'/products'" class="cta">Discover the range of honey products &gt;</router-link>
       </div>
     </Transition>
   </div>
@@ -248,7 +249,14 @@ const maxPhases = 2 //3 counted from 0
     }
   }
 }
-
+.cta{
+  font-family: "DMSans";
+  font-size: 14px;
+  font-weight: 500;
+  text-align: center;
+  color: black;
+  text-transform: uppercase;
+}
 .slide-in-enter-active, .slide-in-leave-active{
   transition: all 0.5s 0.5s ease-out;
 }

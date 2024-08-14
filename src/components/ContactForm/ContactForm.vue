@@ -4,7 +4,7 @@
       <div class="white-box-cover">
         <div class="gray-line"/>
       </div>
-      <div class="left-side">
+      <div v-if="!isMobile" class="left-side">
         <div class="header-container">
           <h1 class="header-text">Contact Us</h1>
           <p class="subheader-text">We're always happy to hear from you! Whether you have a question or feedback, feel free to reach out. Your thoughts and inquiries are important to us, and we're here to assist you in any way we can.</p>
@@ -52,6 +52,7 @@
 <script setup>
 import { reactive, ref, inject } from 'vue';
 const emitter = inject('emitter')
+const { isMobile } = inject('screenSize')
 
 const form = reactive({
   firstName: '',
@@ -223,6 +224,36 @@ function toggleContactForm(){
             }
           }
         }
+      }
+    }
+  }
+}
+@media(max-width: 768px){
+  .contact-container{
+    &-bordered{
+      width: 100%;
+      height: 100%;
+      border: none !important;
+    }
+    .white-box-cover{
+      display: none !important;
+    }
+    .right-side{
+      width: 100% !important;
+      .contact-card{
+        box-shadow: none !important;
+        .contact-form{
+          .form-group{
+            width: 100% !important;
+          }
+          .form-groups-row{
+            flex-direction: column;
+          }
+        }
+      }
+      .submit-button{
+        width: 40% !important;
+        align-self: center;
       }
     }
   }

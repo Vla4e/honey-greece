@@ -26,11 +26,14 @@
           </span>
           <span class="link-subheading">Diversity Series</span>
         </router-link>
+        <router-link v-if="isMobile" class="sidebar-link" to="/all-products">
+          <span class="link-heading">All products</span>
+        </router-link>
     </div>
     <div class="right-side">
-      <div class="sidebar-link disabled">
-        <span class="link-heading">Contact</span>
-        <span class="link-info">
+      <div class="sidebar-link contact-info">
+        <span @click="toggleContactAccordion()" class="link-heading">Contact</span>
+        <span class="link-info" :class="isMobile ? toggledContact ? 'toggled' : '' : ''">
           Email: <a href="mailto:info@premiumhoney.gr" target="_blank">info@premiumhoney.gr</a>
           <br/>
           Phone: +30 22320-22153
@@ -46,12 +49,12 @@
           39.14698616699479, 22.28284913351356
         </span>
       </div>
+      <div v-if="isMobile" @click="toggleContactForm()" class="sidebar-link">
+        <span class="link-heading">Inquire</span>
+      </div>
       <router-link class="sidebar-link" to="/about-us">
         <span class="link-heading">About</span>
         <span class="link-subheading">Unveiling Our Hive: Meet our Team</span>
-      </router-link>
-      <router-link v-if="isMobile" class="sidebar-link" to="/all-products">
-        <span class="link-heading">All products</span>
       </router-link>
     </div>
   </div>
@@ -69,8 +72,21 @@ export default {
 </script>
 
 <script setup>
-import { inject } from 'vue'
+import { inject, ref } from 'vue'
+
 const { isMobile } = inject('screenSize')
+const emitter = inject('emitter')
+
+let toggledContact = ref(false)
+function toggleContactAccordion(){
+  if(isMobile.value){
+    toggledContact.value = !toggledContact.value
+  }
+}
+function toggleContactForm(){
+  // console.log("Called toggle contact form")
+  emitter.emit('toggleContactForm')
+}
 </script>
 
 <style lang="scss" scoped>
@@ -167,6 +183,8 @@ const { isMobile } = inject('screenSize')
       text-transform: none;
       text-align: left;
       max-width: 60%;
+      transition: height ease-in-out 0.5s;
+      overflow: hidden;
     }
   }
   
@@ -193,7 +211,21 @@ const { isMobile } = inject('screenSize')
         color: white;
       }
       .link-subheading, .link-info{
-        display: none;
+        // display: none;
+        pointer-events: none;
+        opacity: 0;
+        height: 0px;
+      }
+      &.contact-info{
+        .link-info{
+          &.toggled{
+            opacity: 1;
+            flex-direction: column;
+            height: 250px;
+            color: white;
+            pointer-events: all;
+          }
+        }
       }
     }
   }

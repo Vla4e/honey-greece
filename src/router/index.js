@@ -108,19 +108,19 @@ const router = createRouter({
         } 
       }
     },
-    {
-      path: '/test',
-      name: 'Test',
-      component: lazyLoad('Test'),
-      meta: { 
-        hasNavbar: false, 
-        playAnimationOnEnter: true,
-        navbarColor: {
-          mobile: 'black',
-          desktop: 'black',
-        }
-      }
-    },
+    // {
+    //   path: '/test',
+    //   name: 'Test',
+    //   component: lazyLoad('Test'),
+    //   meta: { 
+    //     hasNavbar: false, 
+    //     playAnimationOnEnter: true,
+    //     navbarColor: {
+    //       mobile: 'black',
+    //       desktop: 'black',
+    //     }
+    //   }
+    // },
   ]
 })
 

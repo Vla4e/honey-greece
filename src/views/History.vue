@@ -11,7 +11,7 @@
         
         <component v-if="isMobile" class="tab" :is="mobileTabComponent" :key="4" :currentPhase="0"> </component>
     </div>
-    <div v-if="!isMobile || (isMobile && currentTabId === 0)" class="cycle-container">
+    <div v-if="!isAtFinalPhase && (!isMobile || (isMobile && currentTabId === 0))" class="cycle-container">
       <button class="cycle" @click="cycleForward()">
         <img :src="getCycleButtonImage()" alt="Cycle forward" />
       </button>
@@ -51,6 +51,7 @@ const { isMobile } = inject('screenSize')
 
 let currentPhase = ref(0)
 let currentTabId = ref(0)
+let isAtFinalPhase = ref(false)
 // let currentTabComponent = computed(() => Tabs[currentTabId.value])
 let currentTabComponent = computed(() => isMobile.value && currentTabId.value === 3 ? Tabs[3] : Tabs[currentTabId.value]);
 let mobileTabComponent = Tabs[3]
@@ -67,14 +68,23 @@ function cycleForward() {
     }
   } else {
     // Desktop
+    console.log("cphase before ifs", currentPhase.value, currentTabComponent.value.phases, currentTabId.value)
     if (currentPhase.value < currentTabComponent.value.phases) {
       currentPhase.value++;
     } else {
       if (currentTabId.value < 2) { // cycle up to Tab2
         currentTabId.value++;
+        currentPhase.value = 0;
+      } else {
+        console.log("IS at final phase !")
+        isAtFinalPhase.value = true;
+        return
       }
-      currentPhase.value = 0;
     }
+    if(currentPhase.value === 2 && currentTabId.value === 2){
+      isAtFinalPhase.value = true;
+    }
+    console.log("cphase after ifs", currentPhase.value, currentTabComponent.value.phases)
   }
 
   // update based on current tab and phase
