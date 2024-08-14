@@ -7,7 +7,6 @@
     <!-- <button class="reset-button" @click="resetScene">X</button> -->
 
     <div class="size-selection">
-    {{ currentBrand }} TEST
       <button v-if="currentBrand === 'okto'" @click="selectJarSize('450g')" :class="currentJarSize === '450g' ? 'selected': ''" class="large-jar">
         450g
       </button>

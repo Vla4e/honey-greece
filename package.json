@@ -6,7 +6,8 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "build_obfuscate": "vite build && node obfuscate.js"
   },
   "dependencies": {
     "@tweenjs/tween.js": "^23.1.2",

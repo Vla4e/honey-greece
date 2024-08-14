@@ -271,6 +271,8 @@ export default {
       if(isMobile.value){
         // console.log("DELETING 40px", fontSize)
         fontSize -= 65
+      } else {
+        fontSize -= 20; // TEMP FIX
       }
       // console.log("Calculated fontsize", fontSize)
       let lineHeight = fontSize * 1.3
@@ -525,6 +527,7 @@ export default {
       margin-bottom: 15px;
       width: 80%;
       .stylish-pointer-to-left {
+        display: none !important;
         position: absolute;
         right: 100%;
         top: 50%;
@@ -565,6 +568,7 @@ export default {
             
         }
         .stylish-pointer {
+          display: none !important;
           position: absolute;
           left: 100%; /* Starts at the end of the series-item */
           top: 50%;
