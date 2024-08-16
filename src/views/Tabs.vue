@@ -204,7 +204,7 @@ export default {
   .mobile-header{
     display: flex;
     // width: 100%;
-    height: 20%;
+    // height: 20%;
     align-items: flex-end;
     font-family: "DMSans";
     font-size: 32px;

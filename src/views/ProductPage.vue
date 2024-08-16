@@ -115,7 +115,8 @@
     <div v-if="isMobile" class="suggested-brand-section">
       <span class="flavor-text">Also discover... </span>
       <div class="suggested-brands">
-        <router-link :to="`/product/HAA?line=Monoflorals`" class="brand">
+        <router-link :to="`/product/${suggestedBrandRoute}`" class="brand">
+          {{suggestedBrandRoute}}
           <img :src="suggestedBrandLogoUrl" class="logo" alt="Brand"/>
           <img :src="chevronRight" class="chevron" alt="Go to brand"/>
         </router-link>
@@ -221,15 +222,18 @@ export default {
       let imgUrl = null
       switch(selectedBrand.value.brand){
         case 'Okto':
+          suggestedBrandRoute.value = 'HAA'
           imgUrl = (await import('@/assets/pages/tabs/tab2-larger.png')).default;
           return imgUrl;
         case 'HAA':
           // console.log("returnign HAA")
+          suggestedBrandRoute.value = 'Okto'
           imgUrl = (await import('@/assets/pages/tabs/tab1-larger.png')).default;
           return imgUrl;
       }
     }
     let suggestedBrandLogoUrl = ref(null) // does not look cool bro...
+    let suggestedBrandRoute = ref(null)
 
     let computedTextLength = computed(()=>{
       let nameLength = currentFlavour.value.name.length
@@ -424,7 +428,8 @@ export default {
       toggleViews,
       showControls,
       isMobile,
-      chevronRight
+      chevronRight,
+      suggestedBrandRoute
     };
   },
 };
@@ -744,7 +749,7 @@ export default {
         margin-bottom: 20px;
       }
       .blend{
-        width: 100%;
+        width: 95%;
         justify-content: center;
         margin-bottom: 40px;
         min-height: 40px;
@@ -752,12 +757,12 @@ export default {
           color: white;
           text-align: center;
           transition: font-size 0.3s ease;
-          font-size: 18px;
+          font-size: 16px;
         }
         &.selected{
           .blend-text{
             position: relative;
-            font-size: 25px;
+            font-size: 22px;
             &::before,
             &::after {
                 content: '';

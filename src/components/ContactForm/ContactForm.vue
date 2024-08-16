@@ -35,9 +35,20 @@
               <label for="message">Message</label>
               <textarea id="message" v-model="form.message" required></textarea>
             </div>
-
-            <button class="submit-button" type="submit">Submit</button>
-
+            <div class="button-recaptcha">
+              <button class="submit-button" type="submit">Submit</button>
+              <div class="recaptcha-disclaimer" style="text-align: center; margin-top: 10px;">
+                <span class="disclaimer-text">
+                  This site is protected by reCAPTCHA and the Google
+                </span>
+                <div class="links">
+                  <a href="https://policies.google.com/privacy">Privacy Policy</a>
+                  &nbsp;and&nbsp;
+                  <a href="https://policies.google.com/terms">Terms of Service</a>
+                  &nbsp;apply.
+                </div>
+              </div>
+            </div>
           </form>
         </div>
       </div>
@@ -91,7 +102,7 @@ async function submitForm(captchaToken) {
   };
 
   try {
-    const response = await fetch('http://localhost:3000/send-email', {
+    const response = await fetch('https://api.premiumhoney.gr/send-email', {
       method: 'POST',
       headers: {
         "Content-Type": "application/json",
@@ -254,7 +265,7 @@ function toggleContactForm(){
             background: none;
             padding: 15px;
             border-radius: 0px;
-            margin-top: 15px;
+            // margin-top: 15px;
             &:hover{
               border-color: #131313;
             }
@@ -291,6 +302,42 @@ function toggleContactForm(){
         width: 40% !important;
         align-self: center;
       }
+    }
+  }
+}
+
+.button-recaptcha{
+  display: flex;
+  width: 100%;
+  align-items: center;
+  .recaptcha-disclaimer{
+    display:flex;
+    flex-direction: column;
+    width: 100%;
+    margin-top: 0px;
+    .disclaimer-text{
+      font-size: 12px;
+      color: black;
+    }
+    .links{
+      display: flex;
+      justify-content: center;
+      color: black;
+      font-size: 12px;
+    }
+  }
+  @media(max-width:768px){
+    flex-direction: column;
+    .recaptcha-disclaimer{
+      .disclaimer-text{
+        font-size:11px;
+      }
+      .links{
+        font-size:11px;
+      }
+    }
+    .submit-button{
+      padding: 10px;
     }
   }
 }

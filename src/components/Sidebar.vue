@@ -56,6 +56,21 @@
         <span class="link-heading">About</span>
         <span class="link-subheading">Unveiling Our Hive: Meet our Team</span>
       </router-link>
+
+      <div class="sidebar-link recaptcha">
+        <div class="recaptcha-disclaimer" style="text-align: center; margin-top: 10px;">
+          <span class="disclaimer-text">
+            This site is protected by reCAPTCHA and the Google
+          </span>
+          <div class="links">
+            <a href="https://policies.google.com/privacy">Privacy Policy</a>
+            &nbsp;and&nbsp;
+            <a href="https://policies.google.com/terms">Terms of Service</a>
+            &nbsp;apply.
+          </div>
+        </div>
+      </div>
+
     </div>
   </div>
 </template>
@@ -202,13 +217,19 @@ function toggleContactForm(){
     .sidebar-link{
       align-items: center;
       margin-bottom: 25px !important;
+      @media(max-height: 780px){
+        margin-bottom: 10px !important;
+      }
       &:last-child{
         margin-bottom: 15px;
       }
       .link-heading{
-        font-size: 28px;
+        font-size: 24px;
         text-align: center;
         color: white;
+        @media(max-height: 790px){
+          font-size: 20px;
+        }
       }
       .link-subheading, .link-info{
         // display: none;
@@ -244,6 +265,30 @@ function toggleContactForm(){
     width: 45px;
     height: 45px;
     cursor: pointer;
+  }
+}
+.recaptcha-disclaimer{
+  display:flex;
+  flex-direction: column;
+  width: 100%;
+  margin-top: 0px;
+  .disclaimer-text{
+    font-size: 11px;
+    color: black;
+  }
+  .links{
+    display: flex;
+    justify-content: center;
+    color: black;
+    font-size: 11px;
+  }
+  @media(max-width:768px){
+    .disclaimer-text{
+      color: white;
+    }
+    .links{
+      color: white;
+    }
   }
 }
 </style>

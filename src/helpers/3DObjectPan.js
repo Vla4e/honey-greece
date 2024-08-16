@@ -22,12 +22,6 @@ async function initiateObjectRotation(target, container, currentSize){
       }
     }
   })
-  // target.children.forEach(child => {
-  //   if(child.name.includes(jarSizeLocal)){
-  //     console.log("inside loop")
-  //     rotationGroup.push(child);
-  //   }
-  // });
   console.log("Rotation group:", rotationGroup)
   registerEventListeners(target, container)
 }
@@ -46,9 +40,31 @@ function registerEventListeners(target, container){
   container.addEventListener("mouseup", () => {
     mouseDown = false;
   })
+  container.addEventListener("touchstart", (event) => {
+    mouseDown = true;
+    event.preventDefault();  // Prevents the default scrolling on touch
+  });
 
+  container.addEventListener("touchmove", (event) => {
+      if (mouseDown) {
+          const touch = event.touches[0];
+          event.movementX = touch.clientX - lastTouchX;
+          event.movementY = touch.clientY - lastTouchY;
+          lastTouchX = touch.clientX;
+          lastTouchY = touch.clientY;
+          debouncedMouseMove(event, target);
+      }
+      event.preventDefault();
+  });
+
+  container.addEventListener("touchend", () => {
+      mouseDown = false;
+  });
   listenersActive = true
 }
+
+let lastTouchX = 0;
+let lastTouchY = 0;
 
 function debouncedMouseMove (event, target){
   if(mouseDown){

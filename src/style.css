@@ -107,3 +107,7 @@ button:focus-visible {
   align-items: center;
   padding: 15px 10px;
 }
+
+.grecaptcha-badge {
+  visibility: hidden;
+}

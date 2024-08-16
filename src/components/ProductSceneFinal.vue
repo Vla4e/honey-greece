@@ -2,12 +2,15 @@
   <div class="scene-container" ref="sceneContainer">
 
     <canvas v-show="!isLoading" ref="webGl" class="webGl" />
-    <LoadingIndicator style="width: 100px; height: 100px;" v-if="isLoading" class="jar-loading"/>
+    <div v-if="isLoading" class="loading-indicator-container">
+      <LoadingIndicator style="width: 100px; height: 100px;" class="jar-loading"/>
+    </div>
 
     <!-- <button class="reset-button" @click="resetScene">X</button> -->
 
-    <div class="size-selection">
-      <button v-if="currentBrand === 'okto'" @click="selectJarSize('450g')" :class="currentJarSize === '450g' ? 'selected': ''" class="large-jar">
+    <div :style="isLoading ? 'pointer-events: none;':''" class="size-selection">
+      <button 
+      v-if="currentBrand === 'okto'" @click="selectJarSize('450g')" :class="currentJarSize === '450g' ? 'selected': ''" class="large-jar">
         450g
       </button>
       <button @click="selectJarSize('300g')" :class="currentJarSize === '300g' ? 'selected': ''" class="medium-jar">
@@ -132,6 +135,8 @@ const jarConfigs = Object.freeze({
   }  }
 });
 
+import * as TWEEN from '@tweenjs/tween.js';
+import { zoomIn, zoomOut} from '@/helpers/cameraZoom.js'
 const cameraConfigs = Object.freeze({
   x: 0.35,
   y: 0.06,
@@ -141,10 +146,13 @@ const cameraConfigs = Object.freeze({
   // z: 0.045
 })
 const cameraConfigsMobile = Object.freeze({
-  x: 0.25,
+  x: 0.22,
   y: 0.06,
-  z: 0
+  z: 0,
+  x450g: 0.28
 })
+let animatingCamera = false;
+
 
 Cache.enabled = true;
 
@@ -265,6 +273,7 @@ export default {
     let currentJarScene = null;
     let upcomingJarScene = null;
     let currentJarSize = ref(jarConfigs["300g"].name);
+    let previousJarSize = ref(null);
     let currentJarSizeGrams = ref(null);
     let upcomingJarSize = ref('');
     let jarScenes = {}; // store loaded model to avoid reloading
@@ -338,7 +347,7 @@ export default {
       let allTextures = []
       for (let i = 0; i<5; i++) {
         // // // console.log("Loading texture:", tempFlavors[i].urlSlug)
-        let tempTexture = await loadTexture(`/assets/label-textures-2/okto/monoflorals/300g/${tempFlavors[i].urlSlug}.png`)
+        let tempTexture = await loadTexture(`/assets/label-textures-3/okto/monoflorals/300g/${tempFlavors[i].urlSlug}.png`)
         // // // console.log("FINISHED LOADING")
         tempTexture.name = tempFlavors[i].urlSlug
         tempTexture.flipY = false
@@ -347,9 +356,9 @@ export default {
       return allTextures
     }
     async function changeMat(){
-      // let textureLoad = await loadTexture('/assets/label-textures-2/haa/monoflorals/300g/fir_limited.png')
+      // let textureLoad = await loadTexture('/assets/label-textures-3/haa/monoflorals/300g/fir_limited.png')
       // textureLoad.flipY = false;
-      // let textureLoad2 = await loadTexture('/assets/label-textures-2/haa/monoflorals/300g/pine_limited.png')
+      // let textureLoad2 = await loadTexture('/assets/label-textures-3/haa/monoflorals/300g/pine_limited.png')
       // textureLoad2.flipY = false;
       // // // console.log("BRAND CONFIGS", brandConfigs[textureUrlSlugs.brand.toUpperCase()].brandProductLines['Monoflorals'].flavours)
       let tempFlavors = brandConfigs[textureUrlSlugs.brand.toUpperCase()].brandProductLines['Monoflorals'].flavours
@@ -615,6 +624,8 @@ export default {
         mesh.material = material2;
         mesh.material.needsUpdate = true;
       })
+      
+      isLoading.value = false;
     }
 
 
@@ -761,7 +772,7 @@ export default {
       globalCamera = new PerspectiveCamera(25, aspectRatio.value, 0.001, 5);
       if( isMobile.value ){
         // // // // console.log("ISMOBILE")
-        globalCamera = new PerspectiveCamera(25, aspectRatio.value, 0.001, 3);
+        globalCamera = new PerspectiveCamera(30, aspectRatio.value, 0.001, 3);
         // globalCamera.initialZoom = 1.4;
         globalCamera.position.set(cameraConfigsMobile.x, cameraConfigsMobile.y, cameraConfigsMobile.z)
         // globalCamera.position.set(cameraConfigs.x, cameraConfigs.y, cameraConfigs.z);
@@ -814,7 +825,7 @@ export default {
     // let upcomingTexture = { textures: [], name: "" };
     async function computeTexture() {
       isFirstLoad = false;
-      const baseTextureUrl = '/assets/label-textures-2';
+      const baseTextureUrl = '/assets/label-textures-3';
 
 
       // load if not
@@ -1061,7 +1072,9 @@ export default {
       }
         // labelMesh.material.map = texture;
         // labelMesh.material.needsUpdate = true;
-      isLoadingTexture = false
+      setTimeout(() => {
+        isLoadingTexture = false
+      }, 250)
       // console.log("Before if for StartWipe", firstTextureLoad, startWipe.value)
       if(!firstTextureLoad){
         // console.log("initiating startWipe", labelMeshes[jarSizes[0]].material.uniforms.transitionProgress.value)
@@ -1073,6 +1086,8 @@ export default {
 
     /* Jar size*/
     const selectJarSize = async (size) => {
+      console.log("Attempting selectJarSize")
+      previousJarSize.value = currentJarSize.value
       if(size === currentJarSize.value){
         return
       } else {
@@ -1087,7 +1102,24 @@ export default {
           action.play()
           currentJarSize.value = size;
         })
-        initiateObjectRotation(globalScene, webGl.value.parentElement, currentJarSize.value)
+        initiateObjectRotation(globalScene, webGl.value, currentJarSize.value)
+        console.log("CJS", currentJarSize.value)
+
+        if(size === '450g'){
+          console.log("Zooming out")
+          animatingCamera = true;
+          zoomOut(globalCamera, 1000, 1.1, cameraConfigsMobile)
+          setTimeout(() => {
+            animatingCamera = false;
+          }, 1100);
+        } else if(previousJarSize.value === '450g' && previousJarSize.value !== size){
+          console.log("Zooming in")
+          animatingCamera = true;
+          zoomIn(globalCamera, 1000, 1.1, cameraConfigsMobile)
+          setTimeout(() => {
+            animatingCamera = false;
+          }, 1100)
+        }
       }
     };
 
@@ -1138,7 +1170,6 @@ export default {
       // // console.log("FINISHED SETTING LIGHTING ===========>")
       pmremGenerator.dispose()
       exrTexture.dispose();
-      isLoading.value = false;
     }
     // async function setLightingEXR(renderer, options = {}) {
     //   const {
@@ -1242,6 +1273,10 @@ export default {
         }
       }
 
+      if(animatingCamera){
+        TWEEN.update();
+      }
+
       if (startWipe.value) {
         // console.log("WIPING")
         // Assuming you start the transitionProgress at 0
@@ -1332,8 +1367,8 @@ export default {
 
       await setCanvas();
       // initializeEdges(globalScene.children[0]);
-      console.log("SCENE BEFORE BEING PASSED", globalScene)
-      await initiateObjectRotation(globalScene, webGl.value.parentElement, currentJarSize.value)
+      console.log("SCENE BEFORE BEING PASSED", webGl.value)
+      await initiateObjectRotation(globalScene, webGl.value, currentJarSize.value)
       await nextTick()
       // getDistanceFromCanvas(globalScene.children[0].children[0])
       // initSliderInteraction();
@@ -1543,6 +1578,8 @@ export default {
   @media(max-width: 767px){
     height: 100% !important;
     min-height: 300px !important;
+    display: flex;
+    flex-direction: column;
   }
 }
 .reset-button{
@@ -1595,6 +1632,15 @@ export default {
   @media(max-width: 767px){
     // min-height: 350px;
     margin-bottom: 30px;
+  }
+}
+.loading-indicator-container{
+  width: 100%;
+  height: 100%;
+  @media(max-width: 767px){
+    // min-height: 350px;
+    margin-bottom: 30px;
+    flex-grow: 1;
   }
 }
 // .slider-container{

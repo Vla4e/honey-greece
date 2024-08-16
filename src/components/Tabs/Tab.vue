@@ -172,6 +172,7 @@ export default {
   &-3 { 
     background-image: url('@/assets/pages/tabs/bg-3.png');
     position: relative;
+    cursor: default !important;
     .tab-texts{
       display: flex;
       position: absolute !important;
@@ -394,7 +395,7 @@ export default {
   }
 }
 
-@media (max-width: 767px) and (min-height: 700px) {
+@media (max-width: 767px) and (min-height: 840px) {
   .clicked-tab{
     .tab-texts{
       // position: static;
