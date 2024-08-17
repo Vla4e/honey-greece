@@ -13,7 +13,7 @@
       <ContactForm v-if="showContactForm"/>
     </Transition>
     <PageTransition></PageTransition>
-    <RouterView :key="route.fullPath" class="page-container"/>
+    <RouterView :key="routerViewKey" class="page-container"/>
     <!-- REMOVE KEY when setCanvas has been fixed,
     added to force rerender of components with same route/diff subroute -->
   </div>
@@ -38,6 +38,21 @@ export default {
     const { isMobile, isTablet, isDesktop } = useScreenSize()
     provide('screenSize', { isMobile, isTablet, isDesktop })
     let route = useRoute()
+    // const routerViewKey = computed(() => {
+    //   // Only update the key when navigating between subroutes of `/product`
+    //   console.log("VIEWKEY CHANGED", route.path)
+    //   if (route.path.startsWith('/product')) {
+    //     return route.fullPath; // Full path includes query parameters and hash
+    //   }
+    //   return route.path; // Use the basic path for other routes to prevent unnecessary updates
+    // });
+    const routerViewKey = computed(() => {
+      if (route.path.startsWith('/product')) {
+        // Only include the path and query parameters, not the hash
+        return route.path;
+      }
+      return route.name; // Use the route name for other routes
+    });
     // console.log("CURRENT ROUTE => ", toRaw(route))
     let globalStore = useGlobalStore()
     let { playAnimationOnEnter } = storeToRefs(globalStore)
@@ -102,7 +117,8 @@ export default {
       burgerIcon, 
       isMobile, 
       hideOverflow,
-      route
+      route,
+      routerViewKey
     }
   }
 }

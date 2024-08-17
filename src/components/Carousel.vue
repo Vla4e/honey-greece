@@ -23,7 +23,7 @@
           @click="goToItem(obj)"
         >
           <slot :name="index">
-            <img :src="obj.path" class="jar-image" :draggable="false"/>
+            <img :src="obj.path" class="jar-image" loading="lazy" :draggable="false"/>
             <span class="name"> {{obj.flavourData.flavour.name}} </span>
             <span class="product-line"> {{obj.flavourData.lineName}} </span>
           </slot>
@@ -287,6 +287,9 @@ function preventDefaultSelection(event) {
     cursor: pointer;
     @media(min-width: 1440px){
       width: 80%;
+    }
+    @media(max-width: 450px){
+      min-height: 200px;
     }
   }
   .name{

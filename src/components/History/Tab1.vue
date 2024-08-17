@@ -73,51 +73,7 @@
         </div>
       </div>
     </Transition>
-    <!-- <button style="position: absolute; bottom: 20%; left: 50%;" @click="test()">Test</button> -->
-
     <h1 class="floating-heading floating-heading-1" v-if="currentPhase < 2">A Tradition of Excellence</h1>
-    <!-- <h1 class="floating-heading floating-heading-2">
-      journey
-      <br/>of our 
-      <br/>honey
-    </h1>
-    <img :src="image1" class="image image-1"/>
-    <img :src="image2" class="image image-2"/>
-    <p class="floating-text">
-      It all began four decades ago, when the Montouris family established their honey business. 
-      What started as a humble endeavor grew into a labor of love and a testament to unwavering commitment.
-    </p>
-    <div class="journey-text-container">
-      <span class="heading">
-        Our journey began with a simple premise
-      </span>
-      <span class="text">
-        direct sales from our premises. 
-        The sheer quality of our honey garnered attention, and it was soon recognized as a benchmark for excellence. 
-        The demand for our golden nectar inspired us to diversify our offerings
-      </span>
-    </div>
-    <div class="okto-container">
-      <img class="logo" alt="HAA">
-      <span class="description">
-        For those who seek the best, our Premium Honey series combines the rich flavors of the Greek countryside with a touch of tradition. 
-        This is honey that carries a piece of our heritage in every drop.
-      </span>
-    </div>
-    <div class="haa-container">
-      <img class="logo" alt="haa">
-      <span class="description">
-        The epitome of honey perfection, this series offers the purest, most exquisite honey nature has to offer. 
-        Our bees roam pristine Greek landscapes, collecting nectar from a rich tapestry of flowers, resulting in a honey that is unparalleled in quality.
-      </span>
-    </div>
-    <div class="melculum-container">
-      <img class="logo" alt="melculum">
-      <span class="description">
-        Our honey spreads and other delightful creations are a testament to our creativity and passion. 
-        Here, we blend the beauty of diversity with the art of taste, crafting unique and delicious honey-based products that you'll love.
-      </span>
-    </div> -->
   </div>
 </template>
 

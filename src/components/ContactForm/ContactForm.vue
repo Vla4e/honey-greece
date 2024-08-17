@@ -324,6 +324,10 @@ function toggleContactForm(){
       justify-content: center;
       color: black;
       font-size: 12px;
+      a{
+        text-decoration: underline;
+        color: black;
+      }
     }
   }
   @media(max-width:768px){

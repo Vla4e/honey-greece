@@ -116,7 +116,6 @@
       <span class="flavor-text">Also discover... </span>
       <div class="suggested-brands">
         <router-link :to="`/product/${suggestedBrandRoute}`" class="brand">
-          {{suggestedBrandRoute}}
           <img :src="suggestedBrandLogoUrl" class="logo" alt="Brand"/>
           <img :src="chevronRight" class="chevron" alt="Go to brand"/>
         </router-link>
@@ -347,6 +346,9 @@ export default {
     function selectFlavour(flavour) {
       if(currentFlavour.value !== flavour){
         currentFlavour.value = flavour;
+        if(isMobile.value){
+          circleToggled.value = !circleToggled.value
+        }
       } else return
     }
 
@@ -696,6 +698,8 @@ export default {
     max-width: 100%;
     background: white;
     .floating-text{
+      display: flex;
+      align-items: center;
       position: static;
       max-width: 95%;
       text-align: center;
@@ -703,6 +707,8 @@ export default {
       font-size: 65px;
       margin: auto;
       margin-bottom: -30px;
+      min-height: 125px;
+      transition: all 0.3s ease-in-out;
     }
     .mobile-series{
       position: static;

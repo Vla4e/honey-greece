@@ -32,11 +32,11 @@
     </div>
     <div class="right-side">
       <div class="sidebar-link contact-info">
-        <span @click="toggleContactAccordion()" class="link-heading">Contact</span>
+        <span @click="toggleContactAccordion()" class="link-heading contact">Contact</span>
         <span class="link-info" :class="isMobile ? toggledContact ? 'toggled' : '' : ''">
           Email: <a href="mailto:info@premiumhoney.gr" target="_blank">info@premiumhoney.gr</a>
           <br/>
-          Phone: +30 22320-22153
+          Phone: <a href="tel:+302232022153">+30 22320-22153</a>
           <br/><br/>
           Address:
           <br/>
@@ -46,7 +46,7 @@
           <br/>
           Location:
           <br/>
-          39.14698616699479, 22.28284913351356
+          <a href="https://www.google.com/maps?q=39.14698616699479, 22.28284913351356" target="_blank">39.14698616699479, 22.28284913351356</a>
         </span>
       </div>
       <div v-if="isMobile" @click="toggleContactForm()" class="sidebar-link">
@@ -147,6 +147,16 @@ function toggleContactForm(){
   .sidebar-link{
     display: flex;
     flex-direction: column;
+    
+    &.contact-info{
+      a{
+        color: black;
+        text-decoration: underline;
+        @media(max-width: 768px){
+          color: white;
+        }
+      }
+    }
     &.disabled{
       pointer-events: none !important;
       color: #13131370 !important;
@@ -167,12 +177,17 @@ function toggleContactForm(){
       margin-bottom: 15px;
       &:hover{
         &:not(.disabled){
-        // transform: scale(1.01);
-        font-weight:700;
-        // transition: all ease-in 0.3s;
+          // transform: scale(1.01);
+          font-weight:700;
+          // transition: all ease-in 0.3s;
         }
         .okt, .omega{
           font-weight: 700;
+        }
+      }
+      &.contact{
+        &:hover{
+          font-weight:400;
         }
       }
     }
@@ -219,6 +234,10 @@ function toggleContactForm(){
       margin-bottom: 25px !important;
       @media(max-height: 780px){
         margin-bottom: 10px !important;
+      }
+      
+      @media(max-height: 600px){
+        margin-bottom: 0px !important;
       }
       &:last-child{
         margin-bottom: 15px;
@@ -273,21 +292,37 @@ function toggleContactForm(){
   width: 100%;
   margin-top: 0px;
   .disclaimer-text{
-    font-size: 11px;
+    font-family: 'DMSans';
+    font-style: normal;
+    font-weight: 400;
+    font-size: 14px;
     color: black;
   }
   .links{
     display: flex;
     justify-content: center;
     color: black;
-    font-size: 11px;
+    font-size: 14px;
+    font-family: 'DMSans';
+    font-style: normal;
+    font-weight: 400;
+    a{
+      text-decoration: underline;
+      color: black;
+    }
   }
   @media(max-width:768px){
     .disclaimer-text{
       color: white;
+      font-size: 11px;
     }
     .links{
       color: white;
+      font-size: 11px;
+      a{
+        text-decoration: underline;
+        color: white;
+      }
     }
   }
 }

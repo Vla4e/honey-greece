@@ -50,6 +50,7 @@ export default {
       globalStore.showLoadingScreen = true;
       globalStore.loadingProgress = 0;
       if (isMobile.value) {
+        console.log("Will load mobile vid")
         if (speed >= 9) {
           videoSource.value = (await import('@/assets/pages/home/mobile_3mbps.mp4')).default;
         } else if (speed >= 6) {
@@ -68,6 +69,7 @@ export default {
           videoSource.value = (await import('@/assets/pages/home/desktop_1mbps.mp4')).default;
         }
       }
+      console.log("SOURCE:", videoSource.value)
       videoReady.value = true;
       globalStore.showLoadingScreen = false;
     }

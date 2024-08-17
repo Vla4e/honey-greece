@@ -338,21 +338,59 @@ export default {
 
 /////////////////////
 
-
-
+    let allCurrentTextures = {}
+    let alreadyLoadedProductLines = []
     async function loadAllTextures(){
-      // // console.log(textureUrlSlugs)
-      // // console.log("TEXTURE URL SLUGS", brandConfigs[textureUrlSlugs.brand.toUpperCase()])
-      let tempFlavors = brandConfigs['Okto'].brandProductLines['Monoflorals'].flavours
-      let allTextures = []
-      for (let i = 0; i<5; i++) {
-        // // // console.log("Loading texture:", tempFlavors[i].urlSlug)
-        let tempTexture = await loadTexture(`/assets/label-textures-3/okto/monoflorals/300g/${tempFlavors[i].urlSlug}.png`)
-        // // // console.log("FINISHED LOADING")
-        tempTexture.name = tempFlavors[i].urlSlug
-        tempTexture.flipY = false
-        allTextures.push(tempTexture)
+      console.log("LOAD ALL MOTHERFUCKING TEXTURES ===========>", alreadyLoadedProductLines.length)
+      if(alreadyLoadedProductLines.length){
+        console.log("HUH")
       }
+      let wtf = alreadyLoadedProductLines.find((line) => {
+        console.log("line === textureUrlSlugs.productLine", line === textureUrlSlugs.productLine, line, textureUrlSlugs.productLine)
+        return line === textureUrlSlugs.productLine
+      })
+      if(wtf){
+        console.log("FOUND ALREADY")
+        return
+      }
+      console.log("ATTEMPTING LAT")
+      let hardcodedPDLs = {
+        'Okto': ['Multiflorals', 'Monoflorals'],
+        'HAA': ['Monoflorals', 'Blends']
+      }
+      let hardcodedPDLUrls = {
+        'Okto': ['multiflorals', 'monoflorals'],
+        'HAA': ['monoflorals', 'blends']
+      }
+      let hardcodedSizes = {
+        'Okto': ['450g', '300g'],
+        'HAA': ['300g', '150g']
+      }
+      let brandUrl = textureUrlSlugs.brand === 'okto' ? 'Okto' : 'HAA'
+      let productLineUrl = textureUrlSlugs.productLine.charAt(0).toUpperCase() + textureUrlSlugs.productLine.slice(1);
+      // // console.log("TEXTURE URL SLUGS", brandConfigs[textureUrlSlugs.brand.toUpperCase()])
+      let tempFlavors1 = brandConfigs[brandUrl].brandProductLines[hardcodedPDLs[brandUrl][0]].flavours;
+      let tempFlavors2 = brandConfigs[brandUrl].brandProductLines[hardcodedPDLs[brandUrl][1]].flavours;
+      console.log("FLAV 1", JSON.parse(JSON.stringify(tempFlavors1)));
+      console.log("FLAV 2", tempFlavors2);
+      let allTextures = [];
+
+      // Loop over both flavor lists sequentially
+      [tempFlavors1, tempFlavors2].forEach((flavours, index) => {
+          let pdlUrl = hardcodedPDLUrls[brandUrl][index];
+
+          flavours.forEach(async (flavour, flavourIndex) => {
+              let tempTexture = await loadTexture(`/assets/label-textures-3/${textureUrlSlugs.brand}/${pdlUrl}/${hardcodedSizes[brandUrl][0]}/${flavour.urlSlug}.png`);
+              let tempTexture2 = await loadTexture(`/assets/label-textures-3/${textureUrlSlugs.brand}/${pdlUrl}/${hardcodedSizes[brandUrl][1]}/${flavour.urlSlug}.png`);
+
+              tempTexture.name = flavour.urlSlug;
+              tempTexture.flipY = false;
+
+              allTextures.push(tempTexture, tempTexture2);
+          });
+      })
+      console.log("ALLTEX", allTextures)
+      alreadyLoadedProductLines.push(textureUrlSlugs.productLine)
       return allTextures
     }
     async function changeMat(){
@@ -394,18 +432,18 @@ export default {
       // const hIntensityl = 0.50
       // const envMapIntensityl = 1.00
       // const viscosityWavinessl = 20.00
-      const idl = 12
+      const idl = 7
       const fixedGridPositionl = new Vector3(
-    0.6325000000000001,
-    0.23,
+  0.05,
+    0.2,
     0)
-      const densityl = 9.68;
-      const lightl = 0.32;
+      const densityl = 10.85;
+      const lightl = 0.92;
       const viscosityl = 0.85
       const hPositionl =  0.50
       const hIntensityl = 0.50
       const envMapIntensityl = 1.00
-      const viscosityWavinessl = 17.00
+      const viscosityWavinessl = 20.00
       // // // // console.log("Creating material with parameters:", 
       //   idl,
       //   densityl, 
@@ -424,7 +462,7 @@ export default {
         // // // console.log("Environment map:", globalScene.environment);
 
         // let testColor = new Color("#c17710");
-        let testColor = new Color("#fbac23");
+        let testColor = new Color("#a57531");
         let material = new ShaderMaterial({
         uniforms: {
           matcap: { value: matcapTexture },
@@ -552,6 +590,7 @@ export default {
           }
           `
         });
+        
         // // console.log("returning mat", material)
         return material
       } catch (e) {
@@ -586,10 +625,10 @@ export default {
       //   }
       // })
       let positionStore = {};
-      Object.values(honeyMeshes).forEach((mesh) => {
-        positionStore[mesh.size] = mesh.position.clone()
-        // mesh.position.copy(fixedPosition)
-      })
+      // Object.values(honeyMeshes).forEach((mesh) => {
+      //   positionStore[mesh.size] = mesh.position.clone()
+      //   // mesh.position.copy(fixedPosition)
+      // })
       // // // console.log("STORED POS", positionStore)
       // let sampledEnvMapColor = sampleEnvironmentMap(position)
       // function createUniformEnvironmentMap(color) {
@@ -805,6 +844,7 @@ export default {
       // globalRenderer.setScissorTest( true );
       globalRenderer.shadowMap.enabled = false;
       globalRenderer.render(globalScene, globalCamera);
+      console.log("Calling updateTex from setCanvas")
       updateTexture()
       // globalOrbitControls = new OrbitControls(globalCamera, canvas);
       // globalOrbitControls.enableDamping = true; // Add smooth damping
@@ -1104,22 +1144,24 @@ export default {
         })
         initiateObjectRotation(globalScene, webGl.value, currentJarSize.value)
         console.log("CJS", currentJarSize.value)
-
-        if(size === '450g'){
-          console.log("Zooming out")
-          animatingCamera = true;
-          zoomOut(globalCamera, 1000, 1.1, cameraConfigsMobile)
-          setTimeout(() => {
-            animatingCamera = false;
-          }, 1100);
-        } else if(previousJarSize.value === '450g' && previousJarSize.value !== size){
-          console.log("Zooming in")
-          animatingCamera = true;
-          zoomIn(globalCamera, 1000, 1.1, cameraConfigsMobile)
-          setTimeout(() => {
-            animatingCamera = false;
-          }, 1100)
+        if(isMobile.value){
+          if(size === '450g'){
+            console.log("Zooming out")
+            animatingCamera = true;
+            zoomOut(globalCamera, 1000, 1.1, cameraConfigsMobile)
+            setTimeout(() => {
+              animatingCamera = false;
+            }, 1100);
+          } else if(previousJarSize.value === '450g' && previousJarSize.value !== size){
+            console.log("Zooming in")
+            animatingCamera = true;
+            zoomIn(globalCamera, 1000, 1.1, cameraConfigsMobile)
+            setTimeout(() => {
+              animatingCamera = false;
+            }, 1100)
+          }
         }
+
       }
     };
 
@@ -1478,7 +1520,8 @@ export default {
       brand: productStore.getBrandSlug,
       size: currentJarSize.value
     }), async (newValues) => {
-      // console.log("Triggered WATCHER:", JSON.parse(JSON.stringify(newValues)))
+      console.log("Triggered WATCHER:", JSON.parse(JSON.stringify(newValues)))
+      console.log("-------- old values", JSON.parse(JSON.stringify(textureUrlSlugs)))
       //Set local size to grams, set global values of jar sizes
       let gramSize = newValues.size
       currentJarSize.value = newValues.size
@@ -1519,16 +1562,22 @@ export default {
           size: gramSize
         }
         firstTextureLoad = true
+        
+          console.log("HM?")
+          // allCurrentTextures[newValues.productLine] = await loadAllTextures(newValues.productLine);
       }
 
       if ( newValues.productLine !== textureUrlSlugs.productLine )
       {
+        console.log("PDL CHANGE")
         textureUrlSlugs = {
           ...textureUrlSlugs,
           productLine: newValues.productLine
         }
         // firstTextureLoad = true
         // console.log("FTL", firstTextureLoad)
+        
+          // allCurrentTextures[newValues.productLine] = await loadAllTextures(newValues.productLine);
       }
 
       if(newValues.flavour !== textureUrlSlugs.flavour){
@@ -1536,8 +1585,10 @@ export default {
           ...textureUrlSlugs,
           flavour: newValues.flavour
         }
-        // console.log("SETTING TEXTUREURL SLUGS VALUES", newValues.flavour !== textureUrlSlugs.flavour)
+        console.log("calling update tex from flav watcher")
         updateTexture();
+        // allCurrentTextures = await loadAllTextures()
+        // console.log("ALL CURRENT", allCurrentTextures)
       }
       
     }, 

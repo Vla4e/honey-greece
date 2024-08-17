@@ -119,7 +119,7 @@ watch(() => props.currentPhase, (newPhase) => {
     }
     .text{
       opacity:0;
-      transition: all 1s 1s ease-in-out;
+      transition: all 0.6s 0.8s ease-in-out;
     }
   }
   .image-grid{
@@ -263,6 +263,7 @@ watch(() => props.currentPhase, (newPhase) => {
     font-size: 20px;
     font-weight: 400;
     text-align: left;
+    color: white;
   }
 }
 .fade-leave-active {

@@ -72,16 +72,15 @@ export default {
     }
 
     watch(route, (newVal) => {
-      if(newVal.path !== lastRoutePath.value){
-        lastRoutePath.value = newVal.path
-        if (transitionIterator) {
-          let interval = setInterval(() => { //Check whether firstSlide animation is finished.
-            if(firstSlideTransitionStatus.value){
-              transitionIterator.next();
-              clearInterval(interval)
-            }
-          }, 50)
-        }
+      console.log("ROUTE CHANGE TRIGGERED", route.path)
+      lastRoutePath.value = newVal.path
+      if (transitionIterator) {
+        let interval = setInterval(() => { //Check whether firstSlide animation is finished.
+          if(firstSlideTransitionStatus.value){
+            transitionIterator.next();
+            clearInterval(interval)
+          }
+        }, 50)
       }
     }, {
       immediate: true
@@ -90,7 +89,10 @@ export default {
 
     //ROUTER TRANSITION
     watch(playAnimationOnEnter, (newVal) => {
+      console.log("PAOE ACTIVATED", newVal)
+      console.log("RP, LRP", route.path, lastRoutePath.value, route.path === lastRoutePath.value)
       if (newVal) {
+        // if(route.path === lastRoutePath.value) return
         firstSlideTransitionStatus.value = false;
         startTransition()
       }

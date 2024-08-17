@@ -116,6 +116,7 @@ export async function loadGlbReturnParts(loader, url){
 }
 
 export async function loadTexture(url) {
+  console.log("ATTEMPTING TO LOAD TEXT")
     return textureLoader.loadAsync(url);
 }
 
