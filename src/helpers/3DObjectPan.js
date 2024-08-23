@@ -1,5 +1,5 @@
 import { debounce } from '@/helpers/globalFunctions.js'
-import { Vector3, Quaternion } from 'three';
+import { Vector3, Quaternion, AxesHelper } from 'three';
 
 const rotationFactorX = 0.005;
 const rotationFactorY = 0.005;
@@ -15,25 +15,26 @@ let autoRotationSpeed = 0.01;
 
 let initialRotations = [];
 
+let axesHelper2 = new AxesHelper(5);
+axesHelper2.setColors('blue', 'green', 'red')
 async function initiateObjectRotation(target, container, currentSize){
-  console.log("Container", container)
+  // console.log("Container", container)
   rotationGroup = [];
   jarSizeLocal = currentSize
   target.traverse((obj) => {
     if(obj.isMesh){
-      console.log("MESH", obj.name)
       if(obj.name.includes(jarSizeLocal) && jarSizeLocal !== '450g'){
         rotationGroup.push(obj)
         initialRotations.push(obj.quaternion.clone())
       }
     }
   })
-  console.log("Rotation group:", rotationGroup)
+  // console.log("Rotation group:", rotationGroup)
   registerEventListeners(target, container)
 }
 
 function registerEventListeners(target, container){
-  console.log("Adding event listeners")
+  // console.log("Adding event listeners")
   container.addEventListener("mousedown", handleMouseDown)
   container.addEventListener("mousemove", (event) => debouncedMouseMove(event, target))
   container.addEventListener("mouseup", handleMouseUp)
@@ -47,14 +48,17 @@ let lastTouchX = 0;
 let lastTouchY = 0;
 
 function handleMouseDown() {
+  // console.log("MouseDown")
   mouseDown = true;
 }
 
 function handleMouseUp() {
+  // console.log("MouseUp")
   mouseDown = false;
 }
 
 function handleTouchStart(event) {
+  // console.log("TouchStart")
   mouseDown = true;
   const touch = event.touches[0];
   lastTouchX = touch.clientX;
@@ -63,6 +67,7 @@ function handleTouchStart(event) {
 }
 
 function handleTouchMove(event, target) {
+  // console.log("TouchMove")
   if (mouseDown) {
     const touch = event.touches[0];
     const movementX = touch.clientX - lastTouchX;
@@ -75,12 +80,15 @@ function handleTouchMove(event, target) {
 }
 
 function debouncedMouseMove(event, target){
-  if(mouseDown){
-    debounce(() => rotateObject(event, target), debounceInterval)
+  // console.log("DebouncedMOVE")
+  if(mouseDown){ // temp fix because the callback passed to debounced is not triggering
+    // debounce(() => rotateObject(event, target), debounceInterval)
+    rotateObject(event, target)
   }
 }
 
 function rotateObject(event, target){
+  // console.log("Rotate")
   const xRotation = event.movementY * rotationFactorX;
   const yRotation = event.movementX * rotationFactorY;
 

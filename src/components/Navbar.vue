@@ -63,6 +63,7 @@ export default {
     let originalNavbarColor = ref(currentNavbarColor.value);
 
     watch(currentNavbarColor, (newColor) => {
+        console.log("color change DETECTED", newColor)
       document.documentElement.style.setProperty('--navbar-color', newColor);
     });
 

@@ -39,12 +39,9 @@ export default {
 import { ref, computed, toRaw, inject, onMounted } from 'vue';
 import chevronRightWhite from '@/assets/images/arrow-white.svg';
 import chevronRight from '@/assets/images/arrow.svg';
-// const carouselItems = [
-//   { id: 1, slotName: 'item1', content: 'First Item: Welcome to the Carousel!' },
-//   { id: 2, slotName: 'item2', content: 'Second Item: Enjoy your ride.' },
-//   { id: 3, slotName: 'item3', content: "Third Item: Don't forget to check all our features." },
-//   { id: 4, slotName: 'item4', content: 'Fourth Item: Last one, hope you had fun!' }
-// ];
+
+import { useNavbarStore } from '@/store/navbar.js'
+const navbarStore = useNavbarStore();
 
 let emitter = inject('emitter')
 const { isMobile } = inject('screenSize')
@@ -68,7 +65,7 @@ function cycleForward() {
     }
   } else {
     // Desktop
-    console.log("cphase before ifs", currentPhase.value, currentTabComponent.value.phases, currentTabId.value)
+    console.log("cphase ctcomp ctabId before IFS", currentPhase.value, currentTabComponent.value.phases, currentTabId.value)
     if (currentPhase.value < currentTabComponent.value.phases) {
       currentPhase.value++;
     } else {
@@ -84,7 +81,13 @@ function cycleForward() {
     if(currentPhase.value === 2 && currentTabId.value === 2){
       isAtFinalPhase.value = true;
     }
-    console.log("cphase after ifs", currentPhase.value, currentTabComponent.value.phases)
+    if(currentTabId.value === 1){
+      console.log("Should set navColor")
+      navbarStore.setNavbarColor({desktop: 'black', mobile: 'white'})
+    } else if(currentTabId.value === 2){
+      navbarStore.setNavbarColor({desktop: 'white', mobile: 'white'})
+    }
+    console.log("cphase ctcomp ctabId AFTER IFS", currentPhase.value, currentTabComponent.value.phases, currentTabId.value)
   }
 
   // update based on current tab and phase

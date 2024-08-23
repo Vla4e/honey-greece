@@ -138,8 +138,8 @@ const jarConfigs = Object.freeze({
 import * as TWEEN from '@tweenjs/tween.js';
 import { zoomIn, zoomOut} from '@/helpers/cameraZoom.js'
 const cameraConfigs = Object.freeze({
-  x: 0.35,
-  y: 0.06,
+  x: 0.35, 
+  y: 0.06, // 0.06 for small set. 0.075
   z: 0
   // x: 0.56,
   // y: 0,
@@ -422,21 +422,8 @@ export default {
       id
     ) {
       
-      // // console.log("Creating material")
-      // const idl = 11
-      // const fixedGridPositionl = new Vector3(-0.55, 0.1, 0)
-      // const densityl = 9.06;
-      // const lightl = 0.7;
-      // const viscosityl = 0.82
-      // const hPositionl =  0.50
-      // const hIntensityl = 0.50
-      // const envMapIntensityl = 1.00
-      // const viscosityWavinessl = 20.00
       const idl = 7
-      const fixedGridPositionl = new Vector3(
-  0.05,
-    0.2,
-    0)
+      const fixedGridPositionl = new Vector3( 0.05, 0.2, 0)
       const densityl = 10.85;
       const lightl = 0.92;
       const viscosityl = 0.85
@@ -444,17 +431,6 @@ export default {
       const hIntensityl = 0.50
       const envMapIntensityl = 1.00
       const viscosityWavinessl = 20.00
-      // // // // console.log("Creating material with parameters:", 
-      //   idl,
-      //   densityl, 
-      //   lightl, 
-      //   viscosityl, 
-      //   hPositionl, 
-      //   hIntensityl, 
-      //   envMapIntensityl, 
-      //   viscosityWavinessl,
-      //   fixedGridPositionl
-      // )
       try {
         const matcapTexture = await globalTextureLoader.loadAsync(`/assets/matcaps/${idl}.png`);
         // // // console.log("TEXTURETEXTURE", matcapTexture)
@@ -591,6 +567,101 @@ export default {
           `
         });
         
+//         let material = new ShaderMaterial({
+//         uniforms: {
+//           matcap: { value: matcapTexture },
+//           colorAdjust: { value: testColor },
+//           time: { value: 0 },
+//           envMap: { value: globalScene.environment },
+//           IOR: { value: densityl },
+//           subSurfaceScatter: { value: lightl },
+//           viscosity: { value: viscosityl },
+//           viscosityWaviness: { value: viscosityWavinessl },
+//           highlightPosition: { value: hPositionl },
+//           highlightIntensity: { value: hIntensityl },
+//           envMapIntensity: { value: envMapIntensityl },
+//           fixedGridPosition: { value: fixedGridPositionl } // New uniform
+//         },
+//         vertexShader: `
+// varying vec3 vNormal;
+// varying vec3 vViewPosition;
+// varying vec2 vUv;
+
+// void main() {
+//   vNormal = normalize(normalMatrix * normal);
+//   vec4 mvPosition = modelViewMatrix * vec4(position, 1.0);
+//   vViewPosition = -mvPosition.xyz;
+//   vUv = uv;
+//   gl_Position = projectionMatrix * mvPosition;
+// }
+//         `,
+//         fragmentShader: `
+//           uniform sampler2D matcap;
+// uniform vec3 colorAdjust;
+// uniform float time;
+// uniform samplerCube envMap;
+// uniform float envMapIntensity;
+// uniform float IOR;
+// uniform float subSurfaceScatter;
+// uniform float viscosity;
+// uniform float highlightIntensity;
+// uniform float highlightPosition;
+// uniform float viscosityWaviness;
+
+// varying vec3 vNormal;
+// varying vec3 vViewPosition;
+// varying vec2 vUv;
+
+// vec3 getEnvironmentReflection(vec3 viewDir, vec3 normal) {
+//   vec3 reflectVec = reflect(viewDir, normal);
+//   return textureCube(envMap, reflectVec).rgb;
+// }
+
+// void main() {
+//   vec3 viewDir = normalize(vViewPosition);
+//   vec3 normal = normalize(vNormal);
+
+//   // Refraction
+//   vec3 refractColor = refract(viewDir, normal, 1.0 / IOR);
+//   vec2 matcapUV = refractColor.xy * 0.5 + 0.5;
+//   vec3 matcapColor = texture2D(matcap, matcapUV).rgb;
+
+//   // Environment reflection
+//   vec3 reflColor = getEnvironmentReflection(viewDir, normal) * envMapIntensity;
+
+//   // Fresnel effect
+//   float fresnelPower = 3.0;
+//   float fresnel = pow(1.0 - dot(viewDir, normal), fresnelPower);
+
+//   // Subsurface scattering
+//   vec3 scatterColor = colorAdjust * (1.0 - fresnel) * subSurfaceScatter;
+
+//   // Viscosity effect
+//   float viscosityEffect = sin(vUv.y * viscosityWaviness + time * 0.1) * viscosity;
+//   matcapColor += vec3(viscosityEffect);
+
+//   // Vertical highlight
+//   float verticalHighlight = smoothstep(highlightPosition - 0.1, highlightPosition + 0.1, vUv.y);
+//   verticalHighlight = pow(verticalHighlight, 2.0) * highlightIntensity * 2.0;
+
+//   // Blend colors
+//   vec3 baseColor = mix(matcapColor, reflColor, fresnel * 0.8);
+//   vec3 finalColor = mix(baseColor, colorAdjust, 0.5);
+//   finalColor += scatterColor;
+//   finalColor += vec3(verticalHighlight);
+
+//   // Color depth simulation
+//   float depth = vUv.y;
+//   finalColor *= mix(vec3(1.0), colorAdjust, depth);
+
+//   // Transparency effect
+//   float transparency = smoothstep(0.2, 0.8, abs(dot(viewDir, normal)));
+//   finalColor = mix(finalColor, reflColor, transparency * 0.2);
+
+//   gl_FragColor = vec4(finalColor, 1.0);
+// }
+//           `
+//         });
         // // console.log("returning mat", material)
         return material
       } catch (e) {
@@ -659,7 +730,7 @@ export default {
       )
       // // console.log("Got material", material2)
       Object.values(honeyMeshes).forEach((mesh) => {
-        // // console.log("MESH :", mesh)
+        console.log("HONEY MESH : : : : : : : : :", mesh)
         mesh.material = material2;
         mesh.material.needsUpdate = true;
       })
@@ -1142,6 +1213,7 @@ export default {
           action.play()
           currentJarSize.value = size;
         })
+        console.log("initiated obj ROTATION")
         initiateObjectRotation(globalScene, webGl.value, currentJarSize.value)
         console.log("CJS", currentJarSize.value)
         if(isMobile.value){
@@ -1161,7 +1233,6 @@ export default {
             }, 1100)
           }
         }
-
       }
     };
 

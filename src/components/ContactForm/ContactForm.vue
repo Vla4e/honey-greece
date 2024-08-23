@@ -257,13 +257,13 @@ function toggleContactForm(){
             justify-content: space-between;
           }
           .submit-button{
-            width: 25%;
+            width: 30%;
             font-family: 'DMSans';
-            font-size: 25px;
+            font-size: 22px;
             color: #131313;
             text-transform: uppercase;
             background: none;
-            padding: 15px;
+            padding: 10px;
             border-radius: 0px;
             // margin-top: 15px;
             &:hover{
