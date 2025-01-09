@@ -4,14 +4,14 @@
       {{ currentFlavour.name }}
     </span> -->
 
-    <transition name="fade" mode="out-in">
+    <Transition name="fade" mode="out-in">
       <span class="floating-text" :style="{ 
         'font-size': computedTextLength.fontSize + 'px',
         'line-height': computedTextLength.lineHeight + 'px'
       }" :key="currentFlavour.name">
         {{ currentFlavour.name }}
       </span>
-    </transition>
+    </Transition>
     
     <span v-if="isMobile" class="mobile-series">
           {{ currentProductLine.name }}

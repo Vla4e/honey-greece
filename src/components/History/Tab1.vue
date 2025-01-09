@@ -149,7 +149,7 @@ watch(() => props.currentPhase, (newPhase) => {
   overflow: hidden;
   .floating-heading{
     position: absolute;
-    top: 10%;
+    top: 15%;
     left: 50%;
     transform: translateX(-50%);
     font-family: "DMSans";
@@ -184,8 +184,8 @@ watch(() => props.currentPhase, (newPhase) => {
     color: #000000;
     text-align: justify;
     margin: 0px !important;
-    position: relative;
-    top: 15%;
+    // position: relative;
+    // top: 15%;
     @media(min-width: 1660px){
       font-size: 20px;
     }
@@ -229,7 +229,8 @@ watch(() => props.currentPhase, (newPhase) => {
     justify-content: center;
     align-items: center;
     width: 95%;
-    height: 100%;
+    max-height: 100vh;
+    padding-top: 80px;
     // transition: transform 0.5s ease;
     position:relative;
     z-index:2; //floating-text goes behind
@@ -240,10 +241,15 @@ watch(() => props.currentPhase, (newPhase) => {
       flex-direction: column;
       align-items: center;
       justify-content: center;
-      height: 80%;
+      height: 90%;
       color: #131313;
       font-size: 46px;
       transition: all 0.5s ease;
+      .image{
+        width: 100%;
+        max-width: 100%;
+        // max-height: 100%;
+      }
       &:not(:last-child){
         margin-right: 20px;
       }
@@ -295,7 +301,7 @@ watch(() => props.currentPhase, (newPhase) => {
       flex-direction: column;
       align-items: center;
       justify-content: center;
-      height: 100%;
+      height: 90%;
       width: 30%;
       &:not(:last-child){
         // margin-right: 20px;
@@ -334,22 +340,19 @@ watch(() => props.currentPhase, (newPhase) => {
     .column{
       // width: 33.333%;
       // margin-right: 20px;
-      .image{
-        width: 90%;
-        @media(max-width: 1536px){
-          width: 80%;
-        }
-        @media(max-width: 1367px){
-          width: 90%;
-        }
-      }
     }
     .column-boxes{
-      width: 37.5%;
+      width: 35%;
       justify-content: flex-end !important;
+      image{
+        width: 100%;
+        max-width: 100%;
+        max-height: 100%;
+      }
     }
     .column-beginning{
       width: 20%;
+      justify-content: flex-end !important;
     }
   }
   
@@ -360,27 +363,32 @@ watch(() => props.currentPhase, (newPhase) => {
       }
     }
     .column-boxes{
-      width: 37.5%;
+      width: 35%;
       justify-content: flex-end !important;
       .image{
-        width: 90%;
-        @media(max-width: 1537px){
-          width: 80%;
-        }
-        @media(max-width: 1367px){
-          width: 90%;
-        }
+        width: 100%;
+        max-width: 100%;
+        max-height: 100%;
+        // @media(max-width: 1537px){
+        //   width: 100%;
+        // }
+        // @media(max-width: 1367px){
+        //   width: 90%;
+        // }
       }
     }
     .column-beekeeper{
       width: 30%;
       justify-content: flex-end !important;
       .image{
-        height: 100%;
+        width: 100%;
+        max-width: 100%;
+        // max-height: 100%;
       }
     }
     .column-beginning{
       width: 20%;
+      justify-content: flex-end !important;
     }
   }
   &-phase-2{
@@ -393,20 +401,26 @@ watch(() => props.currentPhase, (newPhase) => {
       width: 30%;
       justify-content: flex-end !important;
       .image{
-        // max-width: 100%;
+        width: 100%;
+        max-width: 100%;
         // max-height: 100%;
-        height: 100%;
       }
     }
     .column-beginning{
       width: 20%;
-      margin-right: 5% !important;
+      margin-right: 3vw !important;
+      margin-left: 2vw !important;
+      justify-content: flex-end !important;
+      transform: translateY(-50%);
     }
     .column-journey{
       width: 40%;
       align-items: flex-start !important;
-      justify-content: space-between !important;
+      justify-content: center !important;
       .journey{
+        &-heading{
+          margin-bottom: 5vh;
+        }
         @media(max-width: 1440px){
           &-heading{
             font-size: 100px;

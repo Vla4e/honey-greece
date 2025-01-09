@@ -12,7 +12,7 @@
         <br/>our beloved home
       </h1>
       <Transition name="slide-in" mode="out-in">
-        <p v-if="currentPhase > 0" class="text">
+        <p :class="currentPhase > 0 ? 'show' : ''" class="text">
           A long-standing tradition of producing high-quality honey with an intense aroma. 
           From the blossoms of the Peloponnesian orchards to the wild herbs of Crete, our bees are nature's gifted artisans, 
           capturing the essence of the Greek landscape in every jar.
@@ -27,7 +27,7 @@
     </div>
     <Transition name="slide-in" mode="out-in">
       <div v-if="currentPhase > 1" class="quote-container">
-          <div class="pushdown" style="height: 30%; width: 30%;">
+          <div class="pushdown" style="height: 15%; width: 30%;">
           </div>
           <span class="honey-heading">
             Antonios Montouris Honey
@@ -73,7 +73,7 @@ const maxPhases = 2 //3 counted from 0
   // background-position: center;
   // background-repeat: no-repeat;
   display: flex;
-  justify-content: center;
+  // justify-content: center;
   align-items: center;
   position: relative;
   overflow: hidden;
@@ -84,6 +84,7 @@ const maxPhases = 2 //3 counted from 0
     position: relative;
     top: 0;
     right: 0;
+    transition: transform 1.5s ease;
   }
   .background, .background-cover{
     width: 100%;
@@ -92,7 +93,7 @@ const maxPhases = 2 //3 counted from 0
     z-index: 1;
     top: 0;
     right: 0;
-    transition: all 0.5s ease;
+    transition: transform 1.5s ease;
   }
 
   .background-cover{
@@ -100,6 +101,8 @@ const maxPhases = 2 //3 counted from 0
     // background-blend-mode: multiply;
     // opacity: 0.2;
     z-index:2;
+    opacity: 0;
+    transition: transform 1.5s ease, opacity 1s ease;
   }
 
   .text-container{
@@ -109,29 +112,44 @@ const maxPhases = 2 //3 counted from 0
     align-items: center;
     justify-content: center;
     height: 100%;
-    width: 100%;
-    transition: transform 0.7s ease, width 0.7s ease;
+    width: 50%;
+    min-width: 50%;
+    transition: transform 0.7s ease, width 2.7s ease;
+    position: relative;
+    transform: translateX(50%);
     .heading{
       font-family: 'DM Serif';
       font-style: normal;
-      font-size: 150px;
+      font-size: clamp(50px, 5vw, 200px);
       font-weight: 400;
       color: white;
       text-align: center;
       text-shadow: 4px 4px 4px rgba(0, 0, 0, 0.5);
       margin: 0;
       // transform: translate(0%, 0%);
-      transition: font-size 0.5s ease;
+      transition: font-size 1.5s ease;
+      // position: absolute;
+      // top: 20%;
     }
 
     .text{
+      // position: absolute;
+      // top: 50%;
       font-family: "DMSans";
       font-size: 20px;
       font-weight: 400;
       text-align: left;
       color: white;
-      width: 40%;
+      width: 60%;
       text-shadow: 4px 4px 4px rgba(0, 0, 0, 0.5);
+      opacity: 0;
+      transition: opacity 1.5s;
+      &.show{
+        opacity: 1;
+      }
+      @media(max-width: 1440px){
+        font-size: 16px;
+      }
     }
   }
   
@@ -139,28 +157,25 @@ const maxPhases = 2 //3 counted from 0
     display: flex;
     flex-direction: column;
     align-items: center;
-    justify-content: center;
+    // justify-content: center;
     z-index: 3;
     position: relative;
     height: 100%;
     transition: all 1s 0.5s ease;
     .honey-heading{
       font-family: "DMSans";
-      font-size: 150px;
+      font-size: clamp(50px, 2rem + 5vw, 100px + 3vw);
       font-weight: 700;
-      line-height: 150px;
+      line-height: clamp(50px, 2rem + 5vw, 100px + 3vw);
       letter-spacing: 0.03em;
       text-align: left;
       text-transform: uppercase;
-      position:absolute;
-      top: 15%;
-      left: 5%;
+      // position:absolute;
+      // top: 15%;
+      // left: 5%;
+      // padding-left: 5%;
       z-index: 2;
       color: #0000000D;
-      @media(max-width: 1440px){
-        font-size: 100px;
-        line-height: 100px;
-      }
     }
     .quote{
       font-family: "Alex Brush";
@@ -192,7 +207,7 @@ const maxPhases = 2 //3 counted from 0
     // justify-content: flex-end;
     .text-container{
       // width: 80%;
-      transform: translateX(25%);
+      transform: translateX(100%) !important;
       .heading{
         font-size: 64px;
         font-weight: 400;
@@ -206,31 +221,37 @@ const maxPhases = 2 //3 counted from 0
       // width: 120%;
       // height: 120%;
     }
+    .background-cover{
+      opacity: 1;
+    }
   }
 
   &-phase-2{
     width: 100% !important;
-    justify-content: flex-start;
+    // justify-content: flex-start;
     .text-container{
-      width: 50%;
-      padding-left: 5%;
-      padding-right: 5%;
+      // width: 50%;
+      // padding-left: 5%;
+      // padding-right: 5%;
+      transform: translateX(0%) !important;
       .heading{
         font-size: 64px;
         font-weight: 400;
         text-align: center;
       }
       .text{
-        width: 100%;
+        // width: 100%;
         @media(max-width: 1440px){
-          font-size: 18px;
+          font-size: 16px;
         }
       }
     }
     .quote-container{
       width: 50%;
-      padding-left: 5%;
-      padding-right: 5%;
+      max-width: 50%;
+      overflow: hidden;
+      padding-left: 2%;
+      padding-right: 2%;
       .quote{
         @media(max-width: 1440px){
           font-size: 56px;
@@ -238,24 +259,30 @@ const maxPhases = 2 //3 counted from 0
       }
     }
     .background{
-      width: 120%;
-      height: 120%;
-      right: 50%;
+      // width: 120%;
+      // height: 120%;
+      transform: translateX(-50%);
     }
     .background-cover{
-      right: 50%;
-      width: 50%;
+      // right: 50%;
+      // width: 50%;
+      opacity: 1;
       background: linear-gradient(125.77deg, #14141440 35.84%,  #14141480 69.84%);
+      transform: translateX(-50%);
     }
   }
 }
 .cta{
   font-family: "DMSans";
-  font-size: 14px;
-  font-weight: 500;
+  font-size: 18px;
+  font-weight: 700;
   text-align: center;
   color: black;
   text-transform: uppercase;
+  transition: transform 0.3s ease;
+  &:hover{
+    transform: scale(1.1)
+  }
 }
 .slide-in-enter-active, .slide-in-leave-active{
   transition: all 0.5s 0.5s ease-out;

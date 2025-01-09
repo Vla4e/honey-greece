@@ -154,7 +154,7 @@ function findFlavourData(brandSlug, lineSlug, flavourSlug) {
   if (!brandConfig) return null;
 
   let lineConfig = brandConfig.brandProductLines[lineSlug.charAt(0).toUpperCase() + lineSlug.slice(1)];
-  // console.log("LINE CONF", lineConfig)
+  console.log("LINE CONFIG", lineConfig)
   let lineName = lineConfig.name
   if (!lineConfig) return null;
 

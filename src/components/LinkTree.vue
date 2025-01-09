@@ -1,9 +1,15 @@
 <template>
   <div :class="brand.disabled ? 'disabled' : ''" class="link-tree">
-    <span @click="goToPage(typedBrands.urlSlug, typedBrands.link)" class="tree-route" :class="currentBrandPage ? 'active': ''">
+    
+    <span 
+      @click="goToPage(typedBrands.urlSlug, typedBrands.link)" 
+      class="tree-route" 
+      :class="currentBrandPage ? 'active': ''"
+    >
       <OktoText :fontSize="16" v-if="typedBrands.name === 'Oktώ'"/>
-      <span v-else>{{typedBrands.name}}</span>
+      <span :class="computedColor" v-else>{{typedBrands.name}}</span>
     </span>
+    
     <div v-if="renderDropdownTree" class="dropdown-tree">
       <img :src="treeRoot" class="root"/>
       <div class="branches">
@@ -15,6 +21,7 @@
         </div>
       </div>
     </div>
+  
   </div>
 </template>
 
@@ -34,6 +41,11 @@ export default {
     brand: {
       type: Array,
       required: true,
+    },
+    rightHalfOppositeColor: {
+      type: Boolean,
+      required: false,
+      default: false
     }
   },
   setup (props) {
@@ -41,7 +53,7 @@ export default {
     const route = useRoute()
 
     //Add type values to lines (branches), so correct branch image can be computed
-    let renderDropdownTree = ref(false)
+    let renderDropdownTree = ref(false) // defaults to false since subcategories have been removed and tree is redundant for a single category.
     let typedBrands = [] 
     if(props.brand.lines){
       let lines = props.brand.lines
@@ -54,9 +66,9 @@ export default {
       typedBrands.name = props.brand.name
       typedBrands.link = props.brand.linkTo
       typedBrands.urlSlug = props.brand.urlSlug
-      if(!props.brand.lines.length){
-        renderDropdownTree.value = false
-      } else renderDropdownTree.value = true
+      // if(!props.brand.lines.length){
+      //   renderDropdownTree.value = false
+      // } else renderDropdownTree.value = true
     }
     
     //Check whether route matches component's brand, set to active if true
@@ -74,7 +86,7 @@ export default {
         }
       }
     }, { immediate: true });
-
+    
     function goToPage(brand, linkTo){
       console.log("going to linktree:", brand, linkTo)
       if(brand === 'All Products' || linkTo === '/all-products'){
@@ -96,7 +108,17 @@ export default {
         return treeRightmost
       } else return treeNode
     }
-
+    
+    let computedColor = ref(null)
+    watch(() => props.rightHalfOppositeColor, (newVal) => {
+      console.log("oppcolor", newVal)
+      console.log("props brand", props.brand.name, props.brand.name == 'All products')
+      if(props.brand.name === 'Melculum' || props.brand.linkTo == '/all-products'){
+        if(newVal){
+          computedColor.value = 'black'
+        }
+      }
+    })
     return {
       treeRoot,
       treeNode,
@@ -104,10 +126,13 @@ export default {
       treeRightmost,
       renderDropdownTree,
       brand: props.brand,
+      rightHalfOppositeColor: props.rightHalfOppositeColor,
       typedBrands,
       currentBrandPage,
       computeSource,
+      computedColor,
       goToPage
+      
     }
   }
 }
@@ -116,33 +141,38 @@ export default {
 <style lang="scss" scoped>
 .link-tree{
   position: relative;
+  
+  transition: transform 0.3s ease-in-out;
   &:hover{
-    color: black;
-    .dropdown-tree{
-      opacity: 1;
-      max-height: 500px;
-      pointer-events: auto;
-      .root{
-        opacity: 1;
-      }
-      .branches{
-        .branch{
-          opacity: 1;
-          pointer-events: auto;
-          .branch-link{
-            pointer-events: auto;
-            &:hover{
-              font-size: 17px;
-            }
-          }
-          &.first, &.inbetween, &.last {
-            pointer-events: auto;
-            opacity: 1;
-          }
-        }
-      }
-    }
+    transform: scale(1.02);
   }
+  // &:hover{
+  //   color: black;
+  //   .dropdown-tree{
+  //     opacity: 1;
+  //     max-height: 500px;
+  //     pointer-events: auto;
+  //     .root{
+  //       opacity: 1;
+  //     }
+  //     .branches{
+  //       .branch{
+  //         opacity: 1;
+  //         pointer-events: auto;
+  //         .branch-link{
+  //           pointer-events: auto;
+  //           &:hover{
+  //             font-size: 17px;
+  //           }
+  //         }
+  //         &.first, &.inbetween, &.last {
+  //           pointer-events: auto;
+  //           opacity: 1;
+  //         }
+  //       }
+  //     }
+  //   }
+  // }
   .dropdown-tree{
     position: absolute;
     top: 100%;
@@ -221,12 +251,22 @@ export default {
     line-height: normal;
     letter-spacing: 1.5px;
     text-transform: uppercase;
+    text-shadow: var(--navbar-text-shadow);
     cursor: pointer;
+    
     &.active{
       font-weight: 700;
     }
     .okto-text{
       line-height: 0px !important;
+    }
+    span{
+      &.black{
+        color: black !important;
+      }
+    }
+    @media(min-width: 1981px){
+      font-size: 20px;
     }
   }
   &.disabled{

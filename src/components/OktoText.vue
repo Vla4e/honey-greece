@@ -1,7 +1,7 @@
 <template>
   <div ref="oktoText" :class="hoverable ? 'hoverable' : ''" class="okto-text">
-    <span class="okt" :style="{ fontSize: fontSizeOkt + 'px' }">Okt</span>
-    <span class="omega" :style="{ fontSize: fontSizeOmega + 'px' }">ώ</span>
+    <span class="okt">Okt</span>
+    <span class="omega">ώ</span>
     <!-- <img :src="oktoOmega" class="okto-omega"/> -->
   </div>
 </template>
@@ -36,7 +36,7 @@ const props = defineProps({
 
 const baseOktFontSize = 36;
 const baseOmegaFontSize = 44;
-const ratio = baseOmegaFontSize / baseOktFontSize; 
+const ratio = baseOmegaFontSize / baseOktFontSize; // 1.22(2)
 let fontSizeOkt = computed(() => {
   if(isMobile.value)
     return props.fontSizeMobile
@@ -64,6 +64,10 @@ onMounted(() => {
     font-weight: 400 !important;
     text-align: left !important;
     text-transform: uppercase !important;
+    font-size: 16px;
+    @media(min-width: 1981px){
+      font-size: 20px;
+    }
   }
   .omega{
     // font-family: "DMSans";
@@ -71,6 +75,10 @@ onMounted(() => {
     font-weight: 400 !important;
     text-align: left !important;
     text-transform: lowercase !important;
+    font-size: calc(16px * 1.22); // 1.22 = ratio of figma design proposed omega letter fontsize / "okt" fontsize
+    @media(min-width: 1981px){
+      font-size: calc(20px * 1.22);
+    }
   }
 }
 

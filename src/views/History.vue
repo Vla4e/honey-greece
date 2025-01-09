@@ -37,6 +37,7 @@ export default {
 
 <script setup>
 import { ref, computed, toRaw, inject, onMounted } from 'vue';
+
 import chevronRightWhite from '@/assets/images/arrow-white.svg';
 import chevronRight from '@/assets/images/arrow.svg';
 
@@ -56,7 +57,7 @@ const mobileScrollTarget = ref();
 
 function cycleForward() {
   if (isMobile.value) {
-    console.log("TC", mobileScrollTarget.value)
+    console.log("mobileScroll target", mobileScrollTarget.value)
     // reset phase for new tab
     if(mobileScrollTarget.value){
       let targets = mobileScrollTarget.value.getElementsByClassName('tab-mobile-column')
@@ -102,6 +103,7 @@ function updateTextColor() {
   } else if (currentTabId.value === 2) {
     if (currentPhase.value > 1) {
       emitter.emit('switchTextColor', 'black');
+      emitter.emit('rightHalfOppositeColor')
     } else {
       emitter.emit('switchTextColor', 'white');
     }
@@ -153,6 +155,9 @@ const previousPhase = () => {
 
 onMounted(() => {
   emitter.emit('switchTextColor', 'white')
+  console.log("phase:", currentPhase.value)
+  console.log("tabId", currentTabId.value)
+  console.log("tab phases amount", currentTabComponent.value.phases)
 })
 </script>
 

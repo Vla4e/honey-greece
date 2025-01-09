@@ -18,10 +18,13 @@
     </div>
     <div v-if="useMaterial === 'complex' || useMaterial === 'complexOptions'" class="material-controls" style="position: absolute; bottom: 5%; left: 35%; width: 600px; background: rgba(255,255,255,0.7); padding: 10px;">
       <label>Density: {{ density }}</label>
+      <input type="number" v-model="density"/>
       <input type="range" v-model="density" min="1" max="20" step="0.01">
       <label>Light: {{ light }}</label>
+      <input type="number" v-model="light"/>
       <input type="range" v-model="light" min="0" max="10" step="0.01">
       <label>Viscosity: {{ viscosity }}</label>
+      <input type="number" v-model="viscosity"/>
       <input type="range" v-model="viscosity" min="0" max="10" step="0.01">
       <!-- <label>Highlight position: {{ hPosition }}</label>
       <input type="range" v-model="hPosition" min="0" max="5" step="0.01">
@@ -30,6 +33,7 @@
       <!-- <label>envMapIntensity intensity: {{ envMapIntensity }}</label>
       <input type="range" v-model="envMapIntensity" min="0" max="5" step="0.01"> -->
       <label v-if="useMaterial === 'complexOptions'">viscosityWaviness: {{ viscosityWaviness }}</label>
+      <input type="number" v-model="viscosityWaviness"/>
       <input v-if="useMaterial === 'complexOptions'" type="range" v-model="viscosityWaviness" min="5" max="100" step="1">
       <button @click="applyMaterialChanges">Apply Changes</button>
     </div>
@@ -213,6 +217,7 @@ export default {
     let jarPositions = []
     let worldPosition = new Vector3(0.15000002, -0.1, 0.0)
     function createMatcapGrid(gridWidth = 12, gridHeight = 5, spacing = 0.115) {
+      let matrices = []
       console.log("CREATING GRID NOW")
       if (!globalScene || !currentJarScene) {
         console.error("Scene or jar scene not initialized");
@@ -239,7 +244,7 @@ export default {
             jarClone.position.set(xPos, yPos, 0);
             jarPositions.push(jarClone.position)
             jarClone.traverse((obj) => {
-              if (obj.isMesh && obj.name === 'honey_object_450g') {
+              if (obj.isMesh && obj.name === 'honey_object_300g') {
                 const matcapId = idx;
                 
                 if(useMaterial.value === 'fixed'){
@@ -256,7 +261,17 @@ export default {
                   }
                 } else if( useMaterial.value === 'complexOptions'){
                   // console.log("CREATING COMPELXMATOPT", idx)
-                  obj.material = createComplexMaterialOptions(idx,  density.value, light.value, viscosity.value, hPosition.value, hIntensity.value, envMapIntensity.value, viscosityWaviness.value)
+                  obj.material = claudeComplexOptions(idx,  density.value, light.value, viscosity.value, hPosition.value, hIntensity.value, envMapIntensity.value, viscosityWaviness.value)
+                  obj.updateMatrixWorld(true);
+                  let meshMatrix = obj.matrixWorld.clone();
+                  let matrixElements = meshMatrix.elements;
+                  let transformData = {
+                    matrix: Array.from(matrixElements)
+                  }
+                  let jsonFormat = JSON.stringify(transformData);
+                  // console.log("JSONFORMAT FOR ID", idx, "================================================================")
+                  // console.log(jsonFormat)
+                  matrices.push({id: idx, jsonFormat})
                   if(!honeyObject){
                     honeyObject = obj
                     console.log("THIS IS THE HONEYOBJ", honeyObject.name)
@@ -276,6 +291,7 @@ export default {
             iterations++;
           } else {}
         }
+        console.log("matrices:", matrices)
       }
       globalScene.add(jarGroup);
       console.log("JARPOS", jarPositions)
@@ -301,7 +317,7 @@ export default {
     
     function createFixedMaterial(id){
       const textureLoader = new TextureLoader();
-      const matcapTexture = textureLoader.load(`/assets/matcaps/${id+1}.png`);
+      const matcapTexture = textureLoader.load(`/assets/matcaps2/${id+1}.png`);
       matcapTexture.encoding = SRGBColorSpace
       // Step 2: Create a MeshMatcapMaterial with the loaded texture
       return  new MeshMatcapMaterial({
@@ -313,7 +329,7 @@ export default {
 
     function createMatcapMaterial(id) {
       
-      const matcapTexture = globalTextureLoader.load(`/assets/matcaps/${id+1}.png`);
+      const matcapTexture = globalTextureLoader.load(`/assets/matcaps2/${id+1}.png`);
       return new ShaderMaterial({
         uniforms: {
           matcap: { value: matcapTexture },
@@ -372,7 +388,7 @@ export default {
     ) {
       // console.log("Applying with values: ", density, light, viscosity)
       
-      const matcapTexture = globalTextureLoader.load(`/assets/matcaps/${id+1}.png`);
+      const matcapTexture = globalTextureLoader.load(`/assets/matcaps2/${id+1}.png`);
 
 
       return new ShaderMaterial({
@@ -464,7 +480,7 @@ export default {
     ) {
       // console.log("Applying with values: ", worldPosition)
       
-      const matcapTexture = globalTextureLoader.load(`/assets/matcaps/${id+1}.png`);
+      const matcapTexture = globalTextureLoader.load(`/assets/matcaps2/${id+1}.png`);
 
 
       return new ShaderMaterial({
@@ -567,6 +583,141 @@ export default {
         `
       });
     }
+
+    async function claudeComplexOptions(
+      id, 
+      density = 16.53, 
+      light = 1.03, 
+      viscosity = 0.01, 
+      hPosition = 0.50, 
+      hIntensity = 0.50, 
+      envMapIntensity = 1.00, 
+      viscosityWaviness = 20.00,
+      savedPosition = null // New parameter for when we want to use a saved position
+    ) {
+      const matcapTexture = globalTextureLoader.load(`/assets/matcaps2/${id+1}.png`);
+      
+      // Use saved position if provided, otherwise use current world position
+      const positionToUse = savedPosition || worldPosition;
+
+
+      return new ShaderMaterial({
+        uniforms: {
+          matcap: { value: matcapTexture },
+          colorAdjust: { value: honeyColor},
+          time: { value: 0 },
+          envMap: { value: globalScene.environment },
+          IOR: { value: density},
+          subSurfaceScatter: { value: light},
+          viscosity: { value: viscosity},
+          viscosityWaviness: { value: viscosityWaviness},
+          highlightPosition: { value: hPosition },
+          highlightIntensity: { value: hIntensity },
+          envMapIntensity: { value: envMapIntensity},
+          idealPosition: { value: positionToUse },
+          useSavedPosition: { value: savedPosition !== null }
+        },
+        vertexShader: `
+          varying vec3 vNormal;
+          varying vec3 vViewPosition;
+          varying vec3 vWorldPosition;
+          void main() {
+            vNormal = normalize(normalMatrix * normal);
+            vec4 mvPosition = modelViewMatrix * vec4(position, 1.0);
+            vViewPosition = -mvPosition.xyz;
+            vWorldPosition = (modelMatrix * vec4(position, 1.0)).xyz;
+            gl_Position = projectionMatrix * mvPosition;
+          }
+        `,
+        fragmentShader: `
+          uniform sampler2D matcap;
+          uniform vec3 colorAdjust;
+          uniform vec3 idealPosition;
+          uniform bool useSavedPosition;
+          uniform float time;
+          uniform samplerCube envMap;
+          uniform float envMapIntensity;
+          uniform float IOR;
+          uniform float subSurfaceScatter;
+          uniform float viscosity;
+          uniform float highlightIntensity;
+          uniform float highlightPosition;
+          uniform float viscosityWaviness;
+
+          varying vec3 vNormal;
+          varying vec3 vViewPosition;
+          varying vec3 vWorldPosition;
+
+          vec3 getEnvironmentReflection(vec3 viewDir, vec3 normal) {
+            vec3 reflectVec = reflect(viewDir, normal);
+            
+            if (useSavedPosition) {
+              // When using saved position, adjust reflection vector relative to saved position
+              vec3 positionDiff = idealPosition - vWorldPosition;
+              float distanceToIdeal = length(positionDiff);
+              vec3 dirToIdeal = normalize(positionDiff);
+              
+              // Blend between current reflection and saved position-based reflection
+              vec3 adjustedReflectVec = normalize(mix(reflectVec, dirToIdeal, distanceToIdeal * 0.1));
+              return textureCube(envMap, adjustedReflectVec).rgb;
+            } else {
+              // In grid mode, use original calculation
+              vec3 envMapCoord = idealPosition + reflectVec * 20.0;
+              return textureCube(envMap, envMapCoord).rgb;
+            }
+          }
+
+          void main() {
+            vec3 viewDir = normalize(vViewPosition);
+            vec3 normal = normalize(vNormal);
+
+            // Use either saved or current position for height-based effects
+            vec3 positionForEffects = useSavedPosition ? idealPosition : vWorldPosition;
+
+            // Refraction
+            vec3 refractColor = refract(viewDir, normal, 1.0 / IOR);
+            vec2 matcapUV = refractColor.xy * 0.5 + 0.5;
+            vec3 matcapColor = texture2D(matcap, matcapUV).rgb;
+
+            // Environment reflection with reduced intensity
+            vec3 reflColor = getEnvironmentReflection(viewDir, normal) * envMapIntensity;
+
+            // Adjusted Fresnel effect
+            float fresnelPower = 3.0;
+            float fresnel = pow(1.0 - dot(viewDir, normal), fresnelPower);
+
+            // Subsurface scattering approximation
+            vec3 scatterColor = colorAdjust * (1.0 - fresnel) * subSurfaceScatter;
+
+            // Viscosity simulation using appropriate position
+            float viscosityEffect = sin(positionForEffects.y * viscosityWaviness + time * 0.1) * viscosity;
+            matcapColor += vec3(viscosityEffect);
+
+            // Enhanced Vertical highlight using appropriate position
+            float verticalHighlight = smoothstep(highlightPosition - 0.1, highlightPosition + 0.1, 
+                                              abs(positionForEffects.y));
+            verticalHighlight = pow(verticalHighlight, 2.0) * highlightIntensity * 2.0;
+
+            // Blend colors with adjusted weights
+            vec3 baseColor = mix(matcapColor, reflColor, fresnel * 0.8);
+            vec3 finalColor = mix(baseColor, colorAdjust, 0.5);
+            finalColor += scatterColor;
+            finalColor += vec3(verticalHighlight);
+
+            // Color depth simulation using appropriate position
+            float depth = (positionForEffects.y + 1.0) * 0.5;
+            finalColor *= mix(vec3(1.0), colorAdjust, depth);
+
+            // Enhance transparency effect with reduced environment map influence
+            float transparency = smoothstep(0.2, 0.8, abs(dot(viewDir, normal)));
+            finalColor = mix(finalColor, reflColor, transparency * 0.2);
+
+            gl_FragColor = vec4(finalColor, 1.0);
+          }
+        `
+      });
+    }
+
     const density = ref(4.85);
     const light = ref(0.09);
     const viscosity = ref(1.03)
@@ -680,7 +831,7 @@ export default {
       globalScene = new Scene();
 
       // let jarPromise = await loadGlbReturnParts(loader, jarConfigs.medium.source)
-      let mediumSmallScene = await loadGlbReturnParts(loader, '/assets/glb/newJars/450-300-animation-choppy-v2.glb')
+      let mediumSmallScene = await loadGlbReturnParts(loader, '/assets/glb/newJars/300-150-animation-choppy-v6.glb')
       // let largeMediumScene = await loadGlbReturnParts(loader, '/assets/glb/newJars/450-300-animation-choppy-v1.glb')
       labelMeshes = mediumSmallScene.labelMeshes
       // for (let mesh of mediumSmallScene.meshes){
@@ -708,7 +859,7 @@ export default {
             // remove this obj
             objToRemove.push(obj)
           }
-          if(obj.name.includes('300')){
+          if(obj.name.includes('450')){
             // remove this obj
             objToRemove.push(obj)
           }
@@ -856,7 +1007,7 @@ export default {
         if(loadedText){
           const elapsedTime = clockTexture.getElapsedTime();
           const linePosition = (Math.sin(elapsedTime) + 1) / 2; // Oscillate between 0 and 1
-          labelTest.material.uniforms.linePosition.value = linePosition;
+          // labelTest.material.uniforms.linePosition.value = linePosition;
         }
       }
       const elapsedTime = clock.getElapsedTime();
@@ -868,7 +1019,7 @@ export default {
             
         // console.log("inside HObject")
             // console.log("elapsedTime", elapsedTime, honeyObject.name)
-            honeyObject.material.uniforms.time.value = elapsedTime;
+            // honeyObject.material.uniforms.time.value = elapsedTime;
           }
         }
       }

@@ -29,7 +29,7 @@
 import { ref, computed, inject, onMounted, onUnmounted } from 'vue';
 import router from '@/router/index.js'
 import oktoJar from '@/assets/images/jar-labels/okto/monoflorals/450g/oak_honey.png'
-import haaJar from '@/assets/images/jar-labels/haa/monoflorals/300g/cotton_limited.png'
+import haaJar from '@/assets/images/jar-labels/haa/blends/300g/forest_blend.png'
 
 export default {
   name: 'Tab',
@@ -90,10 +90,14 @@ export default {
     }
 
     function tabClick(brand) {
-      console.log("TABCLICKED", brand)
-      if(brand === 'Melculum') return // Melculum not ready
-      tabClicked.value = !tabClicked.value
-      singleTabEmitter.emit('toggleClickedTab', { value: tabClicked.value, brand: props.brand })
+      // console.log("TABCLICKED", brand)
+      // if(brand === 'Melculum') return // Melculum not ready
+      // tabClicked.value = !tabClicked.value
+      // singleTabEmitter.emit('toggleClickedTab', { value: tabClicked.value, brand: props.brand })
+
+      /* Above code is disabled as multiple brand lines are not selling anymore */
+      console.log("GOING TO", brand)
+      goToProductLine(brand, props.productLines[0])
     }
 
     onMounted(() => {

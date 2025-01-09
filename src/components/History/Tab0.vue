@@ -2,9 +2,8 @@
   <div class="tab-0" :class="`tab-0-phase-${currentPhase}`">
     <video v-if="videoReady" class="background-video" :class="isMobile ? 'mobile-video' : ''" autoplay muted loop playsinline disableremoteplayback>
       <source :src="videoSource" type="video/mp4">
-      <!-- Your browser does not support the video tag. -->
-      {{ videoReady }} {{ videoSource }}
     </video>
+    <div class="video-layer"/>
     <!-- State 1 -->
     <div class="heading-container">
       <h1 class="heading">History</h1>
@@ -92,6 +91,14 @@ watch(() => props.currentPhase, (newPhase) => {
   object-fit: cover;
   overflow: hidden !important;
 }
+  .video-layer{
+    position: absolute;
+    top:0;
+    left:0;
+    width: 100%;
+    height: 100%;
+    background-color: rgb(34 34 34 / 19%);
+  }
 .tab-0{
   position: relative;
   background-image: url('@/assets/pages/history/tab-0-background.png');
@@ -174,7 +181,7 @@ watch(() => props.currentPhase, (newPhase) => {
     top: 30%;
     right: 65%;
     .heading{
-      font-size: 64px;
+      font-size: clamp(64px, 64px + 2vw, 150px);
       text-align: left;
     }
     .heading-addition{
@@ -182,6 +189,7 @@ watch(() => props.currentPhase, (newPhase) => {
     }
     .text{
       opacity: 1;
+      font-size: clamp(16px, 1rem + 0.2vw, 100px);
     }
   }
   .image-grid{
@@ -207,7 +215,7 @@ watch(() => props.currentPhase, (newPhase) => {
     top: 30%;
     right: 65%;
     .heading{
-      font-size: 64px;
+      font-size: clamp(64px, 64px + 2vw, 150px);
       text-align: left;
     }
     .heading-addition{
@@ -215,6 +223,7 @@ watch(() => props.currentPhase, (newPhase) => {
     }
     .text{
       opacity: 1;
+      font-size: clamp(16px, 1rem + 0.2vw, 100px);
     }
   }
   .image-grid{
@@ -240,15 +249,16 @@ watch(() => props.currentPhase, (newPhase) => {
   .heading{
     font-family: 'DM Serif';
     font-style: normal;
-    font-size: 150px;
+    font-size: clamp(120px, 8vw, 10vw);
     font-weight: 400;
     color: white;
     text-align: right;
     text-shadow: 4px 4px 4px rgba(0, 0, 0, 0.5);
     margin: 0;
+    margin-bottom: 15px;
     &-addition{
       font-family: "DMSans";
-      font-size: 40px;
+      font-size: clamp(36px, 2vw, 4vw);
       font-weight: 400;
       color: white;
       letter-spacing: 0.04em;
