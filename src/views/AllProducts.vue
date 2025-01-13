@@ -24,15 +24,15 @@
       >
         <div v-if="!isMobile" class="brand-info-container">
           <span class="heading">
-            Honey Apiary Academy
+            {{ brand.fullName }}
           </span>
           <span class="subheading">
             Ultra Premium Greek Honey
           </span>
           <span class="description">
-          Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. 
+            {{ brand.brandDescription }}
           </span>
-          <router-link :to="`/product/${brand.name}`" class="explore-link">
+          <router-link :to="`/product/${brand.name === 'haa' ? 'HAA' : 'Okto'}`" class="explore-link">
             <span>Explore complete range</span>
             <img :src="rightArrow" class="arrow"/>
           </router-link>
@@ -42,7 +42,7 @@
           :brand="brand"
           :brandsData="matchedData"
         />
-        <router-link v-if="isMobile" :to="`/product/${currentlySelectedBrand}`" class="explore-link">
+        <router-link v-if="isMobile" :to="`/product/${brand.name === 'haa' ? 'HAA' : 'Okto'}`" class="explore-link">
           <span>Explore complete range</span>
           <img :src="rightArrow" class="arrow"/>
         </router-link>
@@ -152,9 +152,13 @@ function findFlavourData(brandSlug, lineSlug, flavourSlug) {
     brandConfig = oktoConfig
   }
   if (!brandConfig) return null;
+  console.log("BRANDCONFIG:", brandConfig.brand)
+  console.log("lineSLug:", lineSlug)
+
+  if((lineSlug === 'monoflorals' && brandConfig.brand === 'HAA') || (lineSlug === 'multiflorals' && brandConfig.brand === 'Okto')) return;
 
   let lineConfig = brandConfig.brandProductLines[lineSlug.charAt(0).toUpperCase() + lineSlug.slice(1)];
-  console.log("LINE CONFIG", lineConfig)
+  console.log("LINE CONFIG CALLED:", lineConfig.name)
   let lineName = lineConfig.name
   if (!lineConfig) return null;
 
@@ -202,12 +206,14 @@ onMounted(async () => {
     {
       name: 'haa',
       fullName: 'Honey Apiary Academy',
+      brandDescription: 'At Honey Academy Apiary, our ultra-premium brand maintains top-tier quality and craftsmanship. Through advanced procedures, we meticulously select limited cells, transporting them to prime vegetation areas. This precision guarantees each jar represents excellence, delivering an extraordinary honey experience for discerning palates.',
       carouselItems: carouselItems,
       imageUrls: categorizedImageUrls['haa']
     },
     {
       name: 'okto',
       fullName: 'Oktώ',
+      brandDescription: `Oktώ stands as our esteemed premium brand, known for its exceptional quality and unwavering commitment to excellence. Focused on superior taste and consistency, Oktώ offers a range of premium honey selections, each embodying the hallmark of quality and authenticity synonymous with Hellenic Premium Honey.`,
       carouselItems: carouselItems,
       imageUrls: categorizedImageUrls['okto']
     }
@@ -284,6 +290,28 @@ onMounted(async () => {
         color: black;
         margin-bottom: 5px;
       }
+      
+
+      .okto-heading{
+        .okt{
+          font-family: "DMSans";
+          font-size: 24px !important;
+          font-weight: 700;
+          text-align: left;
+          width: 100%;
+          color: black !important;
+        }
+        .omega{
+          font-family: "DMSans";
+          font-size: 24px !important;
+          font-weight: 700;
+          text-align: left;
+          width: 100%;
+          font-size: calc(24px*1.22) !important;
+          color: black !important;
+        }
+        margin-bottom: 5px;
+      }
       .subheading{
         font-family: "DMSans";
         font-size: 20px;
@@ -310,28 +338,32 @@ onMounted(async () => {
   }
   
   .explore-link{
-        display: flex;
-        align-items: center;
-        // justify-content: space-between;
-        width: 100%;
-        @media(max-width: 767px){
-          align-self: center;
-          margin-top: 40px;
-          margin-bottom: 25px;
-          justify-content: center;
-        }
-        span{
-          font-family: "DMSans";
-          font-size: 14px;
-          font-weight: 700;
-          text-align: left;
-          color: black;
-          margin-right: 10px;
-        }
-        .arrow{
-          width: 20px;
-        }
-      }
+    display: flex;
+    align-items: center;
+    // justify-content: space-between;
+    width: 100%;
+    @media(max-width: 767px){
+      align-self: center;
+      margin-top: 40px;
+      margin-bottom: 25px;
+      justify-content: center;
+    }
+    span{
+      font-family: "DMSans";
+      font-size: 14px;
+      font-weight: 700;
+      text-align: left;
+      color: black;
+      margin-right: 10px;
+    }
+    .arrow{
+      width: 20px;
+    }
+    transition: letter-spacing 0.3s ease;
+    &:hover{
+      letter-spacing: 2px;
+    }
+  }
     
   @media(max-width: 767px){
     justify-content: flex-start;

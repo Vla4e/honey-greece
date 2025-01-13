@@ -72,12 +72,13 @@ const { isMobile } = inject('screenSize')
 let currentBrand = ref(null)
 onBeforeMount(() => {
   currentBrand.value = props.brandsData[props.brand.name]
+  console.log("Current brand:", toRaw(currentBrand.value))
 })
 
 
 function goToItem(val){
+  console.log('Item selected')
   console.log(toRaw(val))
-  console.log()
   if(!moved.value){
     router.push({ 
       name: 'Product', 
@@ -176,14 +177,14 @@ function onMouseMove(event) {
   const deltaX = clientX - startX.value;
   translateValue.value = previousTranslate.value + deltaX;
   if (Math.abs(deltaX) > 5) { // threshold to consider it a drag
-    console.log("It is a drag")
+    // console.log("It is a drag")
     moved.value = true;
   } else {
-    console.log("not a drag")
+    // console.log("not a drag")
     moved.value = false;
   }
   if(moved.value){
-    console.log("prevent from onMouseMouve")
+    // console.log("prevent from onMouseMouve")
     event.preventDefault()
   }
   // Calculate the velocity

@@ -213,7 +213,7 @@ function toggleContactForm(){
       text-transform: none;
       text-align: left;
       max-width: 60%;
-      transition: height ease-in-out 0.5s;
+      transition: height ease-in-out 0.5s, opacity ease-in-out 0.3s;
       overflow: hidden;
     }
   }
@@ -261,7 +261,8 @@ function toggleContactForm(){
           &.toggled{
             opacity: 1;
             flex-direction: column;
-            height: 250px;
+            height: 300px;
+            // min-height: 250px;
             color: white;
             pointer-events: all;
           }

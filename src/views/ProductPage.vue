@@ -30,7 +30,7 @@
             :key="idx"
           >
             <span class="series-item-text">
-              {{ brandProductLine.name }}
+              Okto - {{ brandProductLine.name }}
             </span>
             <div
               class="stylish-pointer"
@@ -188,7 +188,7 @@ export default {
     if(props.selectedBrand){
       selectedBrand.value = brandConfigs[props.selectedBrand]
       brandProductLines = ref(selectedBrand.value.brandProductLines)
-      // console.log("route query", route.query?.line)
+      console.log("route query", route.query?.line)
       if(route.query?.line){
         currentProductLine.value = brandProductLines.value[route.query.line]
       } else { // Default if no selectedLine was passed as query
@@ -199,6 +199,7 @@ export default {
       brandProductLines = ref(selectedBrand.value.brandProductLines)
       currentProductLine.value = brandProductLines.value['Blends']
     }
+    console.log("currentPRoductLIne", currentProductLine.value)
     productLineFlavours = computed(() => currentProductLine.value.flavours)
     currentFlavour.value = productLineFlavours.value[0]
 

@@ -8,11 +8,12 @@
       </p>
     </div>
     <div class="section section-boxes-vertical">
-      <h2 class="floating-heading">
+      <img class="floating-image tradition" src="@/assets/pages/history/mobile/tradition.png"/>
+      <!-- <h2 class="floating-heading">
         A Tradition of
         <br/>
         Excellence
-      </h2>
+      </h2> -->
       <img :src="gridImage1" class="image boxes-vertical" alt="honey boxes"/>
       <p class="text">
         It all began four decades ago, when the Montouris family established their honey business. 
@@ -29,10 +30,11 @@
       </p>
     </div>
     <div class="section section-beekeeper">
-      <span class="floating-heading">
+      <img class="floating-image journey" src="@/assets/pages/history/mobile/journey.png"/>
+      <!-- <span class="floating-heading">
         Our journey
         <br/>of honey
-      </span>
+      </span> -->
       <img :src="image2" class="image beekeeper" alt="beekeeper"/>
     </div>
     <div class="section section-journey">
@@ -48,21 +50,23 @@
           The sheer quality of our honey garnered attention, and it was soon recognized as a benchmark for excellence. 
           The demand for our golden nectar inspired us to diversify our offerings.
         </p>
-        <span class="floating-heading">
+        <img class="floating-image hellenic" src="@/assets/pages/history/mobile/hellenic.png"/>
+        <!-- <span class="floating-heading">
           Hellenic
           <br/>premium
           <br/>honey
-        </span>
+        </span> -->
     </div>
     <div class="section section-brands">
       <span class="heading">Today, we are proud to introduce three distinct product series</span>
-      <h2 class="floating-heading">
+      <img class="floating-image honey" src="@/assets/pages/history/mobile/honey.png"/>
+      <!-- <h2 class="floating-heading">
         honey
         <br/>
         product
         <br/>
         series
-      </h2>
+      </h2> -->
       <div class="haa-container row">
         <img class="logo" :src="haa" alt="honey apiary academy">
         <span class="description">
@@ -89,7 +93,8 @@
     </div> -->
     <div class="section section-greece">
       <img class="image greece" :src="background" alt="greece"/>
-      <h2 class="floating-heading">Greece</h2>
+      <!-- <h2 class="floating-heading">Greece</h2> -->
+      <img class="floating-image greece" src="@/assets/pages/history/mobile/greece.png"/>
       <div class="quote-container">
           <img class="quote quote-start" :src="quoteStart"/>
           <span class="text-between-quotes">
@@ -99,9 +104,10 @@
       </div>
     </div>
     <div class="section section-description">
-      <h2 class="floating-heading">
+      <img class="floating-image antonios" src="@/assets/pages/history/mobile/antonios.png"/>
+      <!-- <h2 class="floating-heading">
         Antonios Montouris Honey
-      </h2>
+      </h2> -->
       <p class="text">
           A long-standing tradition of producing high-quality honey with an intense aroma. 
           From the blossoms of the Peloponnesian orchards to the wild herbs of Crete, our bees are nature's gifted artisans, 
@@ -183,6 +189,9 @@ import background from '@/assets/pages/history/greece-mobile.png';
       font-size: 65px;
     }
   }
+  .floating-image{
+    position: absolute;
+  }
   .heading{
     font-family: "DM Serif";
     font-size: 32px;
@@ -252,6 +261,7 @@ import background from '@/assets/pages/history/greece-mobile.png';
       margin: auto;
       // padding-right: 1%;
       margin-bottom: 120px !important;
+      position: relative;
       .image{
         width: 75%;
         align-self: flex-end;
@@ -260,6 +270,10 @@ import background from '@/assets/pages/history/greece-mobile.png';
       .floating-heading{
         white-space: nowrap;
         z-index: 3;
+      }
+      .floating-image{
+        z-index:10;
+        width: 25%;
       }
       .text{
         width: 60%;
@@ -284,12 +298,18 @@ import background from '@/assets/pages/history/greece-mobile.png';
 
     &-beekeeper{
       margin-bottom: 100px !important;
+      position: relative;
       .floating-heading{
         z-index: 3;
         font-size: 65px;
       }
+      .floating-image{
+        width: 30%;
+        z-index: 10;
+        left: -5%;
+      }
       .image{
-        width: 80%;
+        width: 90%;
         align-self: flex-end;
         // margin-left: 35px;
       }
@@ -302,13 +322,21 @@ import background from '@/assets/pages/history/greece-mobile.png';
     &-journey{
       margin-bottom: 60px !important;
       height: 350px !important;
+      position: relative;
       .floating-heading{
         right: 0;
         top: -30px;
       }
+      .floating-image{
+        width: 55%;
+        // height: 100%;
+        right: 0;
+        z-index: 1;
+      }
     }
 
     &-brands{
+      position: relative;
       .heading{
         font-style: italic;
         font-size: 16px;
@@ -325,7 +353,12 @@ import background from '@/assets/pages/history/greece-mobile.png';
         @media(max-width: 380px){
           font-size: 70px;
         }
-
+      }
+      .floating-image{
+        width: 50%;
+        z-index: 1;
+        top: 50%;
+        transform: translateY(-40%);
       }
       .row{
         display: flex;
@@ -373,6 +406,7 @@ import background from '@/assets/pages/history/greece-mobile.png';
     }
 
     &-greece{
+      position: relative;
       .image{
         width: 100%;
         margin: auto;
@@ -381,6 +415,12 @@ import background from '@/assets/pages/history/greece-mobile.png';
       .floating-heading{
         right: -20px;
         z-index: 3;
+      }
+      .floating-image{
+        width: 15%;
+        position: absolute;
+        z-index: 3;
+        right: -5%;
       }
       .quote-container{
         display: flex;
@@ -401,6 +441,7 @@ import background from '@/assets/pages/history/greece-mobile.png';
       }
     }
     &-description{
+      position: relative;
       .text{
         width: 85%;
         margin: auto;
@@ -408,6 +449,11 @@ import background from '@/assets/pages/history/greece-mobile.png';
       .floating-heading{
         top: 30%;
         text-align: left;
+      }
+      .floating-image{
+        width: 60%;
+        z-index: 1;
+        left: -5%;
       }
     }
     &-quote{

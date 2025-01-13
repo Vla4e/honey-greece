@@ -76,7 +76,8 @@ import {
   CubeTexture,
   CanvasTexture,
   EquirectangularReflectionMapping,
-  DoubleSide
+  DoubleSide,
+  sRGBEncoding
 } from "three";
 
 import { watch, onMounted, onUnmounted, onBeforeUnmount,  ref, computed, nextTick, inject, toRaw  } from "vue";
@@ -580,6 +581,7 @@ export default {
     const envMapIntensity = ref(1.00)
     const viscosityWaviness = ref(20.00)
 
+    
     // Replace changeMatcapFinal with a new function that uses createComplexMaterialOptions
     async function changeComplexMatcap(id, color) {
       let tempFixed = new Vector3(
@@ -632,6 +634,8 @@ export default {
         viscosityWaviness // viscosityWaviness
       )
       // // console.log("Got material", material2)
+      
+      console.log("HONEYMESHES:::::", honeyMeshes)
       Object.values(honeyMeshes).forEach((mesh) => {
         console.log("HONEY MESH : : : : : : : : :", mesh)
         mesh.material = material2;
@@ -845,7 +849,7 @@ export default {
       // load if not
       let jarTexturesLocal = []
       for (const size of jarSizes) {
-        let textureUrl = `${baseTextureUrl}/${textureUrlSlugs.brand}/${textureUrlSlugs.productLine}/${size}/${textureUrlSlugs.flavour}.png`;
+        let textureUrl = `${baseTextureUrl}/${textureUrlSlugs.brand}/${textureUrlSlugs.productLine}/${size}/${textureUrlSlugs.flavour}_resized.png`;
         // console.log("url - > ", textureUrl)
         let texture = await loadTexture(textureUrl);
         texture.name = textureUrlSlugs.flavour
@@ -857,9 +861,181 @@ export default {
 
       return jarTexturesLocal
     }
+    // async function createTextureShader(previousTexture, nextTexture, clonedProperties){
+    //   // console.log("CALLED CTS func")
+    //   // Copy glb mesh properties into shader
+    //   let tempEnv = globalScene.environment
+    //   let originalMaterial = clonedProperties;
+    //   let baseColor = originalMaterial.color;
+    //   let roughness = originalMaterial.roughness;
+    //   let metalness = originalMaterial.metalness;
+    //   let material = new ShaderMaterial({
+    //     uniforms: {
+    //         currentTexture: { value: previousTexture[0].texture },
+    //         nextTexture: { value: nextTexture[0].texture },
+    //         transitionProgress: { value: 0 },
+    //         envMap: { value: globalScene.environment },
+    //         roughness: { value: roughness },
+    //         metalness: { value: metalness },
+    //         baseColor: { value: baseColor },
+    //         envMapIntensity: { value: 1 },
+    //         side: DoubleSide
+    //     },
+    //     vertexShader: `
+    //       varying vec2 vUv;
+    //       varying vec3 vNormal;
+    //       varying vec3 vViewPosition;
+    //       varying float vSide;
+
+    //       void main() {
+    //           vUv = uv;
+    //           vec3 transformedNormal = normalMatrix * normal;
+    //           vNormal = normalize(transformedNormal);
+    //           vec4 mvPosition = modelViewMatrix * vec4(position, 1.0);
+    //           vViewPosition = -mvPosition.xyz;
+    //           gl_Position = projectionMatrix * mvPosition;
+              
+    //           // Determine if this is a front or back face
+    //           vSide = dot(transformedNormal, vViewPosition) > 0.0 ? -1.0 : 1.0;
+    //       }
+    //           `,
+    //     fragmentShader: `
+    //       uniform float transitionProgress;
+    //       uniform sampler2D currentTexture;
+    //       uniform sampler2D nextTexture;
+    //       uniform samplerCube envMap;
+    //       uniform float roughness;
+    //       uniform float metalness;
+    //       uniform vec3 baseColor;
+    //       uniform float envMapIntensity;
+
+    //       varying vec2 vUv;
+    //       varying vec3 vNormal;
+    //       varying vec3 vViewPosition;
+    //       varying float vSide;
+
+    //       void main() {
+    //           float alpha = step(vUv.x, transitionProgress);
+    //           vec4 texColorCurrent = texture2D(currentTexture, vUv);
+    //           vec4 texColorNext = texture2D(nextTexture, vUv);
+    //           vec4 texColor = mix(texColorCurrent, texColorNext, alpha);
+
+    //           vec3 color = baseColor * texColor.rgb;
+
+    //           vec3 normal = normalize(vNormal) * vSide;
+    //           vec3 viewDir = normalize(vViewPosition);
+              
+    //           // Calculate environment reflection
+    //           vec3 reflectVec = reflect(-viewDir, normal);
+    //           vec3 envColor = texture(envMap, reflectVec).rgb;
+
+    //           // Apply environment mapping
+    //           vec3 envMapColor = envColor * envMapIntensity;
+              
+    //           // Mix base color with environment reflection based on roughness and metalness
+    //           vec3 finalColor = mix(color, envMapColor, (1.0 - roughness) * metalness);
+    //           finalColor += envMapColor * (1.0 - metalness) * (1.0 - roughness) * 0.5;
+
+    //           // Use the alpha from the texture
+    //           float finalAlpha = texColor.a;
+
+    //           gl_FragColor = vec4(finalColor, finalAlpha);
+    //       }
+    //           `,
+    //           transparent: true,
+    //           alphaTest: 0.05,  // Adjust this value as needed
+    //   });
+
+    //   let material2 = new ShaderMaterial({
+    //     uniforms: {
+    //         currentTexture: { value: previousTexture[1].texture }, // Start with the first texture
+    //         nextTexture: { value: nextTexture[1].texture }, // Initially set to the second texture
+    //         transitionProgress: { value: 0 }, // Transition not started
+    //     envMap: { value: globalScene.environment },
+    //     roughness: { value: roughness },
+    //     metalness: { value: metalness },
+    //     baseColor: { value: baseColor },
+    //     envMapIntensity: { value: 1.0 },
+    //     // exposure: {value: 0.2},
+    //     side: DoubleSide
+    //     },
+    //     vertexShader: `
+    //       varying vec2 vUv;
+    //       varying vec3 vNormal;
+    //       varying vec3 vViewPosition;
+    //       varying float vSide;
+
+    //       void main() {
+    //           vUv = uv;
+    //           vec3 transformedNormal = normalMatrix * normal;
+    //           vNormal = normalize(transformedNormal);
+    //           vec4 mvPosition = modelViewMatrix * vec4(position, 1.0);
+    //           vViewPosition = -mvPosition.xyz;
+    //           gl_Position = projectionMatrix * mvPosition;
+              
+    //           // Determine if this is a front or back face
+    //           vSide = dot(transformedNormal, vViewPosition) > 0.0 ? -1.0 : 1.0;
+    //       }
+    //     `,
+    //     fragmentShader: `
+    //       uniform float transitionProgress;
+    //       uniform sampler2D currentTexture;
+    //       uniform sampler2D nextTexture;
+    //       uniform samplerCube envMap;
+    //       uniform float roughness;
+    //       uniform float metalness;
+    //       uniform vec3 baseColor;
+    //       uniform float envMapIntensity;
+
+    //       varying vec2 vUv;
+    //       varying vec3 vNormal;
+    //       varying vec3 vViewPosition;
+    //       varying float vSide;
+
+    //       void main() {
+    //           float alpha = step(vUv.x, transitionProgress);
+    //           vec4 texColorCurrent = texture2D(currentTexture, vUv);
+    //           vec4 texColorNext = texture2D(nextTexture, vUv);
+    //           vec4 texColor = mix(texColorCurrent, texColorNext, alpha);
+
+    //           vec3 color = baseColor * texColor.rgb;
+
+    //           vec3 normal = normalize(vNormal) * vSide;
+    //           vec3 viewDir = normalize(vViewPosition);
+              
+    //           // Calculate environment reflection
+    //           vec3 reflectVec = reflect(-viewDir, normal);
+    //           vec3 envColor = texture(envMap, reflectVec).rgb;
+
+    //           // Apply environment mapping
+    //           vec3 envMapColor = envColor * envMapIntensity;
+              
+    //           // Mix base color with environment reflection based on roughness and metalness
+    //           vec3 finalColor = mix(color, envMapColor, (1.0 - roughness) * metalness);
+    //           finalColor += envMapColor * (1.0 - metalness) * (1.0 - roughness) * 0.5;
+
+    //           // Use the alpha from the texture
+    //           float finalAlpha = texColor.a;
+
+    //           gl_FragColor = vec4(finalColor, finalAlpha);
+    //       }
+    //     `,
+    //     transparent: true,
+    //     alphaTest: 0.05,  // Adjust this value as needed
+    //   });
+    //   // console.log("about to return mats")
+    //   return [
+    //     {material: material, size: previousTexture[0].size}, 
+    //     {material: material2, size: previousTexture[1].size}
+    //   ];
+    // }
+
+    // CLAUDE PROVIDED
     async function createTextureShader(previousTexture, nextTexture, clonedProperties){
       // console.log("CALLED CTS func")
       // Copy glb mesh properties into shader
+      previousTexture[0].texture.encoding = SRGBColorSpace;
+      nextTexture[0].texture.encoding = SRGBColorSpace;
       let tempEnv = globalScene.environment
       let originalMaterial = clonedProperties;
       let baseColor = originalMaterial.color;
@@ -881,21 +1057,27 @@ export default {
           varying vec2 vUv;
           varying vec3 vNormal;
           varying vec3 vViewPosition;
+          varying vec3 vWorldPosition;
           varying float vSide;
 
           void main() {
               vUv = uv;
+              vec4 worldPosition = modelMatrix * vec4(position, 1.0);
+              vWorldPosition = worldPosition.xyz;
+              
               vec3 transformedNormal = normalMatrix * normal;
               vNormal = normalize(transformedNormal);
+              
               vec4 mvPosition = modelViewMatrix * vec4(position, 1.0);
               vViewPosition = -mvPosition.xyz;
               gl_Position = projectionMatrix * mvPosition;
               
-              // Determine if this is a front or back face
               vSide = dot(transformedNormal, vViewPosition) > 0.0 ? -1.0 : 1.0;
           }
-              `,
+        `,
         fragmentShader: `
+          #define PI 3.14159265359
+
           uniform float transitionProgress;
           uniform sampler2D currentTexture;
           uniform sampler2D nextTexture;
@@ -911,35 +1093,44 @@ export default {
           varying float vSide;
 
           void main() {
+              // Basic texture blending for the wipe effect
               float alpha = step(vUv.x, transitionProgress);
               vec4 texColorCurrent = texture2D(currentTexture, vUv);
               vec4 texColorNext = texture2D(nextTexture, vUv);
               vec4 texColor = mix(texColorCurrent, texColorNext, alpha);
-
-              vec3 color = baseColor * texColor.rgb;
-
-              vec3 normal = normalize(vNormal) * vSide;
-              vec3 viewDir = normalize(vViewPosition);
               
-              // Calculate environment reflection
-              vec3 reflectVec = reflect(-viewDir, normal);
-              vec3 envColor = texture(envMap, reflectVec).rgb;
-
-              // Apply environment mapping
-              vec3 envMapColor = envColor * envMapIntensity;
+              // Get base color with texture
+              vec3 color = texColor.rgb;  // Removed baseColor multiplication for now
               
-              // Mix base color with environment reflection based on roughness and metalness
-              vec3 finalColor = mix(color, envMapColor, (1.0 - roughness) * metalness);
-              finalColor += envMapColor * (1.0 - metalness) * (1.0 - roughness) * 0.5;
-
-              // Use the alpha from the texture
-              float finalAlpha = texColor.a;
-
-              gl_FragColor = vec4(finalColor, finalAlpha);
+              // Basic lighting setup
+              vec3 N = normalize(vNormal) * vSide;
+              vec3 V = normalize(vViewPosition);
+              vec3 R = reflect(-V, N);
+              
+              // Sample environment map
+              vec3 envSample = textureCube(envMap, R).rgb;
+              
+              // Simplified lighting calculation
+              float fresnel = pow(1.0 - max(dot(N, V), 0.0), 5.0);
+              vec3 specularColor = mix(vec3(0.04), color, metalness);
+              
+              // Mix diffuse and specular
+              vec3 diffuse = color * (1.0 - metalness);
+              vec3 specular = envSample * mix(specularColor, vec3(1.0), fresnel);
+              
+              // Combine everything
+              vec3 finalColor = (diffuse + specular * (1.0 - roughness)) * envMapIntensity;
+              
+              // Ensure we have some minimal lighting
+              finalColor = max(finalColor, color * 0.2);  // Add ambient term
+              
+              gl_FragColor = vec4(finalColor, texColor.a);
           }
-              `,
-              transparent: true,
-              alphaTest: 0.05,  // Adjust this value as needed
+        `,
+              
+        transparent: true,
+        alphaTest: 0.05, 
+         // Adjust this value as needed
       });
 
       let material2 = new ShaderMaterial({
@@ -951,7 +1142,7 @@ export default {
         roughness: { value: roughness },
         metalness: { value: metalness },
         baseColor: { value: baseColor },
-        envMapIntensity: { value: 1.0 },
+        envMapIntensity: { value: 1 },
         // exposure: {value: 0.2},
         side: DoubleSide
         },
@@ -959,63 +1150,74 @@ export default {
           varying vec2 vUv;
           varying vec3 vNormal;
           varying vec3 vViewPosition;
+          varying vec3 vWorldPosition;
           varying float vSide;
 
           void main() {
               vUv = uv;
+              vec4 worldPosition = modelMatrix * vec4(position, 1.0);
+              vWorldPosition = worldPosition.xyz;
+              
               vec3 transformedNormal = normalMatrix * normal;
               vNormal = normalize(transformedNormal);
+              
               vec4 mvPosition = modelViewMatrix * vec4(position, 1.0);
               vViewPosition = -mvPosition.xyz;
               gl_Position = projectionMatrix * mvPosition;
               
-              // Determine if this is a front or back face
               vSide = dot(transformedNormal, vViewPosition) > 0.0 ? -1.0 : 1.0;
           }
         `,
-        fragmentShader: `
-          uniform float transitionProgress;
-          uniform sampler2D currentTexture;
-          uniform sampler2D nextTexture;
-          uniform samplerCube envMap;
-          uniform float roughness;
-          uniform float metalness;
-          uniform vec3 baseColor;
-          uniform float envMapIntensity;
+        fragmentShader: `#define PI 3.14159265359
 
-          varying vec2 vUv;
-          varying vec3 vNormal;
-          varying vec3 vViewPosition;
-          varying float vSide;
+      uniform float transitionProgress;
+      uniform sampler2D currentTexture;
+      uniform sampler2D nextTexture;
+      uniform samplerCube envMap;
+      uniform float roughness;
+      uniform float metalness;
+      uniform vec3 baseColor;
+      uniform float envMapIntensity;
 
-          void main() {
-              float alpha = step(vUv.x, transitionProgress);
-              vec4 texColorCurrent = texture2D(currentTexture, vUv);
-              vec4 texColorNext = texture2D(nextTexture, vUv);
-              vec4 texColor = mix(texColorCurrent, texColorNext, alpha);
+      varying vec2 vUv;
+      varying vec3 vNormal;
+      varying vec3 vViewPosition;
+      varying float vSide;
 
-              vec3 color = baseColor * texColor.rgb;
-
-              vec3 normal = normalize(vNormal) * vSide;
-              vec3 viewDir = normalize(vViewPosition);
-              
-              // Calculate environment reflection
-              vec3 reflectVec = reflect(-viewDir, normal);
-              vec3 envColor = texture(envMap, reflectVec).rgb;
-
-              // Apply environment mapping
-              vec3 envMapColor = envColor * envMapIntensity;
-              
-              // Mix base color with environment reflection based on roughness and metalness
-              vec3 finalColor = mix(color, envMapColor, (1.0 - roughness) * metalness);
-              finalColor += envMapColor * (1.0 - metalness) * (1.0 - roughness) * 0.5;
-
-              // Use the alpha from the texture
-              float finalAlpha = texColor.a;
-
-              gl_FragColor = vec4(finalColor, finalAlpha);
-          }
-        `,
+      void main() {
+          // Basic texture blending for the wipe effect
+          float alpha = step(vUv.x, transitionProgress);
+          vec4 texColorCurrent = texture2D(currentTexture, vUv);
+          vec4 texColorNext = texture2D(nextTexture, vUv);
+          vec4 texColor = mix(texColorCurrent, texColorNext, alpha);
+          
+          // Get base color with texture
+          vec3 color = texColor.rgb;  // Removed baseColor multiplication for now
+          
+          // Basic lighting setup
+          vec3 N = normalize(vNormal) * vSide;
+          vec3 V = normalize(vViewPosition);
+          vec3 R = reflect(-V, N);
+          
+          // Sample environment map
+          vec3 envSample = textureCube(envMap, R).rgb;
+          
+          // Simplified lighting calculation
+          float fresnel = pow(1.0 - max(dot(N, V), 0.0), 5.0);
+          vec3 specularColor = mix(vec3(0.04), color, metalness);
+          
+          // Mix diffuse and specular
+          vec3 diffuse = color * (1.0 - metalness);
+          vec3 specular = envSample * mix(specularColor, vec3(1.0), fresnel);
+          
+          // Combine everything
+          vec3 finalColor = (diffuse + specular * (1.0 - roughness)) * envMapIntensity;
+          
+          // Ensure we have some minimal lighting
+          finalColor = max(finalColor, color * 0.2);  // Add ambient term
+          
+          gl_FragColor = vec4(finalColor, texColor.a);
+      }`,
         transparent: true,
         alphaTest: 0.05,  // Adjust this value as needed
       });
@@ -1025,7 +1227,142 @@ export default {
         {material: material2, size: previousTexture[1].size}
       ];
     }
+   /* GPT PROVIDED */   
+//     async function createTextureShader(previousTexture, nextTexture, clonedProperties) {
+//   // Copy relevant glb material properties
+//   let originalMaterial = clonedProperties;
+//   let baseColor = originalMaterial.color;
+//   let roughness = originalMaterial.roughness;
+//   let metalness = originalMaterial.metalness;
 
+//   // Use the PMREM-generated cube map from the scene
+//   // (i.e. globalScene.environment is a samplerCube)
+//   let envMap = globalScene.environment;
+  
+//   // ----------------------------------------------------------------
+//   // Shared Vertex Shader: pass world-space position & normal
+//   // ----------------------------------------------------------------
+//   const vertexShader = `
+//     varying vec2 vUv;
+//     varying vec3 vWorldPosition;
+//     varying vec3 vWorldNormal;
+
+//     void main() {
+//       vUv = uv;
+      
+//       // World-space position
+//       vec4 worldPos = modelMatrix * vec4(position, 1.0);
+//       vWorldPosition = worldPos.xyz;
+
+//       // World-space normal
+//       vWorldNormal = normalize((modelMatrix * vec4(normal, 0.0)).xyz);
+
+//       // Standard MVP transform
+//       gl_Position = projectionMatrix * viewMatrix * worldPos;
+//     }
+//   `;
+
+//   // ----------------------------------------------------------------
+//   // Shared Fragment Shader: do texture "wipe" + basic reflection
+//   // ----------------------------------------------------------------
+//   const fragmentShader = `
+//     uniform float transitionProgress;
+//     uniform sampler2D currentTexture;
+//     uniform sampler2D nextTexture;
+//     uniform samplerCube envMap;
+
+//     uniform float roughness;
+//     uniform float metalness;
+//     uniform vec3 baseColor;
+//     uniform float envMapIntensity;
+
+//     // Provided automatically by Three.js (camera position in world space)
+//     // uniform vec3 cameraPosition;
+
+//     varying vec2 vUv;
+//     varying vec3 vWorldPosition;
+//     varying vec3 vWorldNormal;
+
+//     void main() {
+//       // Wipe transition: step() returns 0.0 or 1.0
+//       float alpha = step(vUv.x, transitionProgress);
+
+//       // Sample the two textures
+//       vec4 texColorCurrent = texture2D(currentTexture, vUv);
+//       vec4 texColorNext = texture2D(nextTexture, vUv);
+
+//       // Blend between the two (horizontal wipe)
+//       vec4 texColor = mix(texColorCurrent, texColorNext, alpha);
+
+//       // Multiply texture color by base color
+//       vec3 color = baseColor * texColor.rgb;
+
+//       // View direction in world space
+//       vec3 viewDir = normalize(cameraPosition - vWorldPosition);
+
+//       // Reflect around the world-space normal
+//       vec3 reflectVec = reflect(-viewDir, normalize(vWorldNormal));
+
+//       // Sample the PMREM-based cube map
+//       vec3 envColor = textureCube(envMap, reflectVec).rgb;
+//       vec3 envMapColor = envColor * envMapIntensity;
+
+//       // Basic reflection model: blend base color and envColor
+//       vec3 finalColor = mix(color, envMapColor, (1.0 - roughness) * metalness);
+
+//       // Add some reflection for non-metal areas
+//       finalColor += envMapColor * (1.0 - metalness) * (1.0 - roughness) * 0.5;
+
+//       // Use the alpha from the blended texture
+//       float finalAlpha = texColor.a;
+
+//       gl_FragColor = vec4(finalColor, finalAlpha);
+//     }
+//   `;
+
+//   // Create the ShaderMaterial for the first size
+//   const material = new ShaderMaterial({
+//     uniforms: {
+//       currentTexture: { value: previousTexture[0].texture },
+//       nextTexture: { value: nextTexture[0].texture },
+//       transitionProgress: { value: 0 },
+//       envMap: { value: envMap },
+//       roughness: { value: roughness },
+//       metalness: { value: metalness },
+//       baseColor: { value: baseColor },
+//       envMapIntensity: { value: 1.0 }
+//     },
+//     vertexShader,
+//     fragmentShader,
+//     transparent: true,
+//     alphaTest: 0.05,
+//     side: DoubleSide
+//   });
+
+//   // Create the ShaderMaterial for the second size
+//   const material2 = new ShaderMaterial({
+//     uniforms: {
+//       currentTexture: { value: previousTexture[1].texture },
+//       nextTexture: { value: nextTexture[1].texture },
+//       transitionProgress: { value: 0 },
+//       envMap: { value: envMap },
+//       roughness: { value: roughness },
+//       metalness: { value: metalness },
+//       baseColor: { value: baseColor },
+//       envMapIntensity: { value: 1.0 }
+//     },
+//     vertexShader,
+//     fragmentShader,
+//     transparent: true,
+//     alphaTest: 0.05,
+//     side: DoubleSide
+//   });
+
+//   return [
+//     { material: material, size: previousTexture[0].size },
+//     { material: material2, size: previousTexture[1].size }
+//   ];
+// }
     let firstTextureLoad = true;
     async function updateTexture() {
       globalStore.toggleLoadingCircle(true);
