@@ -120,7 +120,7 @@ const maxPhases = 2 //3 counted from 0
     .heading{
       font-family: 'DM Serif';
       font-style: normal;
-      font-size: clamp(50px, 5vw, 200px);
+      font-size: clamp(3rem, 0rem + 4.688vw, 7.5rem);
       font-weight: 400;
       color: white;
       text-align: center;
@@ -136,20 +136,21 @@ const maxPhases = 2 //3 counted from 0
       // position: absolute;
       // top: 50%;
       font-family: "DMSans";
-      font-size: 20px;
+      font-size: clamp(1rem, 0.167rem + 1.102vw, 2rem);
+      line-height: clamp(1rem, 0.167rem + 2vw, 2.5rem);
       font-weight: 400;
       text-align: left;
       color: white;
-      width: 60%;
+      width: 80%;
       text-shadow: 4px 4px 4px rgba(0, 0, 0, 0.5);
       opacity: 0;
       transition: opacity 1.5s;
       &.show{
         opacity: 1;
       }
-      @media(max-width: 1440px){
-        font-size: 16px;
-      }
+      // @media(max-width: 1440px){
+      //   font-size: 16px;
+      // }
     }
   }
   
@@ -207,9 +208,9 @@ const maxPhases = 2 //3 counted from 0
     // justify-content: flex-end;
     .text-container{
       // width: 80%;
-      transform: translateX(100%) !important;
+      transform: translate(100%, clamp(5%, 5vh , 10%)) !important;
       .heading{
-        font-size: 64px;
+        font-size: clamp(3rem, 0rem + 4.688vw, 7.5rem);
         font-weight: 400;
         text-align: center;
       }
@@ -235,15 +236,16 @@ const maxPhases = 2 //3 counted from 0
       // padding-right: 5%;
       transform: translateX(0%) !important;
       .heading{
-        font-size: 64px;
+        font-size: clamp(3rem, 0rem + 4.688vw, 7.5rem);
         font-weight: 400;
         text-align: center;
       }
       .text{
         // width: 100%;
-        @media(max-width: 1440px){
-          font-size: 16px;
-        }
+        // @media(max-width: 1440px){
+        //   font-size: 16px;
+        // }
+        font-size: clamp(1rem, 0.167rem + 1.102vw, 2rem);
       }
     }
     .quote-container{

@@ -1,6 +1,8 @@
 import router from '@/router';
 
 let temp = 0;
+
+//Was used to calculate animation path for jars.
 export function parabolicPathCoordinate(pathCoord, startCoord, endCoord){
   //  // Calculate the midpoint of startCoord and endCoord
   //  const midPoint = (startCoord + endCoord) / 2;
@@ -35,10 +37,14 @@ export function parabolicPathCoordinate(pathCoord, startCoord, endCoord){
   // console.log("RES", res)
   return res
 }
+
+//Redundant
 export function useImage (url) {
     console.log("IMPORT META", url, `@/assets/${url}`)
     return new URL(`@/assets/${url}`, import.meta.url).href;
 }
+
+//Unused
 export function delayedNavigation(path, delay) {
   console.log("this router", router)
   setTimeout(() => {
@@ -47,6 +53,8 @@ export function delayedNavigation(path, delay) {
     });
   }, delay);
 }
+
+// limits rate of function execution. First arg is the function to be executed, second is time between execution
 export function debounce (func, wait) {
   let timeout;
 

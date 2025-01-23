@@ -18,18 +18,19 @@ let initialRotations = [];
 let axesHelper2 = new AxesHelper(5);
 axesHelper2.setColors('blue', 'green', 'red')
 async function initiateObjectRotation(target, container, currentSize){
-  // console.log("Container", container)
+  console.log("Container", currentSize)
   rotationGroup = [];
   jarSizeLocal = currentSize
   target.traverse((obj) => {
     if(obj.isMesh){
-      if(obj.name.includes(jarSizeLocal) && jarSizeLocal !== '450g'){
+      console.log("OBJ NAME", obj.name, currentSize, jarSizeLocal, obj.name === currentSize)
+      if(obj.name.includes(jarSizeLocal) && jarSizeLocal !== '450g'){ // enable 450 by removing 2nd condition
         rotationGroup.push(obj)
         initialRotations.push(obj.quaternion.clone())
       }
     }
   })
-  // console.log("Rotation group:", rotationGroup)
+  console.log("Rotation group:", rotationGroup)
   registerEventListeners(target, container)
 }
 

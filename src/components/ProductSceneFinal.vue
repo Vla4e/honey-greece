@@ -67,6 +67,7 @@ import {
   Clock,
   Color,
   ShaderMaterial,
+  NormalBlending,
   CubeCamera,
   WebGLCubeRenderTarget,
   BackSide,
@@ -76,11 +77,31 @@ import {
   CubeTexture,
   CanvasTexture,
   EquirectangularReflectionMapping,
-  DoubleSide,
-  sRGBEncoding
+  DoubleSide
 } from "three";
 
-import { watch, onMounted, onUnmounted, onBeforeUnmount,  ref, computed, nextTick, inject, toRaw  } from "vue";
+// Effects:
+import { EffectComposer } from 'three/examples/jsm/postprocessing/EffectComposer';
+
+import { RenderPass } from 'three/examples/jsm/postprocessing/RenderPass';
+import { SSRPass } from 'three/examples/jsm/postprocessing/SSRPass';
+
+import { ColorCorrectionShader } from 'three/examples/jsm/shaders/ColorCorrectionShader.js';
+
+import { ShaderPass } from 'three/examples/jsm/postprocessing/ShaderPass.js';
+import { BokehPass } from '@/BokehShaderTransparent/BokehPassTransparent.js';
+// import { BokehPass } from 'three/examples/jsm/postprocessing/BokehPass';
+import { EffectComposer as EffectComposerPPC }  from "postprocessing";
+import { RenderPass as RenderPassPPC } from "postprocessing";
+import { DepthOfFieldEffect, FXAAEffect, SMAAEffect, EffectPass } from 'postprocessing'
+console.log("PPC", EffectComposerPPC);
+
+import addPostProcessingPPCTest from '@/helpers/JarScene/PostProcessing.js'
+
+
+
+
+import { watch, onMounted, onUnmounted, onBeforeUnmount,  ref, computed, nextTick, inject } from "vue";
 import { get, objectEntries, useWindowSize } from "@vueuse/core";
 import { useProductStore } from '@/store/product.js';
 import { useGlobalStore } from '@/store/global.js'
@@ -138,6 +159,7 @@ const jarConfigs = Object.freeze({
 
 import * as TWEEN from '@tweenjs/tween.js';
 import { zoomIn, zoomOut} from '@/helpers/cameraZoom.js'
+import jarPositions from "@/assets/boxCenters.js"
 const cameraConfigs = Object.freeze({
   x: 0.35, 
   y: 0.06, // 0.06 for small set. 0.075
@@ -159,6 +181,8 @@ Cache.enabled = true;
 
 export default {
   setup() {
+    let composer; // addPostProcessing
+    
     let jarMedium = ref([]);
     let jarSmall = ref([]);
 
@@ -411,19 +435,97 @@ export default {
     let matcapType = ref(true);
     
 
-    function renderMatcap(){
-      changeComplexMatcap()
+    async function renderMatcap(){
+      await changeComplexMatcap()
       return
     }
 
     let tempColor;
 
 
+    /* ATTEMPT AT EXTRA EFFECTS */
+    async function addPostProcessing () {
+      console.log("Adding PPS")
+      // First verify that we have all required components
+      if (!globalRenderer || !globalScene || !globalCamera) {
+          console.error('Required components not initialized');
+          return;
+      }
+
+      // Log the camera properties to verify it's properly set up
+      console.log('Camera:', globalCamera);
+
+      try {
+        composer = new EffectComposer(globalRenderer);
+        composer.addPass(new RenderPass(globalScene, globalCamera));
+
+        const colorCorrectionPass = new ShaderPass(ColorCorrectionShader);
+        // Tweak these:
+        colorCorrectionPass.uniforms["powRGB"].value.set(0.7, 0.7, 0.7);  // gamma
+        colorCorrectionPass.uniforms["mulRGB"].value.set(1.0, 1.0, 1.0);  // contrast
+        colorCorrectionPass.uniforms["addRGB"].value.set(0.0, 0.0, 0.0);  // brightness
+        // Bokeh Pass (depth of field)
+        const bokehPass = new BokehPass(globalScene, globalCamera, {
+          focus: 0.21,         // Focus distance (tweak this)
+          aperture: 0.015,    // Aperture => bigger = stronger blur
+          maxblur: 0.2     // Max blur amount
+        });
+        bokehPass.materialBokeh.transparent = true;
+        bokehPass.materialBokeh.depthWrite = false;
+        bokehPass.materialBokeh.blending = NormalBlending;
+        console.log("BokehPass", bokehPass)
+        composer.addPass(bokehPass);
+        composer.addPass(colorCorrectionPass);
+        // // Add screen-space reflections
+        // const ssrPass = new SSRPass({
+        //     renderer: globalRenderer,  // Changed from globalRenderer to renderer
+        //     scene: globalScene,
+        //     camera: globalCamera,
+        //     width: containerWidth.value,  // Use your container width
+        //     height: containerHeight.value, // Use your container height
+        //     groundReflector: false,
+        //     selects: []
+        // });
+        // composer.addPass(ssrPass);
+      } catch (error) {
+          console.error('Error setting up post-processing:', error);
+      }
+    };
+    async function addPostProcessingPPC () {
+      console.log("Adding PPS")
+      // First verify that we have all required components
+      if (!globalRenderer || !globalScene || !globalCamera) {
+          console.error('Required components not initialized');
+          return;
+      }
+
+      // Log the camera properties to verify it's properly set up
+      console.log('Camera:', globalCamera);
+
+      try {
+        composer = new EffectComposerPPC(globalRenderer);
+
+        let depthOfFieldEffect = new DepthOfFieldEffect(globalCamera, {
+            focusDistance: 0.05,
+            focalLength: 0.1,
+            bokehScale: 1.5,
+            height: 480
+          });
+        composer.addPass(new RenderPassPPC(globalScene, globalCamera));
+        composer.addPass(new EffectPass(globalCamera, depthOfFieldEffect));
+        // composer.addPass(new EffectPass(globalCamera, new DepthEffect()));
+        composer.addPass(new EffectPass(globalCamera, new FXAAEffect()));
+        composer.addPass(new EffectPass(globalCamera, new SMAAEffect()));
+      } catch (error) {
+          console.error('Error setting up post-processing:', error);
+      }
+    };
+
     async function testMaterial(
       id
     ) {
       
-      const idl = 7
+      const idl = 42
       const fixedGridPositionl = new Vector3( 0.05, 0.2, 0)
       const densityl = 10.85;
       const lightl = 0.92;
@@ -529,15 +631,9 @@ export default {
             // Subsurface scattering
             vec3 scatterColor = colorAdjust * (1.0 - fresnel) * subSurfaceScatter;
 
-            // Viscosity effect
-            // float viscosityEffect = sin(time * viscosityWaviness) * viscosity;
-            //OLD
             float viscosityEffect = sin(fixedGridPosition.y * viscosityWaviness + time * 0.1) * viscosity;
             matcapColor += vec3(viscosityEffect);
 
-            // Vertical highlight
-            // float verticalHighlight = smoothstep(highlightPosition - 0.1, highlightPosition + 0.1, fract(time * 0.1));
-            //OLD
             float verticalHighlight = smoothstep(highlightPosition - 0.1, highlightPosition + 0.1, abs(fixedGridPosition.y));
             verticalHighlight = pow(verticalHighlight, 2.0) * highlightIntensity * 2.0;
 
@@ -547,9 +643,6 @@ export default {
             finalColor += scatterColor;
             finalColor += vec3(verticalHighlight);
 
-            // Color depth simulation
-            // float depth = 0.5 + sin(time * 0.1) * 0.5;
-            //OLD
             float depth = (fixedGridPosition.y + 1.0) * 0.5;
             finalColor *= mix(vec3(1.0), colorAdjust, depth);
 
@@ -572,6 +665,162 @@ export default {
         console.log("Error while loading matcap texture", e)
       }
     }
+
+
+
+    // Same function from test grid
+    async function createComplexMaterialOptions(
+      id,
+      density = 9.06,
+      light = 0.73,
+      viscosity = 0.82,
+      hPosition = 0.50,
+      hIntensity = 0.50,
+      envMapIntensity = 1.00,
+      viscosityWaviness = 20.00
+    ) {
+      // Base honey color (adjust as needed)
+      const testColor = new Color("#d2800f");
+
+      // Load matcap texture
+      const matcapTexture = await globalTextureLoader.loadAsync(`/assets/matcaps2/${id}.png`);
+
+      // 1) Get the *actual* position of your main jar (the one in the center scene)
+      const worldPosMain = new Vector3();
+      honeyMeshes['300g'].getWorldPosition(worldPosMain);
+
+      // 2) Retrieve the world position from the chosen grid jar
+      //    (assuming jarPositions[id].worldPosObj is the world position from the grid)
+      const gridWorldPos = jarPositions[id].worldPosObj;
+
+      // 3) Calculate the offset so we can pretend this jar is still at the grid location
+      const offset = new Vector3().subVectors(gridWorldPos, worldPosMain);
+
+      console.log("worldPosMain:", worldPosMain);
+      console.log("gridWorldPos:", gridWorldPos);
+      console.log("Offset:", offset);
+
+      return new ShaderMaterial({
+        uniforms: {
+          matcap:           { value: matcapTexture },
+          colorAdjust:      { value: testColor },
+          time:             { value: 0 },
+          envMap:           { value: globalScene.environment },
+          IOR:              { value: density },
+          subSurfaceScatter:{ value: light },
+          viscosity:        { value: viscosity },
+          viscosityWaviness:{ value: viscosityWaviness },
+          highlightPosition:{ value: hPosition },
+          highlightIntensity:{ value: hIntensity },
+          envMapIntensity:  { value: envMapIntensity },
+          
+          // NEW: pass the offset to the shader
+          offset:           { value: offset }
+        },
+        vertexShader: `
+          varying vec3 vNormal;
+          varying vec3 vViewPosition;
+          varying vec3 vWorldPosition;
+
+          void main() {
+            vNormal = normalize(normalMatrix * normal);
+
+            vec4 mvPosition = modelViewMatrix * vec4(position, 1.0);
+            vViewPosition = -mvPosition.xyz;
+
+            // Store the actual world position of each vertex
+            vWorldPosition = (modelMatrix * vec4(position, 1.0)).xyz;
+
+            gl_Position = projectionMatrix * mvPosition;
+          }
+        `,
+        fragmentShader: `
+          uniform sampler2D matcap;
+          uniform vec3 colorAdjust;
+          uniform float time;
+          uniform samplerCube envMap;
+          uniform float envMapIntensity;
+          uniform float IOR;
+          uniform float subSurfaceScatter;
+          uniform float viscosity;
+          uniform float highlightIntensity;
+          uniform float highlightPosition;
+          uniform float viscosityWaviness;
+
+          // The offset from the chosen grid jar
+          uniform vec3 offset;
+
+          varying vec3 vNormal;
+          varying vec3 vViewPosition;
+          varying vec3 vWorldPosition;
+
+          // Example environment reflection function
+          vec3 getEnvironmentReflection(vec3 viewDir, vec3 normal, vec3 shiftedPos) {
+            vec3 reflectVec = reflect(viewDir, normal);
+
+            // Use the shifted position in the environment lookup
+            // (You can experiment with how the offset is applied here.)
+            vec3 envMapCoord = shiftedPos + reflectVec * 20.0;
+            return textureCube(envMap, envMapCoord).rgb;
+          }
+
+          void main() {
+            // SHIFT the position-based logic by the offset
+            vec3 shiftedPos = vWorldPosition + offset;
+
+            vec3 viewDir = normalize(vViewPosition);
+            vec3 normal = normalize(vNormal);
+
+            // Refraction
+            vec3 refractColor = refract(viewDir, normal, 1.0 / IOR);
+            vec2 matcapUV = refractColor.xy * 0.5 + 0.5;
+            vec3 matcapColor = texture2D(matcap, matcapUV).rgb;
+
+            // Environment reflection with reduced intensity
+            vec3 reflColor = getEnvironmentReflection(viewDir, normal, shiftedPos) * envMapIntensity;
+
+            // Adjusted Fresnel effect
+            float fresnelPower = 3.0;
+            float fresnel = pow(1.0 - dot(viewDir, normal), fresnelPower);
+
+            // Subsurface scattering approximation
+            vec3 scatterColor = colorAdjust * (1.0 - fresnel) * subSurfaceScatter;
+
+            // Viscosity simulation (subtle movement) using SHIFTED y
+            float viscosityEffect = sin(shiftedPos.y * viscosityWaviness + time * 0.1) * viscosity;
+            matcapColor += vec3(viscosityEffect);
+
+            // Enhanced vertical highlight
+            float verticalHighlight = smoothstep(
+              highlightPosition - 0.1,
+              highlightPosition + 0.1,
+              abs(shiftedPos.y)
+            );
+            verticalHighlight = pow(verticalHighlight, 2.0) * highlightIntensity * 2.0;
+
+            // Blend colors with adjusted weights
+            vec3 baseColor = mix(matcapColor, reflColor, fresnel * 0.8);
+            vec3 finalColor = mix(baseColor, colorAdjust, 0.5);
+
+            // Add scatter and highlight
+            finalColor += scatterColor;
+            finalColor += vec3(verticalHighlight);
+
+            // Color depth simulation (again SHIFTED y)
+            float depth = (shiftedPos.y + 1.0) * 0.5; 
+            finalColor *= mix(vec3(1.0), colorAdjust, depth);
+
+            // Enhance transparency effect with reduced environment map influence
+            float transparency = smoothstep(0.2, 0.8, abs(dot(viewDir, normal)));
+            finalColor = mix(finalColor, reflColor, transparency * 0.2);
+
+            gl_FragColor = vec4(finalColor, 1.0);
+          }
+        `
+      });
+    }
+
+
     // Define reactive variables
     const density = ref(9.05);
     const light = ref(0.74);
@@ -590,50 +839,38 @@ export default {
         0
       )
       let fixedPosition = new Vector3(-0.55, 0.1, 0)
-      // let pos = new Vector3(0, 0, 0)
-      let testId = 41;
-
-      // globalScene.traverse((obj) => {
-      //   if(obj.isMesh){
-      //     if(obj.name.includes("450")){
-      //       obj.position.copy(tempFixed)
-      //     }
-      //   }
-      // })
+      let testId = 42;
       let positionStore = {};
-      // Object.values(honeyMeshes).forEach((mesh) => {
-      //   positionStore[mesh.size] = mesh.position.clone()
-      //   // mesh.position.copy(fixedPosition)
-      // })
-      // // // console.log("STORED POS", positionStore)
-      // let sampledEnvMapColor = sampleEnvironmentMap(position)
-      // function createUniformEnvironmentMap(color) {
-      //   const size = 1;
-      //   const canvas = document.createElement('canvas');
-      //   canvas.width = size;
-      //   canvas.height = size;
-      //   const ctx = canvas.getContext('2d');
-      //   ctx.fillStyle = `rgb(${color.r * 255},${color.g * 255},${color.b * 255})`;
-      //   ctx.fillRect(0, 0, size, size);
-
-      //   const uniformEnvMap = new CanvasTexture(canvas);
-      //   uniformEnvMap.mapping = EquirectangularReflectionMapping;
-      //   return uniformEnvMap;
-      // }
-      // globalGlass300g.material.envMap = createUniformEnvironmentMap(sampledEnvMapColor);
-      // globalGlass300g.material.needsUpdate = true;
-      const material2 = await testMaterial(
-        testId,
-        fixedPosition,
-        density, 
-        light, 
-        viscosity, 
-        hPosition, 
-        hIntensity, 
-        envMapIntensity, 
-        viscosityWaviness // viscosityWaviness
+      // const material2 = await testMaterial(
+      //   testId,
+      //   fixedPosition,
+      //   density, 
+      //   light, 
+      //   viscosity, 
+      //   hPosition, 
+      //   hIntensity, 
+      //   envMapIntensity, 
+      //   viscosityWaviness // viscosityWaviness
+      // )
+      
+      /* MAT NEW */
+      const material2 = await createComplexMaterialOptions(
+        testId// viscosityWaviness
       )
-      // // console.log("Got material", material2)
+
+      /* MAT OLD */
+      // const material2 = await testMaterial(
+      //   testId,
+      //   fixedPosition,
+      //   density, 
+      //   light, 
+      //   viscosity, 
+      //   hPosition, 
+      //   hIntensity, 
+      //   envMapIntensity, 
+      //   viscosityWaviness // viscosityWaviness
+      // )
+      // console.log("Got material", material2)
       
       console.log("HONEYMESHES:::::", honeyMeshes)
       Object.values(honeyMeshes).forEach((mesh) => {
@@ -643,6 +880,7 @@ export default {
       })
       
       isLoading.value = false;
+      return true;
     }
 
 
@@ -682,6 +920,9 @@ export default {
     let labelMeshesClones;
     let glassMeshes;
     let honeyMeshes;
+    let honeyMesh1;
+    let honeyMesh2;
+
 
     let globalObj150g;
     let globalObj300g;
@@ -713,7 +954,11 @@ export default {
       glassMeshes = sceneParts.glassMeshes
       labelMeshesClones = sceneParts.labelMeshesClones
       honeyMeshes = sceneParts.honeyMeshes
-      
+      console.log("HMESHES", honeyMeshes)
+      honeyMesh1 = honeyMeshes['300g']
+      honeyMesh2 = honeyMeshes['450g']
+      console.log("HM1", honeyMesh1)
+      console.log("HM2", honeyMesh2)
       // // // console.log("LABEL MESHES +++++++++++++++++++++++++++++++++++++++++++++++++++++", labelMeshes)
       // // // console.log("GLASS MESHES -----------------------------------------------------", glassMeshes)
       setTrackingVariables(1)
@@ -815,12 +1060,21 @@ export default {
 
       // Renderer
       const canvas = webGl.value;
-      globalRenderer = new WebGLRenderer({ canvas, antialias: true, alpha: true });
+      globalRenderer = new WebGLRenderer({ 
+        canvas, 
+        powerPreference: "high-performance", 
+        antialias: false,
+        stencil: false,
+        depth: false,
+        // alpha: true, 
+        // preserveDrawingBuffer: false
+      });
       globalRenderer.setSize(containerWidth.value, containerHeight.value);
       globalRenderer.setClearColor(0x000000, 0)
       globalRenderer.setPixelRatio(window.devicePixelRatio);
       // globalRenderer.setScissorTest( true );
       globalRenderer.shadowMap.enabled = false;
+      // globalRenderer.outputColorSpace = SRGBColorSpace;
       globalRenderer.render(globalScene, globalCamera);
       console.log("Calling updateTex from setCanvas")
       updateTexture()
@@ -1519,7 +1773,7 @@ export default {
       // pmremGenerator.compileEquirectangularShader();
       globalScene.background = null;
       globalScene.environment = envMap;
-      // globalScene.environment.intensity = 0.2;
+      globalScene.environment.intensity = 1.2;
       // // console.log("FINISHED SETTING LIGHTING ===========>")
       pmremGenerator.dispose()
       exrTexture.dispose();
@@ -1615,6 +1869,7 @@ export default {
     let animateTextureChange = false;
     let startWipe = ref(false);
     let wipeStep = 0.01;
+    let count = 0;
     const animate = () => {
       if(!isAnimating) return
       stats.begin();
@@ -1626,10 +1881,13 @@ export default {
         }
       }
 
+      // let elapsedTimeHoney = clockTexture.getElapsedTime();
+      // honeyMesh1.material.uniforms.time.value = elapsedTimeHoney;
+
       if(animatingCamera){
         TWEEN.update();
       }
-
+      
       if (startWipe.value) {
         // console.log("WIPING")
         // Assuming you start the transitionProgress at 0
@@ -1648,7 +1906,8 @@ export default {
           }
       }
 
-      globalRenderer.render(globalScene, globalCamera);
+      // globalRenderer.render(globalScene, globalCamera);
+      composer.render(); //ADD SSR PASS
       
 
       let delta = clock.getDelta();
@@ -1663,6 +1922,7 @@ export default {
       // globalOrbitControls.update();
       requestAnimationFrame(animate);
     };
+
     function triggerTextureTransition(newTextureIndex) {
       // if (newTextureIndex === globalObj300g.material.uniforms.currentTextureIndex.value) {
       //     console.warn("Already displaying this texture.");
@@ -1719,6 +1979,10 @@ export default {
       // webGl.value.parentElement.addEventListener('mousemove', )
 
       await setCanvas();
+      await nextTick()
+      // await addPostProcessing();
+      
+      composer = await addPostProcessingPPCTest(globalRenderer, globalScene, globalCamera)
       // initializeEdges(globalScene.children[0]);
       console.log("SCENE BEFORE BEING PASSED", webGl.value)
       await initiateObjectRotation(globalScene, webGl.value, currentJarSize.value)
@@ -1726,9 +1990,9 @@ export default {
       // getDistanceFromCanvas(globalScene.children[0].children[0])
       // initSliderInteraction();
       isAnimating = true;
+      await renderMatcap()
       animate();
       // changeMat();
-      renderMatcap()
     });
 
     onBeforeUnmount(() => {

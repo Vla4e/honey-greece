@@ -1,6 +1,6 @@
 import { debounce } from '@/helpers/globalFunctions.js'
 
-const debounceInterval = 0; // milliseconds
+const debounceInterval = 0; // ms
 let mouseDown = false;
 
 
@@ -10,7 +10,7 @@ function debouncedMouseMove (event, target, debouncedFunction){
   }
 }
 
-export function initializeMouseEvents(target = null, container){ //Mesh target
+export function initializeMouseEvents(target = null, container){ //Mesh target, container to track events in
 
   container.addEventListener("mousedown", () => {
     mouseDown = true;

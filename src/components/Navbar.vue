@@ -211,6 +211,7 @@ export default {
   cursor: pointer;
   &.black{
     color: black !important;
+    text-shadow: none !important;
   }
 
   transition: transform 0.3s ease;

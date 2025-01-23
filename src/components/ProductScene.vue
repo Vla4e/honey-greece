@@ -67,6 +67,8 @@ import {
   Clock,
   Color,
   ShaderMaterial,
+  MeshPhysicalMaterial,
+  Group,
   CubeCamera,
   WebGLCubeRenderTarget,
   BackSide,
@@ -77,7 +79,6 @@ import {
   CanvasTexture,
   EquirectangularReflectionMapping,
   DoubleSide,
-  sRGBEncoding
 } from "three";
 
 import { watch, onMounted, onUnmounted, onBeforeUnmount,  ref, computed, nextTick, inject, toRaw  } from "vue";
@@ -419,6 +420,7 @@ export default {
     let tempColor;
 
 
+
     async function testMaterial(
       id
     ) {
@@ -572,6 +574,11 @@ export default {
         console.log("Error while loading matcap texture", e)
       }
     }
+
+    async function honeyMaterial(){
+
+    }
+
     // Define reactive variables
     const density = ref(9.05);
     const light = ref(0.74);

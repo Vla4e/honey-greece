@@ -141,6 +141,9 @@ export default {
 <style lang="scss" scoped>
 .link-tree{
   position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   
   transition: transform 0.3s ease-in-out;
   &:hover{
@@ -263,6 +266,7 @@ export default {
     span{
       &.black{
         color: black !important;
+        text-shadow: none !important;
       }
     }
     @media(min-width: 1981px){

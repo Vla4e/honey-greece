@@ -67,7 +67,6 @@ import {
   BoxHelper,
 Clock,
 Color,
-sRGBEncoding,
 SRGBColorSpace,
 //
 ACESFilmicToneMapping,
@@ -218,6 +217,7 @@ export default {
     let worldPosition = new Vector3(0.15000002, -0.1, 0.0)
     function createMatcapGrid(gridWidth = 12, gridHeight = 5, spacing = 0.115) {
       let matrices = []
+      let boxCenters = []
       console.log("CREATING GRID NOW")
       if (!globalScene || !currentJarScene) {
         console.error("Scene or jar scene not initialized");
@@ -251,6 +251,7 @@ export default {
                   obj.material = createFixedMaterial(idx)
                   if(!honeyObject){
                     honeyObject = obj
+                    console.log("For IDX:", idx)
                     console.log("THIS IS THE HONEYOBJ !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!", honeyObject.name, idx)
                   }
                 } else if( useMaterial.value === 'matcap'){
@@ -261,7 +262,8 @@ export default {
                   }
                 } else if( useMaterial.value === 'complexOptions'){
                   // console.log("CREATING COMPELXMATOPT", idx)
-                  obj.material = claudeComplexOptions(idx,  density.value, light.value, viscosity.value, hPosition.value, hIntensity.value, envMapIntensity.value, viscosityWaviness.value)
+                  // obj.material = claudeComplexOptions(idx,  density.value, light.value, viscosity.value, hPosition.value, hIntensity.value, envMapIntensity.value, viscosityWaviness.value)
+                  obj.material = createComplexMaterialOptions(idx,  density.value, light.value, viscosity.value, hPosition.value, hIntensity.value, envMapIntensity.value, viscosityWaviness.value)
                   obj.updateMatrixWorld(true);
                   let meshMatrix = obj.matrixWorld.clone();
                   let matrixElements = meshMatrix.elements;
@@ -272,9 +274,14 @@ export default {
                   // console.log("JSONFORMAT FOR ID", idx, "================================================================")
                   // console.log(jsonFormat)
                   matrices.push({id: idx, jsonFormat})
+                  console.log("OBJ POS", obj.position)
+                  const worldPosObj = new Vector3();
+                  obj.getWorldPosition(worldPosObj)
+                  boxCenters.push({key: idx, matcapId: idx+1, worldPosObj: worldPosObj})
                   if(!honeyObject){
                     honeyObject = obj
-                    console.log("THIS IS THE HONEYOBJ", honeyObject.name)
+                    console.log("For IDX:", idx)
+                    console.log("THIS IS THE HONEYOBJ !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!", honeyObject.name, idx)
                   }
                 } else {
                   obj.material = createComplexMaterial(idx,  density.value, light.value, viscosity.value)
@@ -291,11 +298,13 @@ export default {
             iterations++;
           } else {}
         }
-        console.log("matrices:", matrices)
       }
       globalScene.add(jarGroup);
       console.log("JARPOS", jarPositions)
+      console.log("matrices:", matrices)
+      console.log("Box centers", boxCenters)
       // Adjust camera to view the vertical grid
+      console.log("GlobalScene:", globalScene)
       const gridWidthSize = (gridWidth - 1) * spacing;
       const gridHeightSize = (gridHeight - 1) * spacing;
       const maxGridSize = Math.max(gridWidthSize, gridHeightSize);
@@ -479,7 +488,6 @@ export default {
       viscosityWaviness = 20.00,
     ) {
       // console.log("Applying with values: ", worldPosition)
-      
       const matcapTexture = globalTextureLoader.load(`/assets/matcaps2/${id+1}.png`);
 
 
@@ -1019,7 +1027,7 @@ export default {
             
         // console.log("inside HObject")
             // console.log("elapsedTime", elapsedTime, honeyObject.name)
-            // honeyObject.material.uniforms.time.value = elapsedTime;
+            honeyObject.material.uniforms.time.value = elapsedTime;
           }
         }
       }

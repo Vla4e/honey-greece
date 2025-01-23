@@ -97,7 +97,7 @@ watch(() => props.currentPhase, (newPhase) => {
     left:0;
     width: 100%;
     height: 100%;
-    background-color: rgb(34 34 34 / 19%);
+    background-color: rgb(34 34 34 / 30%);
   }
 .tab-0{
   position: relative;
@@ -109,24 +109,20 @@ watch(() => props.currentPhase, (newPhase) => {
     display: flex;
     flex-direction: column;
     position: absolute;
-    width: 40%;
+    width: 25%;
     top: 20%;
     right: 20%;
-    transform: translate(0%, 0%);
-    transition: 
-    top 1s ease-out,
-    right 1s ease-out,
-    transform 1s ease-out,
+    transition: all 1s ease-out,
     width 0.8s;
     .heading{
       transition: all 1s ease-in-out;
     }
     .heading-addition{
-      transition: all 1s ease-in-out;
+      transition: opacity 0.5s ease-in-out;
     }
     .text{
       opacity:0;
-      transition: all 0.6s 0.8s ease-in-out;
+      transition: all 0.6s 1.2s ease-in-out;
     }
   }
   .image-grid{
@@ -181,15 +177,31 @@ watch(() => props.currentPhase, (newPhase) => {
     top: 30%;
     right: 65%;
     .heading{
-      font-size: clamp(64px, 64px + 2vw, 150px);
+      font-size: clamp(36px, 64px + 2vw, 150px);
       text-align: left;
+      @media(max-width: 1366px){
+        font-size: 60px;
+      }
+      @media(max-width: 1024px){
+        font-size: 60px;
+      }
     }
     .heading-addition{
       display: none;
+      opacity: 0;
     }
     .text{
       opacity: 1;
-      font-size: clamp(16px, 1rem + 0.2vw, 100px);
+      font-size: clamp(16px, 1rem + 0.5vw, 60px);
+      @media(max-width: 1537px){
+        font-size: 20px;
+      }
+      @media(max-width: 1367px){
+        font-size: 18px;
+      }
+      @media(max-width: 1025px){
+        font-size: 16px;
+      }
     }
   }
   .image-grid{
@@ -215,15 +227,30 @@ watch(() => props.currentPhase, (newPhase) => {
     top: 30%;
     right: 65%;
     .heading{
-      font-size: clamp(64px, 64px + 2vw, 150px);
+      font-size: clamp(36px, 64px + 2vw, 150px);
       text-align: left;
+      @media(max-width: 1366px){
+        font-size: 60px;
+      }
+      @media(max-width: 1024px){
+        font-size: 60px;
+      }
     }
     .heading-addition{
       display: none;
     }
     .text{
       opacity: 1;
-      font-size: clamp(16px, 1rem + 0.2vw, 100px);
+      font-size: clamp(16px, 1rem + 0.5vw, 60px);
+      @media(max-width: 1537px){
+        font-size: 20px;
+      }
+      @media(max-width: 1367px){
+        font-size: 18px;
+      }
+      @media(max-width: 1025px){
+        font-size: 16px;
+      }
     }
   }
   .image-grid{
@@ -249,7 +276,7 @@ watch(() => props.currentPhase, (newPhase) => {
   .heading{
     font-family: 'DM Serif';
     font-style: normal;
-    font-size: clamp(120px, 8vw, 10vw);
+    font-size: clamp(64px, 8vw, 10vw);
     font-weight: 400;
     color: white;
     text-align: right;
@@ -258,7 +285,7 @@ watch(() => props.currentPhase, (newPhase) => {
     margin-bottom: 15px;
     &-addition{
       font-family: "DMSans";
-      font-size: clamp(36px, 2vw, 4vw);
+      font-size: clamp(28px, 2vw, 4vw);
       font-weight: 400;
       color: white;
       letter-spacing: 0.04em;
@@ -270,7 +297,8 @@ watch(() => props.currentPhase, (newPhase) => {
   }
   .text-1{
     font-family: "DMSans";
-    font-size: 20px;
+    font-size: clamp(16px, 1rem + 0.5vw, 60px);
+    text-shadow: 4px 4px 4px rgba(0, 0, 0, 0.5);
     font-weight: 400;
     text-align: left;
     color: white;

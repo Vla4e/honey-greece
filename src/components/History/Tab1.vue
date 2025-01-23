@@ -9,7 +9,7 @@
           <img :src="image1" class="image boxes"/>
         </div>
         <div v-if="currentPhase >= 1" class="column column-beekeeper">
-          <img :src="image2" class="image beekeeper"/>
+          <img :src="beekeeperImage" class="image beekeeper"/>
         </div>
         <div class="column column-beginning">
           <p v-if="currentPhase < 1" class="floating-text" style="color: black;">
@@ -26,7 +26,8 @@
         <div v-if="currentPhase >= 2" class="column column-journey">
           <span class="journey-heading">
             journey
-            <br/>of our honey
+            <br/>of our
+            <br/>honey
           </span>
           <div class="journey-subtext-container">
             <span class="journey-subheading">
@@ -73,7 +74,7 @@
         </div>
       </div>
     </Transition>
-    <h1 class="floating-heading floating-heading-1" v-if="currentPhase < 2">A Tradition of Excellence</h1>
+    <h1 class="floating-heading floating-heading-1" v-if="currentPhase < 2">A Tradition of <br/>Excellence</h1>
   </div>
 </template>
 
@@ -88,7 +89,7 @@ import { ref, watch, onMounted, nextTick, toRaw } from 'vue';
 import { useWindowSize } from "@vueuse/core";
 import router from '@/router/index.js'
 import image1 from '@/assets/pages/history/tab-1-1.png'
-import image2 from '@/assets/pages/history/tab-1-2.png'
+import beekeeperImage from '@/assets/pages/history/beekeeper-new.jpg'
 import okto from '@/assets/pages/history/okto.png'
 import haa from '@/assets/pages/history/haa.png'
 import melculum from '@/assets/pages/history/melculum.png'
@@ -153,10 +154,10 @@ watch(() => props.currentPhase, (newPhase) => {
     left: 50%;
     transform: translateX(-50%);
     font-family: "DMSans";
-    font-size: 150px;
+    font-size: clamp(100px, 6vw, 250px);
     font-weight: 700;
     letter-spacing: 0.03em;
-    line-height: 120px;
+    line-height: clamp(100px, 1rem + 6vw, 250px);
     text-align: center;
     color: #0000000D;
     margin: 0;
@@ -165,9 +166,12 @@ watch(() => props.currentPhase, (newPhase) => {
     &-1{
       @media(max-width:1660px){
         font-size: 135px;
+        font-size: clamp(100px, 6vw, 250px);
+        line-height: clamp(100px, 1rem + 6vw, 250px);
       }
       @media(max-width:1440px){
-        font-size: 120px;
+        font-size: clamp(50px, 6vw, 250px);
+        line-height: clamp(50px, 1rem + 6vw, 250px);
       }
     };
     &-2{
@@ -193,15 +197,15 @@ watch(() => props.currentPhase, (newPhase) => {
   .journey{
     &-heading{
       font-family: "DMSans";
-      font-size: 150px;
+      font-size: clamp(5rem, -1.25rem + 9.766vw, 14.375rem);
       font-weight: 700;
       text-align: left;
       color: #0000000D;
       text-transform: uppercase;
-      line-height:122px !important;
-      margin-bottom: 20px;
+      line-height: clamp(5rem, -1.25rem + 9.766vw, 14.375rem);
+      margin-bottom: 40px;
       @media(max-width:1660px){
-        font-size: 120px;
+        // font-size: 120px;
       }
     }
     &-subtext-container{
@@ -212,14 +216,14 @@ watch(() => props.currentPhase, (newPhase) => {
     }
     &-subheading{
       font-family: "DMSans";
-      font-size: 20px;
+      font-size: 24px;
       font-style: italic;
       font-weight: 700;
       text-align: left;
     }
     &-text{
       font-family: "DMSans";
-      font-size: 16px;
+      font-size: 20px;
       font-weight: 400;
       text-align: left;
     }
@@ -352,7 +356,7 @@ watch(() => props.currentPhase, (newPhase) => {
     }
     .column-beginning{
       width: 20%;
-      justify-content: flex-end !important;
+      justify-content: center !important;
     }
   }
   
@@ -381,14 +385,14 @@ watch(() => props.currentPhase, (newPhase) => {
       width: 30%;
       justify-content: flex-end !important;
       .image{
-        width: 100%;
+        // width: 100%;
         max-width: 100%;
-        // max-height: 100%;
+        max-height: 100%;
       }
     }
     .column-beginning{
       width: 20%;
-      justify-content: flex-end !important;
+      justify-content: center !important;
     }
   }
   &-phase-2{
@@ -401,17 +405,17 @@ watch(() => props.currentPhase, (newPhase) => {
       width: 30%;
       justify-content: flex-end !important;
       .image{
-        width: 100%;
+        // width: 100%;
         max-width: 100%;
-        // max-height: 100%;
+        max-height: 100%;
       }
     }
     .column-beginning{
       width: 20%;
       margin-right: 3vw !important;
       margin-left: 2vw !important;
-      justify-content: flex-end !important;
-      transform: translateY(-50%);
+      justify-content: center !important;
+      // transform: translateY(-50%);
     }
     .column-journey{
       width: 40%;
@@ -423,13 +427,13 @@ watch(() => props.currentPhase, (newPhase) => {
         }
         @media(max-width: 1440px){
           &-heading{
-            font-size: 100px;
+            // font-size: 100px;
           }
         }
         
         @media(min-width: 1660px){
           &-heading{
-            line-height: 160px !important;
+            // line-height: 160px !important;
           }
           &-subheading{
             margin-bottom: 20px;
