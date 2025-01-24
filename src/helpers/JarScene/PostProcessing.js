@@ -1,49 +1,68 @@
-// Effects:
-import { EffectComposer } from 'three/examples/jsm/postprocessing/EffectComposer';
-
-import { RenderPass } from 'three/examples/jsm/postprocessing/RenderPass';
-import { SSRPass } from 'three/examples/jsm/postprocessing/SSRPass';
-
-import { ColorCorrectionShader } from 'three/examples/jsm/shaders/ColorCorrectionShader.js';
-
-/* Uses the 'postprocessing' library (not three.js's out of the box postprocessing) */
-import { EffectComposer as EffectComposerPPC }  from "postprocessing";
-import { RenderPass as RenderPassPPC } from "postprocessing";
+/* Uses the 'postprocessing' library */
 import { 
-  DepthOfFieldEffect, 
-  FXAAEffect, 
-  SMAAEffect, 
-  EffectPass 
-} from 'postprocessing'
+  EffectComposer as EffectComposerPPC, 
+  RenderPass as RenderPassPPC, 
+  EffectPass, 
+  SMAAPreset,
+  EdgeDetectionMode,
+  BlendFunction
+} from 'postprocessing';
+import { DepthOfFieldEffect, FXAAEffect, SMAAEffect, DepthEffect, PixelationEffect } from 'postprocessing';
+import { HalfFloatType, Vector3 } from 'three';
 
-async function addPostProcessingPPCTest (renderer, scene, camera) {
-  console.log("Adding postprocessing.")
+async function addPostProcessing(renderer, scene, camera) {
+  console.log("Adding postprocessing.");
 
-  // verify that scene is set
   if (!renderer || !scene || !camera) {
-      console.error('Required components not initialized');
-      return;
+    console.error('Required components not initialized');
+    return;
   }
 
   try {
-    const composer = new EffectComposerPPC(renderer);
+    const composer = new EffectComposerPPC(renderer, {frameBufferType: HalfFloatType});
 
-    let depthOfFieldEffect = new DepthOfFieldEffect(camera, {
-        focusDistance: 0.05,
-        focalLength: 0.1,
-        bokehScale: 1.5,
-        height: 480
-      });
-    composer.addPass(new RenderPassPPC(scene, camera));
-    composer.addPass(new EffectPass(camera, depthOfFieldEffect));
-    // composer.addPass(new EffectPass(camera, new DepthEffect()));
-    composer.addPass(new EffectPass(camera, new FXAAEffect()));
-    composer.addPass(new EffectPass(camera, new SMAAEffect()));
+    const renderPass = new RenderPassPPC(scene, camera)
+    composer.addPass(renderPass);
+
+    //DOF focus on jar in front.
+    const depthOfFieldEffect = new DepthOfFieldEffect(camera, {
+      focalLength: 0.05,
+      bokehScale: 1.2,
+      height: 600
+    });
+    const targetPoint = new Vector3(
+      -0.0002538628759793937,
+      0.0344855822622776,
+      -0.00008241005707532167
+    )
+    depthOfFieldEffect.target = targetPoint;
+
+    const focusPoint = new Vector3(
+      -0.0002538628759793937,
+      0.0344855822622776,
+      -0.00008241005707532167
+    );
+    const computedDistance = depthOfFieldEffect.calculateFocusDistance(focusPoint);
+    depthOfFieldEffect.focusDistance = computedDistance;
+
+    const dofPass = new EffectPass(camera, depthOfFieldEffect);
+    composer.addPass(dofPass);
+
+    // FXAA - blurrier, lower quality
+    const fxaaPass = new EffectPass(camera, new FXAAEffect());
+    composer.addPass(fxaaPass);
+
+    // SMAA - higher quality, less blurry, sharper edges
+    // const smaaPass = new EffectPass(camera, new SMAAEffect());
+    // smaaPass.encodeOutput = true;
+    // composer.addPass(smaaPass)
+
     
     return composer;
   } catch (error) {
-      console.error('Error setting up post-processing:', error);
+    console.error('Error setting up post-processing:', error);
+    return null;
   }
-};
+}
 
-export default addPostProcessingPPCTest;
+export default addPostProcessing;

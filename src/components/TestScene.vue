@@ -218,7 +218,7 @@ export default {
     function createMatcapGrid(gridWidth = 12, gridHeight = 5, spacing = 0.115) {
       let matrices = []
       let boxCenters = []
-      console.log("CREATING GRID NOW")
+      console.log("CREATING GRID NOW =======================================>")
       if (!globalScene || !currentJarScene) {
         console.error("Scene or jar scene not initialized");
         return;
@@ -263,7 +263,8 @@ export default {
                 } else if( useMaterial.value === 'complexOptions'){
                   // console.log("CREATING COMPELXMATOPT", idx)
                   // obj.material = claudeComplexOptions(idx,  density.value, light.value, viscosity.value, hPosition.value, hIntensity.value, envMapIntensity.value, viscosityWaviness.value)
-                  obj.material = createComplexMaterialOptions(idx,  density.value, light.value, viscosity.value, hPosition.value, hIntensity.value, envMapIntensity.value, viscosityWaviness.value)
+                  // obj.material = createComplexMaterialOptions(idx,  density.value, light.value, viscosity.value, hPosition.value, hIntensity.value, envMapIntensity.value, viscosityWaviness.value)
+                  obj.material = oldComplexOptions(idx, density.value, light.value, viscosity.value, hPosition.value, hIntensity.value, envMapIntensity.value, viscosityWaviness.value);
                   obj.updateMatrixWorld(true);
                   let meshMatrix = obj.matrixWorld.clone();
                   let matrixElements = meshMatrix.elements;
@@ -274,7 +275,7 @@ export default {
                   // console.log("JSONFORMAT FOR ID", idx, "================================================================")
                   // console.log(jsonFormat)
                   matrices.push({id: idx, jsonFormat})
-                  console.log("OBJ POS", obj.position)
+                  // console.log("OBJ POS", obj.position)
                   const worldPosObj = new Vector3();
                   obj.getWorldPosition(worldPosObj)
                   boxCenters.push({key: idx, matcapId: idx+1, worldPosObj: worldPosObj})
@@ -300,9 +301,9 @@ export default {
         }
       }
       globalScene.add(jarGroup);
-      console.log("JARPOS", jarPositions)
-      console.log("matrices:", matrices)
-      console.log("Box centers", boxCenters)
+      // console.log("JARPOS", jarPositions)
+      // console.log("matrices:", matrices)
+      // console.log("Box centers", boxCenters)
       // Adjust camera to view the vertical grid
       console.log("GlobalScene:", globalScene)
       const gridWidthSize = (gridWidth - 1) * spacing;
@@ -325,6 +326,7 @@ export default {
 
     
     function createFixedMaterial(id){
+      console.log("CREATING FIXED MAT ==========>")
       const textureLoader = new TextureLoader();
       const matcapTexture = textureLoader.load(`/assets/matcaps2/${id+1}.png`);
       matcapTexture.encoding = SRGBColorSpace
@@ -337,6 +339,7 @@ export default {
     }
 
     function createMatcapMaterial(id) {
+      console.log("CREATING MATCAP MAT ==========>")
       
       const matcapTexture = globalTextureLoader.load(`/assets/matcaps2/${id+1}.png`);
       return new ShaderMaterial({
@@ -395,6 +398,7 @@ export default {
       light = 1.03, 
       viscosity = 0.01
     ) {
+      console.log("CREATING COMPLEX MAT ==========>")
       // console.log("Applying with values: ", density, light, viscosity)
       
       const matcapTexture = globalTextureLoader.load(`/assets/matcaps2/${id+1}.png`);
@@ -487,6 +491,7 @@ export default {
       envMapIntensity = 1.00, 
       viscosityWaviness = 20.00,
     ) {
+      console.log("CREATING MAT OPTIONS ==========>")
       // console.log("Applying with values: ", worldPosition)
       const matcapTexture = globalTextureLoader.load(`/assets/matcaps2/${id+1}.png`);
 
@@ -592,7 +597,8 @@ export default {
       });
     }
 
-    async function claudeComplexOptions(
+
+    function oldComplexOptions(
       id, 
       density = 16.53, 
       light = 1.03, 
@@ -601,13 +607,12 @@ export default {
       hIntensity = 0.50, 
       envMapIntensity = 1.00, 
       viscosityWaviness = 20.00,
-      savedPosition = null // New parameter for when we want to use a saved position
     ) {
-      const matcapTexture = globalTextureLoader.load(`/assets/matcaps2/${id+1}.png`);
+      console.log("OLD OPTIONS +=========================")
       
-      // Use saved position if provided, otherwise use current world position
-      const positionToUse = savedPosition || worldPosition;
+      const matcapTexture = globalTextureLoader.load(`/assets/matcaps2/42.png`);
 
+      console.log("Applying matcap TEXTURE:", matcapTexture)
 
       return new ShaderMaterial({
         uniforms: {
@@ -622,8 +627,7 @@ export default {
           highlightPosition: { value: hPosition },
           highlightIntensity: { value: hIntensity },
           envMapIntensity: { value: envMapIntensity},
-          idealPosition: { value: positionToUse },
-          useSavedPosition: { value: savedPosition !== null }
+          idealPosition: { value: worldPosition }
         },
         vertexShader: `
           varying vec3 vNormal;
@@ -641,7 +645,6 @@ export default {
           uniform sampler2D matcap;
           uniform vec3 colorAdjust;
           uniform vec3 idealPosition;
-          uniform bool useSavedPosition;
           uniform float time;
           uniform samplerCube envMap;
           uniform float envMapIntensity;
@@ -652,35 +655,20 @@ export default {
           uniform float highlightPosition;
           uniform float viscosityWaviness;
 
+
           varying vec3 vNormal;
           varying vec3 vViewPosition;
           varying vec3 vWorldPosition;
 
           vec3 getEnvironmentReflection(vec3 viewDir, vec3 normal) {
             vec3 reflectVec = reflect(viewDir, normal);
-            
-            if (useSavedPosition) {
-              // When using saved position, adjust reflection vector relative to saved position
-              vec3 positionDiff = idealPosition - vWorldPosition;
-              float distanceToIdeal = length(positionDiff);
-              vec3 dirToIdeal = normalize(positionDiff);
-              
-              // Blend between current reflection and saved position-based reflection
-              vec3 adjustedReflectVec = normalize(mix(reflectVec, dirToIdeal, distanceToIdeal * 0.1));
-              return textureCube(envMap, adjustedReflectVec).rgb;
-            } else {
-              // In grid mode, use original calculation
-              vec3 envMapCoord = idealPosition + reflectVec * 20.0;
-              return textureCube(envMap, envMapCoord).rgb;
-            }
+            vec3 envMapCoord = idealPosition + reflectVec * 20.0; // Adjust the 10.0 as needed
+            return textureCube(envMap, envMapCoord).rgb;
           }
 
           void main() {
             vec3 viewDir = normalize(vViewPosition);
             vec3 normal = normalize(vNormal);
-
-            // Use either saved or current position for height-based effects
-            vec3 positionForEffects = useSavedPosition ? idealPosition : vWorldPosition;
 
             // Refraction
             vec3 refractColor = refract(viewDir, normal, 1.0 / IOR);
@@ -697,23 +685,24 @@ export default {
             // Subsurface scattering approximation
             vec3 scatterColor = colorAdjust * (1.0 - fresnel) * subSurfaceScatter;
 
-            // Viscosity simulation using appropriate position
-            float viscosityEffect = sin(positionForEffects.y * viscosityWaviness + time * 0.1) * viscosity;
+            // Viscosity simulation (subtle movement)
+            float viscosityEffect = sin(vWorldPosition.y * viscosityWaviness + time * 0.1) * viscosity;
             matcapColor += vec3(viscosityEffect);
 
-            // Enhanced Vertical highlight using appropriate position
-            float verticalHighlight = smoothstep(highlightPosition - 0.1, highlightPosition + 0.1, 
-                                              abs(positionForEffects.y));
+            // Enhanced Vertical highlight
+            float verticalHighlight = smoothstep(highlightPosition - 0.1, highlightPosition + 0.1, abs(vWorldPosition.y));
             verticalHighlight = pow(verticalHighlight, 2.0) * highlightIntensity * 2.0;
 
             // Blend colors with adjusted weights
             vec3 baseColor = mix(matcapColor, reflColor, fresnel * 0.8);
             vec3 finalColor = mix(baseColor, colorAdjust, 0.5);
             finalColor += scatterColor;
+
+            // Apply vertical highlight more prominently
             finalColor += vec3(verticalHighlight);
 
-            // Color depth simulation using appropriate position
-            float depth = (positionForEffects.y + 1.0) * 0.5;
+            // Color depth simulation
+            float depth = (vWorldPosition.y + 1.0) * 0.5; // Normalize to 0-1 range
             finalColor *= mix(vec3(1.0), colorAdjust, depth);
 
             // Enhance transparency effect with reduced environment map influence
@@ -760,7 +749,9 @@ export default {
           } else if( useMaterial.value === 'matcap'){
             obj.material = createMatcapMaterial(idx)
           } else if( useMaterial.value === 'complexOptions'){
-            obj.material = createComplexMaterialOptions(idx, density.value, light.value, viscosity.value, hPosition.value, hIntensity.value, envMapIntensity.value, viscosityWaviness.value);
+            console.log("Calling Complex OPTIONS")
+            // obj.material = createComplexMaterialOptions(idx, density.value, light.value, viscosity.value, hPosition.value, hIntensity.value, envMapIntensity.value, viscosityWaviness.value);
+            obj.material = oldComplexOptions(idx, density.value, light.value, viscosity.value, hPosition.value, hIntensity.value, envMapIntensity.value, viscosityWaviness.value);
           } else {
             obj.material = createComplexMaterial(idx, density.value, light.value, viscosity.value);
           }
@@ -789,7 +780,8 @@ export default {
             } else if( useMaterial.value === 'matcap'){
               obj.material = createMatcapMaterial(idx)
             } else if( useMaterial.value === 'complexOptions'){
-              obj.material = createComplexMaterialOptions(idx, density.value, light.value, viscosity.value, hPosition.value, hIntensity.value, envMapIntensity.value, viscosityWaviness.value);
+              // obj.material = createComplexMaterialOptions(idx, density.value, light.value, viscosity.value, hPosition.value, hIntensity.value, envMapIntensity.value, viscosityWaviness.value);
+              obj.material = oldComplexOptions(idx, density.value, light.value, viscosity.value, hPosition.value, hIntensity.value, envMapIntensity.value, viscosityWaviness.value);
             } else {
               obj.material = createComplexMaterial(idx, density.value, light.value, viscosity.value);
             }
@@ -973,17 +965,6 @@ export default {
       let pmremGenerator = new PMREMGenerator(renderer);
       let exrTexture = await new EXRLoader().loadAsync("/assets/exr/brown_photostudio_02_1k.exr")
       
-      // 'assets/exr/bright.exr',
-      // "assets/exr/lw.exr",
-      // 'assets/exr/little_paris.exr',
-      // 'assets/exr/river_walk.exr',
-      // 'assets/exr/reinforced.exr',
-      // 'assets/exr/syfer.exr',
-      // 'assets/exr/mealie.exr',
-      // 'assets/exr/railway.exr',
-      // 'assets/exr/lonely.exr',
-      // 'assets/exr/sunrise.exr',
-      // let rgbeTexture = await new RGBELoader().loadAsync("assets/HDR/test-hdr.hdr");
 
       let envMap = pmremGenerator.fromEquirectangular(exrTexture).texture;
       // pmremGenerator.compileEquirectangularShader();
@@ -992,13 +973,6 @@ export default {
       globalScene.environment = envMap;
       globalScene.environmentIntensity = 1.0;
       globalScene.toneMappingExposure = 1.0;
-      // renderer.toneMapping = ACESFilmicToneMapping;
-      // renderer.toneMapping = ReinhardToneMapping;
-      // renderer.toneMapping = NoToneMapping;
-      // renderer.toneMapping = LinearToneMapping;
-      // renderer.toneMapping = CineonToneMapping;
-      // renderer.toneMapping = AgXToneMapping;
-      // renderer.toneMapping = NeutralToneMapping;
 
       pmremGenerator.dispose()
       exrTexture.dispose();
