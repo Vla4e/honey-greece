@@ -2,7 +2,8 @@
 import {
   Color,
   Vector3,
-  ShaderMaterial
+  ShaderMaterial,
+  BufferAttribute
 } from 'three';
 
 /*
@@ -286,7 +287,7 @@ async function honeyMaterial(honeyMeshes, textureLoader, envMap, honeyType) {
   }
 }
 
-async function oldHoneyMaterial(textureLoader, environment, honeyType){
+async function oldHoneyMaterial(textureLoader, environment, honeyType, jarSize){
   console.log("3. CALCULATING OLD MATCAP")
   let honeyParameters = honeyPresets[honeyType]
   
@@ -316,6 +317,7 @@ async function oldHoneyMaterial(textureLoader, environment, honeyType){
       varying vec3 vNormal;
       varying vec3 vViewPosition;
       varying vec3 vWorldPosition;
+
       void main() {
         vNormal = normalize(normalMatrix * normal);
         vec4 mvPosition = modelViewMatrix * vec4(position, 1.0);
@@ -397,79 +399,110 @@ async function oldHoneyMaterial(textureLoader, environment, honeyType){
     `
   });
 }
+async function playfulMaterial(textureLoader, environment, honeyType, jarSize, honeyMeshes){
+  console.log(" JARSIZE =======> ", jarSize)
+  const meshStore = useMeshStore();
+  const boundingBoxes = toRaw(meshStore.boundingBoxes);
+  const boundingBox300 = boundingBoxes['300g'].boundingBox
+  const boundingBox450 = boundingBoxes['450g'].boundingBox
+  const uJarMinY300 = boundingBox300.min.y
+  const uJarMaxY300 = boundingBox300.max.y
+  const height300 = uJarMaxY300 - uJarMinY300;
+  const uJarMinY450 = boundingBox450.min.y
+  const uJarMaxY450 = boundingBox450.max.y
+  const height450 = uJarMaxY450 - uJarMinY450;
+  console.log(" HEEEEEEEEIGHT ", height300, height450)
+  console.log(" RAITO:", height300/height450)
+  let scaleFactor = height300/height450
 
-async function oldHoneyMaterialPositional(textureLoader, environment, honeyType, jarGridPosition = new Vector3(0,0,0)) {
+  if(jarSize === '300g') scaleFactor = 1.0;
+  console.log("3. CALCULATING OLD MATCAP")
+  let honeyParameters = honeyPresets[honeyType]
   
-  let honeyParameters = honeyPresets[honeyType];
-  const honeyColor = new Color(honeyParameters.colorCode);
-
+  const honeyColor = new Color(honeyParameters.colorCode)
+  
+  console.log("ID OF TEX:", honeyParameters.matcapId)
   // Load matcap texture
   const matcapTexture = await textureLoader.loadAsync(`/assets/matcaps2/${honeyParameters.matcapId}.png`);
-  let tempjarGridPosition = new Vector3(0.17224613712402062, 0.2644855822622776, -0.00008241005707532167)
+  console.log("Applying matcap TEXTURE:", matcapTexture)
+  let worldPosition = new Vector3(0.15000002, -0.1, 0.0)
   return new ShaderMaterial({
     uniforms: {
       matcap: { value: matcapTexture },
-      colorAdjust: { value: honeyColor },
+      colorAdjust: { value: honeyColor},
       time: { value: 0 },
       envMap: { value: environment },
-
-      // Jar‐specific shading parameters
-      IOR: { value: honeyParameters.density },
-      subSurfaceScatter: { value: honeyParameters.light },
-      viscosity: { value: honeyParameters.viscosity },
-      viscosityWaviness: { value: honeyParameters.viscosityWaviness },
+      IOR: { value: honeyParameters.density},
+      subSurfaceScatter: { value: honeyParameters.light},
+      viscosity: { value: honeyParameters.viscosity},
+      viscosityWaviness: { value: honeyParameters.viscosityWaviness},
       highlightPosition: { value: 0.50 },
       highlightIntensity: { value: 0.50 },
-      envMapIntensity: { value: 1.0 },
-
-      // The jar’s *actual* grid position
-      uGridPosition: { value: tempjarGridPosition }
+      envMapIntensity: { value: 1.0},
+      idealPosition: { value: worldPosition },
+      scaleFactor: { value: scaleFactor },
+      dstMinY: { value: uJarMinY300},
+      dstMaxY: { value: uJarMaxY300},
+      srcMinY: { value: uJarMinY300},
+      srcMaxY: { value: uJarMaxY450},
     },
     vertexShader: `
+      uniform float srcMinY;  // boundingBox.min.y for the jar you are rendering
+      uniform float srcMaxY;  // boundingBox.max.y for the jar you are rendering
+      uniform float dstMinY;  // boundingBox.min.y for the medium jar (the 'good' look)
+      uniform float dstMaxY;  // boundingBox.max.y for the medium jar
+
+      varying vec3 vWorldPosition;
       varying vec3 vNormal;
       varying vec3 vViewPosition;
-      varying vec3 vWorldPosition;
 
       void main() {
-        vNormal = normalize(normalMatrix * normal);
+          // Normal + View position as usual
+          vNormal = normalize(normalMatrix * normal);
+          vec4 mvPosition = modelViewMatrix * vec4(position, 1.0);
+          vViewPosition = -mvPosition.xyz;
 
-        vec4 mvPosition = modelViewMatrix * vec4(position, 1.0);
-        vViewPosition = -mvPosition.xyz;
+          // 1) Compute the jar's actual world position
+          vec3 rawWorldPosition = (modelMatrix * vec4(position, 1.0)).xyz;
 
-        // The "local" or "world" position inside this scene
-        // (But not necessarily the real grid position)
-        vWorldPosition = (modelMatrix * vec4(position, 1.0)).xyz;
+          // 2) Convert Y from the jar's bounding‐box range to [0..1]
+          float normalizedY = (rawWorldPosition.y - srcMinY) / (srcMaxY - srcMinY);
 
-        gl_Position = projectionMatrix * mvPosition;
+          // 3) Remap that [0..1] into the medium jar's bounding‐box range
+          float remappedY = mix(dstMinY, dstMaxY, normalizedY);
+
+          // 4) Replace just the Y coordinate
+          rawWorldPosition.y = remappedY;
+
+          // 5) Pass this on to the fragment shader
+          vWorldPosition = rawWorldPosition;
+
+          // Standard projection for actual rendering
+          gl_Position = projectionMatrix * mvPosition;
       }
     `,
     fragmentShader: `
       uniform sampler2D matcap;
       uniform vec3 colorAdjust;
+      uniform vec3 idealPosition;
       uniform float time;
       uniform samplerCube envMap;
       uniform float envMapIntensity;
-
-      // Key new uniform
-      uniform vec3 uGridPosition;
-
       uniform float IOR;
       uniform float subSurfaceScatter;
       uniform float viscosity;
-      uniform float viscosityWaviness;
-      uniform float highlightPosition;
       uniform float highlightIntensity;
+      uniform float highlightPosition;
+      uniform float viscosityWaviness;
+
 
       varying vec3 vNormal;
       varying vec3 vViewPosition;
       varying vec3 vWorldPosition;
 
-      // We'll compute environment reflection as if we're physically at uGridPosition
-      vec3 getEnvironmentReflection(vec3 viewDir, vec3 normal, vec3 globalPos) {
+      vec3 getEnvironmentReflection(vec3 viewDir, vec3 normal) {
         vec3 reflectVec = reflect(viewDir, normal);
-
-        // Instead of "idealPosition", offset by the jar's real grid position:
-        vec3 envMapCoord = globalPos + reflectVec * 20.0;
+        vec3 envMapCoord = idealPosition + reflectVec * 20.0; // Adjust the 10.0 as needed
         return textureCube(envMap, envMapCoord).rgb;
       }
 
@@ -477,52 +510,42 @@ async function oldHoneyMaterialPositional(textureLoader, environment, honeyType,
         vec3 viewDir = normalize(vViewPosition);
         vec3 normal = normalize(vNormal);
 
-        // (1) Compute global position in the grid
-        //     This is the single biggest change:
-        vec3 globalPos = vWorldPosition + uGridPosition;
-
-        // (2) Environment reflection using the real grid position
-        vec3 reflColor = getEnvironmentReflection(viewDir, normal, globalPos) * envMapIntensity;
-
-        // (3) Refraction using IOR
+        // Refraction
         vec3 refractColor = refract(viewDir, normal, 1.0 / IOR);
         vec2 matcapUV = refractColor.xy * 0.5 + 0.5;
         vec3 matcapColor = texture2D(matcap, matcapUV).rgb;
 
-        // (4) Adjusted Fresnel
+        // Environment reflection with reduced intensity
+        vec3 reflColor = getEnvironmentReflection(viewDir, normal) * envMapIntensity;
+
+        // Adjusted Fresnel effect
         float fresnelPower = 3.0;
         float fresnel = pow(1.0 - dot(viewDir, normal), fresnelPower);
 
-        // (5) Subsurface scattering approximation
+        // Subsurface scattering approximation
         vec3 scatterColor = colorAdjust * (1.0 - fresnel) * subSurfaceScatter;
 
-        // (6) Viscosity simulation
-        //     Use globalPos.y so each jar acts as if at the same Y as in the grid
-        float viscosityEffect = sin(globalPos.y * viscosityWaviness + time * 0.1) * viscosity;
+        // Viscosity simulation (subtle movement)
+        float viscosityEffect = sin(vWorldPosition.y * viscosityWaviness + time * 0.1) * viscosity;
         matcapColor += vec3(viscosityEffect);
 
-        // (7) Enhanced vertical highlight
-        float verticalHighlight = smoothstep(
-          highlightPosition - 0.1, 
-          highlightPosition + 0.1, 
-          abs(globalPos.y)
-        );
+        // Enhanced Vertical highlight
+        float verticalHighlight = smoothstep(highlightPosition - 0.1, highlightPosition + 0.1, abs(vWorldPosition.y));
         verticalHighlight = pow(verticalHighlight, 2.0) * highlightIntensity * 2.0;
 
-        // (8) Blend matcap + reflection + color
+        // Blend colors with adjusted weights
         vec3 baseColor = mix(matcapColor, reflColor, fresnel * 0.8);
         vec3 finalColor = mix(baseColor, colorAdjust, 0.5);
         finalColor += scatterColor;
 
-        // (9) Apply the vertical highlight more prominently
+        // Apply vertical highlight more prominently
         finalColor += vec3(verticalHighlight);
 
-        // (10) Color depth simulation
-        //      Again use globalPos.y so height in the grid matters
-        float depth = (globalPos.y + 1.0) * 0.5;
+        // Color depth simulation
+        float depth = (vWorldPosition.y + 1.0) * 0.5; // Normalize to 0-1 range
         finalColor *= mix(vec3(1.0), colorAdjust, depth);
 
-        // (11) Enhance transparency effect with reduced environment map influence
+        // Enhance transparency effect with reduced environment map influence
         float transparency = smoothstep(0.2, 0.8, abs(dot(viewDir, normal)));
         finalColor = mix(finalColor, reflColor, transparency * 0.2);
 
@@ -532,4 +555,396 @@ async function oldHoneyMaterialPositional(textureLoader, environment, honeyType,
   });
 }
 
-export { honeyMaterialPositionInput, honeyMaterial, oldHoneyMaterial, oldHoneyMaterialPositional}
+async function playfulMaterial2(textureLoader, environment, honeyType, jarSize){
+  const meshStore = useMeshStore();
+  const boundingBoxes = toRaw(meshStore.boundingBoxes);
+  const boundingBox300 = boundingBoxes['300g'].boundingBox
+  const boundingBox450 = boundingBoxes['450g'].boundingBox
+  const uJarMinY300 = boundingBox300.min.y
+  const uJarMaxY300 = boundingBox300.max.y
+  const height300 = uJarMaxY300 - uJarMinY300;
+  const uJarMinY450 = boundingBox450.min.y
+  const uJarMaxY450 = boundingBox450.max.y
+  const height450 = uJarMaxY450 - uJarMinY450;
+  let meshHeight = jarSize === '300g' ? height300 : height450
+
+  let honeyParameters = honeyPresets[honeyType]
+  const honeyColor = new Color(honeyParameters.colorCode)
+  const matcapTexture = await textureLoader.loadAsync(`/assets/matcaps2/${honeyParameters.matcapId}.png`);
+  let worldPosition = new Vector3(0.15000002, -0.1, 0.0)
+  
+  return new ShaderMaterial({
+    uniforms: {
+      matcap: { value: matcapTexture },
+      colorAdjust: { value: honeyColor},
+      time: { value: 0 },
+      envMap: { value: environment },
+      IOR: { value: honeyParameters.density},
+      subSurfaceScatter: { value: honeyParameters.light},
+      viscosity: { value: honeyParameters.viscosity},
+      viscosityWaviness: { value: honeyParameters.viscosityWaviness},
+      highlightPosition: { value: 0.50 },
+      highlightIntensity: { value: 0.50 },
+      envMapIntensity: { value: 1.0},
+      idealPosition: { value: worldPosition },
+      mediumJarHeight: { value: height300 },  // Reference height of medium jar
+      currentJarHeight: { value: meshHeight }   // Height of current jar
+    },
+    vertexShader: `
+      uniform float mediumJarHeight;
+      uniform float currentJarHeight;
+      
+      varying vec3 vNormal;
+      varying vec3 vViewPosition;
+      varying vec3 vWorldPosition;
+      varying vec3 vScaledPosition;
+
+      void main() {
+        vNormal = normalize(normalMatrix * normal);
+        vec4 mvPosition = modelViewMatrix * vec4(position, 1.0);
+        vViewPosition = -mvPosition.xyz;
+        vWorldPosition = (modelMatrix * vec4(position, 1.0)).xyz;
+        
+        // Scale the world position to match medium jar's scale
+        float scaleFactor = mediumJarHeight / currentJarHeight;
+        vScaledPosition = vWorldPosition * scaleFactor;
+        
+        gl_Position = projectionMatrix * mvPosition;
+      }
+    `,
+    fragmentShader: `
+      uniform sampler2D matcap;
+      uniform vec3 colorAdjust;
+      uniform vec3 idealPosition;
+      uniform float time;
+      uniform samplerCube envMap;
+      uniform float envMapIntensity;
+      uniform float IOR;
+      uniform float subSurfaceScatter;
+      uniform float viscosity;
+      uniform float highlightIntensity;
+      uniform float highlightPosition;
+      uniform float viscosityWaviness;
+
+      varying vec3 vNormal;
+      varying vec3 vViewPosition;
+      varying vec3 vWorldPosition;
+      varying vec3 vScaledPosition;
+
+      vec3 getEnvironmentReflection(vec3 viewDir, vec3 normal) {
+        vec3 reflectVec = reflect(viewDir, normal);
+        vec3 envMapCoord = idealPosition + reflectVec * 20.0;
+        return textureCube(envMap, envMapCoord).rgb;
+      }
+
+      void main() {
+        vec3 viewDir = normalize(vViewPosition);
+        vec3 normal = normalize(vNormal);
+
+        vec3 refractColor = refract(viewDir, normal, 1.0 / IOR);
+        vec2 matcapUV = refractColor.xy * 0.5 + 0.5;
+        vec3 matcapColor = texture2D(matcap, matcapUV).rgb;
+
+        vec3 reflColor = getEnvironmentReflection(viewDir, normal) * envMapIntensity;
+
+        float fresnelPower = 3.0;
+        float fresnel = pow(1.0 - dot(viewDir, normal), fresnelPower);
+
+        vec3 scatterColor = colorAdjust * (1.0 - fresnel) * subSurfaceScatter;
+
+        // Use scaled position for viscosity
+        float viscosityEffect = sin(vScaledPosition.y * viscosityWaviness + time * 0.1) * viscosity;
+        matcapColor += vec3(viscosityEffect);
+
+        // Use scaled position for highlight
+        float verticalHighlight = smoothstep(highlightPosition - 0.1, highlightPosition + 0.1, abs(vScaledPosition.y));
+        verticalHighlight = pow(verticalHighlight, 2.0) * highlightIntensity * 2.0;
+
+        vec3 baseColor = mix(matcapColor, reflColor, fresnel * 0.8);
+        vec3 finalColor = mix(baseColor, colorAdjust, 0.5);
+        finalColor += scatterColor;
+        finalColor += vec3(verticalHighlight);
+
+        // Use scaled position for color depth
+        float depth = (vScaledPosition.y + 1.0) * 0.5;
+        finalColor *= mix(vec3(1.0), colorAdjust, depth);
+
+        float transparency = smoothstep(0.2, 0.8, abs(dot(viewDir, normal)));
+        finalColor = mix(finalColor, reflColor, transparency * 0.2);
+
+        gl_FragColor = vec4(finalColor, 1.0);
+      }
+    `
+  });
+}
+async function deepseekHoneyMaterial(textureLoader, environment, honeyType, jarSize, honeyMeshes){
+  
+  // const meshStore = useMeshStore();
+  // const boundingBoxes = toRaw(meshStore.boundingBoxes);
+  // const boundingBox = boundingBoxes[currentJarSize].boundingBox
+  // const uJarMinY = boundingBox.min.y
+  // const uJarMaxY = boundingBox.max.y
+  // const height = uJarMaxY - uJarMinY;
+
+  console.log("Honey meshes:", honeyMeshes)
+  // let honeyMesh = honeyMeshes[jarSize]
+  // let meshGeometry = honeyMesh.geometry 
+  
+  // const count = meshGeometry.attributes.position.count;
+  // const heights = new Float32Array(count).fill(height);
+  
+  // meshGeometry.setAttribute('jarHeight', new BufferAttribute(heights, 1));
+  const honeyParameters = honeyPresets[honeyType];
+  const honeyColor = new Color(honeyParameters.colorCode);
+  const matcapTexture = await textureLoader.loadAsync(`/assets/matcaps2/${honeyParameters.matcapId}.png`);
+
+  // Size-dependent parameters
+  const sizeParams = {
+    '150g': { heightScale: 0.7, viscosityScale: 1.3 },
+    '300g': { heightScale: 1.0, viscosityScale: 1.0 },
+    '450g': { heightScale: 1.5, viscosityScale: 0.7 }
+  }[jarSize];
+  
+  // meshGeometry.setAttribute('heightScale', new BufferAttribute(heights, 1));
+  console.log("Size Params:", sizeParams)
+  return new ShaderMaterial({
+    uniforms: {
+      matcap: { value: matcapTexture },
+      colorAdjust: { value: honeyColor },
+      time: { value: 0 },
+      envMap: { value: environment },
+      IOR: { value: honeyParameters.density },
+      subSurfaceScatter: { value: honeyParameters.light },
+      viscosity: { value: honeyParameters.viscosity },
+      viscosityWaviness: { value: honeyParameters.viscosityWaviness * sizeParams.viscosityScale },
+      highlightPosition: { value: 0.50 },
+      highlightIntensity: { value: 0.50 },
+      envMapIntensity: { value: 1.0 },
+      idealPosition: { value: new Vector3(0.15, -0.1, 0.0) },
+      heightScale: { value: sizeParams.heightScale }
+    },
+    vertexShader: `
+      uniform float heightScale;
+      varying vec3 vNormal;
+      varying vec3 vViewPosition;
+      varying vec3 vWorldPosition;
+      varying float vScaledHeight;
+      
+      void main() {
+        vNormal = normalize(normalMatrix * normal);
+        vec4 mvPosition = modelViewMatrix * vec4(position, 1.0);
+        vViewPosition = -mvPosition.xyz;
+        vWorldPosition = (modelMatrix * vec4(position, 1.0)).xyz;
+        vScaledHeight = position.y / heightScale;
+        gl_Position = projectionMatrix * mvPosition;
+      }
+    `,
+    fragmentShader: `
+      uniform sampler2D matcap;
+      uniform vec3 colorAdjust;
+      uniform float time;
+      uniform samplerCube envMap;
+      uniform float envMapIntensity;
+      uniform float IOR;
+      uniform float subSurfaceScatter;
+      uniform float viscosity;
+      uniform float viscosityWaviness;
+      uniform float highlightIntensity;
+      uniform float highlightPosition;
+      uniform float heightScale;
+
+      varying vec3 vNormal;
+      varying vec3 vViewPosition;
+      varying vec3 vWorldPosition;
+      varying float vScaledHeight;
+
+      vec3 getEnvironmentReflection(vec3 viewDir, vec3 normal) {
+        vec3 reflectVec = reflect(viewDir, normal);
+        return textureCube(envMap, reflectVec).rgb * envMapIntensity;
+      }
+
+      void main() {
+        vec3 viewDir = normalize(vViewPosition);
+        vec3 normal = normalize(vNormal);
+
+        // Size-normalized refraction
+        vec3 refractColor = refract(viewDir, normal, 1.0 / IOR);
+        vec2 matcapUV = refractColor.xy * 0.5 + 0.5;
+        vec3 matcapColor = texture2D(matcap, matcapUV).rgb;
+
+        // Size-corrected viscosity effect
+        float viscosityEffect = sin(vScaledHeight * viscosityWaviness + time * 0.1) * viscosity;
+        matcapColor += vec3(viscosityEffect * 0.3);
+
+        // Environment reflections
+        vec3 reflColor = getEnvironmentReflection(viewDir, normal);
+        
+        // Height-normalized effects
+        float verticalHighlight = smoothstep(highlightPosition - 0.1, 
+          highlightPosition + 0.1, abs(vScaledHeight)) * highlightIntensity;
+        
+        float depth = mix(0.5, 1.0, smoothstep(-1.0, 1.0, vScaledHeight));
+        vec3 depthColor = colorAdjust * depth;
+
+        // Final composition
+        vec3 finalColor = mix(matcapColor, depthColor, 0.7);
+        finalColor = mix(finalColor, reflColor, 0.2);
+        finalColor += verticalHighlight * vec3(1.0, 0.9, 0.8);
+
+        // Alpha handling for different sizes
+        float alpha = mix(0.9, 0.95, smoothstep(0.3, 0.7, abs(vScaledHeight)));
+        alpha *= mix(0.95, 1.0, heightScale); // Adjust transparency based on size
+
+        gl_FragColor = vec4(finalColor, alpha);
+      }
+    `,
+    transparent: true,
+    opacity: 0.9
+  });
+}
+
+import { toRaw } from 'vue';
+import { useMeshStore } from '../../store/meshes';
+import { storeToRefs } from 'pinia';
+async function oldHoneyMaterialNormalized(textureLoader, environment, honeyType, currentJarSize){
+  console.log("3. CALCULATING OLD MATCAP")
+  const meshStore = useMeshStore();
+  const boundingBoxes = toRaw(meshStore.boundingBoxes);
+  const boundingBox = boundingBoxes[currentJarSize].boundingBox
+  const uJarMinY = boundingBox.min.y
+  const uJarMaxY = boundingBox.max.y
+  const height = uJarMaxY - uJarMinY;
+  console.log(" HEEEEEEEEIGHT ", height)
+
+  let honeyParameters = honeyPresets[honeyType]
+  const honeyColor = new Color(honeyParameters.colorCode)
+
+  // Load matcap texture
+  const matcapTexture = await textureLoader.loadAsync(`/assets/matcaps2/${honeyParameters.matcapId}.png`);
+
+  
+  let worldPosition = new Vector3(0.15000002, -0.1, 0.0) // remnant of the old times... it's power is unknown to us
+  return new ShaderMaterial({
+    uniforms: {
+      // jarMin: { value: boundingBoxes[currentJarSize].referenceBounds.min },
+      // jarSize: { value: boundingBoxes[currentJarSize].referenceBounds.size },
+      // refMin: { value: boundingBoxes['300g'].referenceBounds.min },
+      // refSize: { value: boundingBoxes['300g'].referenceBounds.size },
+      // pivotOffset: { value: center},
+      // uJarHeight: { value: height },
+      uJarMinY: { value: uJarMinY },
+      uJarHeight: { value: height },
+
+      matcap: { value: matcapTexture },
+      colorAdjust: { value: honeyColor},
+      time: { value: 0 },
+      envMap: { value: environment },
+      IOR: { value: honeyParameters.density},
+      subSurfaceScatter: { value: honeyParameters.light},
+      viscosity: { value: honeyParameters.viscosity},
+      viscosityWaviness: { value: honeyParameters.viscosityWaviness},
+      highlightPosition: { value: 0.50 },
+      highlightIntensity: { value: 0.50 },
+      envMapIntensity: { value: 1.0},
+      idealPosition: { value: worldPosition }
+    },
+    vertexShader: `
+      varying vec3 vNormal;
+      varying vec3 vViewPosition;
+      varying vec3 vWorldPosition;
+      varying vec3 vLocalPosition;
+      
+      void main() {
+        vLocalPosition = position;
+        vNormal = normalize(normalMatrix * normal);
+        vec4 mvPosition = modelViewMatrix * vec4(position, 1.0);
+        vViewPosition = -mvPosition.xyz;
+        vWorldPosition = (modelMatrix * vec4(position, 1.0)).xyz;
+        gl_Position = projectionMatrix * mvPosition;
+      }
+    `,
+    fragmentShader: `
+uniform sampler2D matcap;
+      uniform vec3 colorAdjust;
+      uniform vec3 idealPosition;
+      uniform float time;
+      uniform samplerCube envMap;
+      uniform float envMapIntensity;
+      uniform float IOR;
+      uniform float subSurfaceScatter;
+      uniform float viscosity;
+      uniform float highlightIntensity;
+      uniform float highlightPosition;
+      uniform float viscosityWaviness;
+      uniform float uJarHeight;
+      uniform float uJarMinY; // Added min Y
+
+      varying vec3 vNormal;
+      varying vec3 vViewPosition;
+      varying vec3 vWorldPosition;
+      varying vec3 vLocalPosition;
+
+      vec3 getEnvironmentReflection(vec3 viewDir, vec3 normal) {
+        vec3 reflectVec = reflect(viewDir, normal);
+        vec3 envMapCoord = idealPosition + reflectVec * 20.0;
+        return textureCube(envMap, envMapCoord).rgb;
+      }
+
+      void main() {
+        // PROPER NORMALIZATION - fixes positioning issues
+        float normalizedY = (vLocalPosition.y - uJarMinY) / uJarHeight;
+
+        vec3 viewDir = normalize(vViewPosition);
+        vec3 normal = normalize(vNormal);
+
+        // Refraction (keep original calculation)
+        vec3 refractColor = refract(viewDir, normal, 1.0 / IOR);
+        vec2 matcapUV = refractColor.xy * 0.5 + 0.5;
+        vec3 matcapColor = texture2D(matcap, matcapUV).rgb;
+
+        // Environment reflection (original version)
+        vec3 reflColor = getEnvironmentReflection(viewDir, normal) * envMapIntensity;
+
+        // Fresnel effect (keep original power)
+        float fresnel = pow(1.0 - dot(viewDir, normal), 3.0);
+
+        // Subsurface scattering (original formula)
+        vec3 scatterColor = colorAdjust * (1.0 - fresnel) * subSurfaceScatter;
+
+        // Viscosity effect (adjusted calculation)
+        float viscosityEffect = sin(normalizedY * viscosityWaviness * 5.0 + time * 0.1) * viscosity;
+        matcapColor += vec3(viscosityEffect * 0.5); // Reduced intensity
+
+        // Vertical highlight (original behavior)
+        float verticalHighlight = smoothstep(highlightPosition - 0.1, highlightPosition + 0.1, normalizedY);
+        verticalHighlight = pow(verticalHighlight, 2.0) * highlightIntensity;
+
+        // Color mixing (original ratios)
+        vec3 baseColor = mix(matcapColor, reflColor, fresnel * 0.8);
+        vec3 finalColor = mix(baseColor, colorAdjust, 0.5);
+        finalColor += scatterColor;
+        finalColor += vec3(verticalHighlight);
+
+        // Depth calculation (original concept)
+        float depth = smoothstep(0.2, 0.8, normalizedY);
+        finalColor *= mix(vec3(1.0), colorAdjust, depth);
+
+        // Transparency effect (original parameters)
+        float transparency = smoothstep(0.2, 0.8, abs(dot(viewDir, normal)));
+        finalColor = mix(finalColor, reflColor, transparency * 0.2);
+
+        gl_FragColor = vec4(finalColor, 1.0);
+      }
+    `
+  });
+}
+
+export { 
+  honeyMaterialPositionInput,
+  honeyMaterial,
+  oldHoneyMaterial,
+  oldHoneyMaterialNormalized,
+  deepseekHoneyMaterial,
+  playfulMaterial,
+  playfulMaterial2
+}

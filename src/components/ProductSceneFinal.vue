@@ -92,7 +92,7 @@ import addPostProcessing from '@/helpers/JarScene/PostProcessing.js'
 
 
 
-import { watch, onMounted, onUnmounted, onBeforeUnmount,  ref, computed, nextTick, inject } from "vue";
+import { watch, onMounted, onUnmounted, onBeforeUnmount,  ref, computed, nextTick, inject, toRaw } from "vue";
 import { get, objectEntries, useWindowSize } from "@vueuse/core";
 import { useProductStore } from '@/store/product.js';
 import { useGlobalStore } from '@/store/global.js'
@@ -130,7 +130,7 @@ import LoadingIndicator from "./LoadingIndicator.vue";
 
 //ShaderMaterial imports
   //Honey
-  import { honeyMaterial, honeyMaterialPositionInput, oldHoneyMaterial, oldHoneyMaterialPositional } from "../helpers/JarScene/HoneyMaterials.js";
+  import { oldHoneyMaterial, playfulMaterial, playfulMaterial2, deepseekHoneyMaterial } from "../helpers/JarScene/HoneyMaterials.js";
 
   //Label
 
@@ -158,6 +158,7 @@ import * as TWEEN from '@tweenjs/tween.js';
 import { zoomIn, zoomOut} from '@/helpers/cameraZoom.js'
 import jarPositions from "@/assets/boxCenters.js"
 import { moveSceneToGridPosition, revertScenePosition } from "../helpers/JarScene/MoveSceneByOffset.js";
+import { useMeshStore } from "../store/meshes.js";
 const cameraConfigs = Object.freeze({
   x: 0.35, 
   y: 0.06, // 0.06 for small set. 0.075
@@ -444,17 +445,61 @@ export default {
       console.log("1. Will move to pos")
       await moveSceneToGridPosition(globalScene, globalCamera, honeyMesh1.position, type)
       console.log("2. Moved to POS")
-      const material2 = await oldHoneyMaterial(
+      // const material2 = await oldHoneyMaterial(
+      //   globalTextureLoader, 
+      //   globalScene.environment, 
+      //   type,
+      //   '300g',
+      //   honeyMeshes
+      // )
+      // const material3 = await oldHoneyMaterial(
+      //   globalTextureLoader,
+      //   globalScene.environment,
+      //   type,
+      //   '450g',
+      //   honeyMeshes
+      // )
+      
+      const material2 = await playfulMaterial2(
         globalTextureLoader, 
         globalScene.environment, 
-        type
+        type,
+        '300g',
+        honeyMeshes
       )
+      const material3 = await playfulMaterial2(
+        globalTextureLoader,
+        globalScene.environment,
+        type,
+        '450g',
+        honeyMeshes
+      )
+      // const material2 = await playfulMaterial(
+      //   globalTextureLoader, 
+      //   globalScene.environment, 
+      //   type,
+      //   '300g',
+      //   honeyMeshes
+      // )
+      // const material3 = await playfulMaterial(
+      //   globalTextureLoader,
+      //   globalScene.environment,
+      //   type,
+      //   '450g',
+      //   honeyMeshes
+      // )
+      console.log("Material3", material3)
       
       console.log("HONEYMESHES:::::", honeyMeshes)
       Object.values(honeyMeshes).forEach((mesh) => {
-        console.log("HONEY MESH : : : : : : : : :", mesh)
-        mesh.material = material2;
-        mesh.material.needsUpdate = true;
+        console.log("HONEY MESH : : : : : : : : :", mesh.name)
+        if(mesh.name.includes('300')){
+          mesh.material = material2;
+          mesh.material.needsUpdate = true;
+        } else if (mesh.name.includes('450')){
+          mesh.material = material3;
+          mesh.material.needsUpdate = true;
+        }
       })
       
       isLoading.value = false;
@@ -502,6 +547,7 @@ export default {
     let honeyMeshes;
     let honeyMesh1;
     let honeyMesh2;
+    let honeyMesh3;
 
 
     let globalObj150g;
@@ -524,7 +570,7 @@ export default {
       globalScene = new Scene();
 
       let sceneUrl = currentBrand.value === 'okto' ?  
-      '/assets/glb/newJars/450-300-animation-choppy-v2.glb':
+      '/assets/glb/newJars/uvfixed3.glb':
       '/assets/glb/newJars/300-150-animation-choppy-v6.glb' 
 
       let sceneParts = await loadGlbReturnParts(loader, sceneUrl)
@@ -537,6 +583,9 @@ export default {
       console.log("HMESHES", honeyMeshes)
       honeyMesh1 = honeyMeshes['300g']
       honeyMesh2 = honeyMeshes['450g']
+      if(honeyMeshes['150g']){
+        honeyMesh3 = honeyMeshes['150g']
+      }
       console.log("HM1", honeyMesh1)
       console.log("HM2", honeyMesh2)
       // // // console.log("LABEL MESHES +++++++++++++++++++++++++++++++++++++++++++++++++++++", labelMeshes)
@@ -563,8 +612,8 @@ export default {
             // globalObj150g = obj;
           } else if (obj.name.includes('jar')){
             // // // console.log("OBJ TRANSMISSION", obj.name)
-            // obj.material.transparent = true;
-            // obj.material.opacity = 0;
+            obj.material.transparent = true;
+            obj.material.opacity = 0;
             if(obj.name === "jar_object_150g"){
               // globalGlass150g = obj
             } else {

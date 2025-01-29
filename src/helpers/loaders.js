@@ -1,3 +1,6 @@
+import { useMeshStore } from '../store/meshes';
+const meshStore =  useMeshStore();
+
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import { DRACOLoader } from 'three/examples/jsm/loaders/DRACOLoader.js';
 import { KTX2Loader } from 'three/examples/jsm/loaders/KTX2Loader.js';
@@ -80,6 +83,7 @@ export async function loadGlbReturnParts(loader, url){
           obj.size = sizeDuringTraversal
           obj.type= 'label'
           honeyMeshes[sizeDuringTraversal] = obj
+          meshStore.storeBoundingBox(obj)
         } else {
 
           meshes.push(obj)
