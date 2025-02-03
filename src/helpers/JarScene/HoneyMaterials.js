@@ -555,17 +555,32 @@ async function playfulMaterial(textureLoader, environment, honeyType, jarSize, h
   });
 }
 
-async function playfulMaterial2(textureLoader, environment, honeyType, jarSize){
+async function playfulMaterial2(textureLoader, environment, honeyType, jarSize, honeyMeshes){
+  
+  let honeyMesh = honeyMeshes[jarSize]
   const meshStore = useMeshStore();
   const boundingBoxes = toRaw(meshStore.boundingBoxes);
+
+  const currentBoundingBox = boundingBoxes[jarSize].boundingBox
+  const jarPosition = new Vector3(0, 0, 0);
+  jarPosition.copy(honeyMesh.position);
+  console.log("jarpOs:", jarPosition)
+  jarPosition.y += currentBoundingBox.min.y;
+
   const boundingBox300 = boundingBoxes['300g'].boundingBox
-  const boundingBox450 = boundingBoxes['450g'].boundingBox
   const uJarMinY300 = boundingBox300.min.y
   const uJarMaxY300 = boundingBox300.max.y
+  const jarCenter300 = uJarMaxY300 - uJarMinY300
   const height300 = uJarMaxY300 - uJarMinY300;
+
+  const boundingBox450 = boundingBoxes['450g'].boundingBox
   const uJarMinY450 = boundingBox450.min.y
   const uJarMaxY450 = boundingBox450.max.y
+  const jarCenter450 = uJarMaxY450 - uJarMinY450
   const height450 = uJarMaxY450 - uJarMinY450;
+
+  let jarCenter = jarSize === '300g' ? jarCenter300 : jarCenter450;
+
   let meshHeight = jarSize === '300g' ? height300 : height450
 
   let honeyParameters = honeyPresets[honeyType]
@@ -587,12 +602,16 @@ async function playfulMaterial2(textureLoader, environment, honeyType, jarSize){
       highlightIntensity: { value: 0.50 },
       envMapIntensity: { value: 1.0},
       idealPosition: { value: worldPosition },
-      mediumJarHeight: { value: height300 },  // Reference height of medium jar
-      currentJarHeight: { value: meshHeight }   // Height of current jar
+      mediumJarHeight: { value: height300 },    // Reference height of medium jar
+      currentJarHeight: { value: height450 },    // Height of current jar
+      jarBasePosition: { value: jarPosition },  // Base position of the jar
+      jarCenter: { value: jarCenter }
     },
     vertexShader: `
       uniform float mediumJarHeight;
       uniform float currentJarHeight;
+      uniform vec3 jarBasePosition;
+      uniform vec3 jarCenter;
       
       varying vec3 vNormal;
       varying vec3 vViewPosition;
@@ -605,10 +624,18 @@ async function playfulMaterial2(textureLoader, environment, honeyType, jarSize){
         vViewPosition = -mvPosition.xyz;
         vWorldPosition = (modelMatrix * vec4(position, 1.0)).xyz;
         
-        // Scale the world position to match medium jar's scale
-        float scaleFactor = mediumJarHeight / currentJarHeight;
-        vScaledPosition = vWorldPosition * scaleFactor;
+        // Calculate position relative to jar's base
+        vec3 relativePosition = vWorldPosition - jarBasePosition;
         
+        // Scale the position to match medium jar's scale
+        float scaleFactor = mediumJarHeight / currentJarHeight;
+        
+        // Apply scaling while preserving the relative position
+        vScaledPosition = relativePosition * scaleFactor + jarBasePosition;
+        
+
+        // Flip the matrix ;)
+
         gl_Position = projectionMatrix * mvPosition;
       }
     `,
@@ -677,6 +704,8 @@ async function playfulMaterial2(textureLoader, environment, honeyType, jarSize){
     `
   });
 }
+
+
 async function deepseekHoneyMaterial(textureLoader, environment, honeyType, jarSize, honeyMeshes){
   
   // const meshStore = useMeshStore();

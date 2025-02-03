@@ -27,23 +27,23 @@ async function addPostProcessing(renderer, scene, camera) {
     //DOF focus on jar in front.
     const depthOfFieldEffect = new DepthOfFieldEffect(camera, {
       focalLength: 0.05,
-      bokehScale: 1.2,
+      bokehScale: 1.0,
       height: 600
     });
-    const targetPoint = new Vector3(
-      -0.0002538628759793937,
-      0.0344855822622776,
-      -0.00008241005707532167
-    )
-    depthOfFieldEffect.target = targetPoint;
+    // const targetPoint = new Vector3(
+    //   -0.0002538628759793937,
+    //   0.0344855822622776,
+    //   -0.00008241005707532167
+    // )
+    // depthOfFieldEffect.target = targetPoint;
 
-    const focusPoint = new Vector3(
-      -0.0002538628759793937,
-      0.0344855822622776,
-      -0.00008241005707532167
-    );
-    const computedDistance = depthOfFieldEffect.calculateFocusDistance(focusPoint);
-    depthOfFieldEffect.focusDistance = computedDistance;
+    // const focusPoint = new Vector3(
+    //   -0.0002538628759793937,
+    //   0.0344855822622776,
+    //   -0.00008241005707532167
+    // );
+    // const computedDistance = depthOfFieldEffect.calculateFocusDistance(focusPoint);
+    // depthOfFieldEffect.focusDistance = computedDistance;
 
     const dofPass = new EffectPass(camera, depthOfFieldEffect);
     composer.addPass(dofPass);

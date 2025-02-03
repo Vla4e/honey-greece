@@ -332,10 +332,12 @@ export default {
         console.log("line === textureUrlSlugs.productLine", line === textureUrlSlugs.productLine, line, textureUrlSlugs.productLine)
         return line === textureUrlSlugs.productLine
       })
+
       if(wtf){
         console.log("FOUND ALREADY")
         return
       }
+
       console.log("ATTEMPTING LAT")
       let hardcodedPDLs = {
         'Okto': ['Multiflorals', 'Monoflorals'],
@@ -349,6 +351,7 @@ export default {
         'Okto': ['450g', '300g'],
         'HAA': ['300g', '150g']
       }
+
       let brandUrl = textureUrlSlugs.brand === 'okto' ? 'Okto' : 'HAA'
       let productLineUrl = textureUrlSlugs.productLine.charAt(0).toUpperCase() + textureUrlSlugs.productLine.slice(1);
       // // console.log("TEXTURE URL SLUGS", brandConfigs[textureUrlSlugs.brand.toUpperCase()])
@@ -570,7 +573,8 @@ export default {
       globalScene = new Scene();
 
       let sceneUrl = currentBrand.value === 'okto' ?  
-      '/assets/glb/newJars/uvfixed3.glb':
+      '/assets/glb/newJars/uvfixed4.glb':
+      // '/assets/glb/newJars/450-300-animation-choppy-v2.glb':
       '/assets/glb/newJars/300-150-animation-choppy-v6.glb' 
 
       let sceneParts = await loadGlbReturnParts(loader, sceneUrl)
@@ -611,9 +615,10 @@ export default {
           } else if (obj.name === 'honey_object_150g'){
             // globalObj150g = obj;
           } else if (obj.name.includes('jar')){
-            // // // console.log("OBJ TRANSMISSION", obj.name)
-            obj.material.transparent = true;
-            obj.material.opacity = 0;
+            console.log("OBJ TRANSMISSION", obj.material.roughness)
+            // obj.material.roughness = 0.1;
+            // obj.material.transparent = true;
+            // obj.material.opacity = 0;
             if(obj.name === "jar_object_150g"){
               // globalGlass150g = obj
             } else {
@@ -628,8 +633,8 @@ export default {
             jarMedium.value.push(obj)
           }
           if(obj.name.includes('label')){
-            obj.material.transparent = true;
-            obj.material.opacity = 0;
+            // obj.material.transparent = true;
+            // obj.material.opacity = 0;
             if(obj.name.includes(tempSize)){
               currentJarLabel = obj
             } else upcomingJarLabel = obj
@@ -637,12 +642,13 @@ export default {
         }
       })
 
-      let setupAnimationProps = setupAnimations(mixer, sceneParts.gltf.animations)
+      let setupAnimationProps = await setupAnimations(mixer, sceneParts.gltf.animations)
       // destructuring makes globalScene.add throw error?
       // ({ clipActions, animationState } = setupAnimations(mixer, jarAnimation3.gltf.animations))
+      console.log("ASTATE ===================================> ", setupAnimationProps)
       clipActions = setupAnimationProps.clipActions
       animationState = setupAnimationProps.animationState
-      
+      console.log("ASTATE ===================================> ", animationState)
 
       currentJarScene = sceneParts.scene; //Scene to be loaded
 
@@ -722,7 +728,7 @@ export default {
       // globalRenderer.render(globalScene, globalCamera);
       console.log("Calling updateTex from setCanvas")
 
-      // updateTexture()
+      updateTexture()
 
       await setLightingEXR(globalRenderer)
       // await setLighting(globalRenderer)
@@ -1575,7 +1581,7 @@ export default {
           flavour: newValues.flavour
         }
         console.log("calling update tex from flav watcher")
-        // updateTexture();
+        updateTexture();
         // allCurrentTextures = await loadAllTextures()
         // console.log("ALL CURRENT", allCurrentTextures)
       }
