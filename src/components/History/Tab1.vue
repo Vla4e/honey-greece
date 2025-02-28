@@ -250,7 +250,7 @@ watch(() => props.currentPhase, (newPhase) => {
       font-size: 46px;
       transition: all 0.5s ease;
       .image{
-        width: 100%;
+        // width: 100%;
         max-width: 100%;
         // max-height: 100%;
       }

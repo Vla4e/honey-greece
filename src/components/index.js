@@ -11,6 +11,7 @@ import ColorPicker from './ColorPicker.vue'
 import OktoText from './OktoText.vue'
 import LoadingIndicator from './LoadingIndicator.vue'
 import LoadingScreen from './LoadingScreen.vue'
+import ModalCustom from './ModalCustom.vue'
 
 import PositionSliders from './PositionSliders.vue'
 export default [
@@ -27,5 +28,6 @@ export default [
     PositionSliders,
     OktoText,
     LoadingIndicator,
-    LoadingScreen
+    LoadingScreen,
+    ModalCustom
 ]

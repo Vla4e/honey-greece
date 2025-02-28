@@ -24,7 +24,7 @@ export const useProductStore = defineStore('productStore', {
       return state.currentProductLine.urlSlug
     },
     getFlavourSlug: (state) => {
-      // console.log("flavour getter", state.currentFlavour.urlSlug)
+      console.log("flavour getter", state.currentFlavour.urlSlug)
       return state.currentFlavour.urlSlug
     },
     getBrandSlug: (state) => {

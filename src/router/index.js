@@ -2,22 +2,25 @@ import { createRouter, createWebHistory } from 'vue-router';
 import { useNavbarStore } from '@/store/navbar.js';
 import { useGlobalStore } from '@/store/global.js';
 import { useSidebarStore } from '@/store/sidebar.js';
-import brandConfigs from '@/assets/brand-information/index.js'
 import emitter from '@/helpers/emitter.js';
 
-const transitionDelay = 500;
+import brandConfigs from '../assets/brand-information';
+import { isHoneyAllowed } from '@/helpers/dataOperations.js'
+
+
 const allowedSelectedBrands = ['Okto', 'HAA']
-// const allowedLines = {
-//   'Okto' : [
-//     'Monoflorals',
-//     'Multiflorals'
-//   ],
-//   'HAA': [
-//     'Monoflorals',
-//     'Blends'
-//   ]
-// }
-const allowedLines = ['Blends', 'Monoflorals', 'Multiflorals']
+const allowedLines = {
+  'Okto': [
+    'Monoflorals',
+    // 'Multiflorals' not produced atm
+  ],
+  'HAA' : [
+    'Blends',
+    // 'Monoflorals' not produced atm
+  ]
+}
+
+const transitionDelay = 500;
 
 // lazy load views
 const lazyLoad = (view) => () => import(`@/views/${view}.vue`)
@@ -124,34 +127,74 @@ const router = createRouter({
   ]
 })
 
-function processRouteTransition(to, next) {
-  // console.log("Going to ROUTER", to.name, to.params, to.query);
+async function processRouteTransition(to, next) {
+  console.log("process route transition", to.name, to.params, to.query);
 
-  // Set default query if not already set
-  if (!to.query.line) {
-    to.query.line = 'Monoflorals';
+  if (!to.matched.length) {
+    return next({ name: 'Home' });
   }
 
-  // Check if the line query is allowed
-  if (!allowedLines.includes(to.query.line)) {
-    next({ name: to.name, params: to.params, query: { ...to.query, line: 'Monoflorals' } });
-    return;
-  }
-
-  // Check for unregistered routes
-  if (to.matched.length === 0) {
-    next({ name: 'Home' });
-  } else if (to.name === 'Product' && to.params.selectedBrand) {
-    // Ensure selectedBrand is allowed
-    if (!allowedSelectedBrands.includes(to.params.selectedBrand)) {
-      next({ name: 'Product', params: { selectedBrand: 'Okto' }, query: to.query });
-    } else {
-      next();
+  
+  if (to.name === 'Product') {
+    let selectedBrand = to.params.selectedBrand
+    console.log("Product/selectedBrand", selectedBrand)
+    if (selectedBrand && !allowedSelectedBrands.includes(selectedBrand)) {
+      return next({
+        name: 'Product',
+        params: { selectedBrand: 'Okto' },
+        query: allowedLines['Okto'][0],
+      });
     }
-  } else {
-    next();
+
+    if (!to.query.line) {
+      console.log("Product/defaultLine", allowedLines[selectedBrand][0])
+      to.query.line = allowedLines[selectedBrand][0];
+    }
+
+    // 2. Validate the "line" query
+    if (allowedLines[selectedBrand].includes(to.query.line)) {
+      console.log("Product/allowedLine/honey", to.query.honey)
+      if (to.query.honey) {
+        // Check if honey is valid for the selectedBrand + line
+        const validHoney = await isHoneyAllowed(selectedBrand, to.query.line, to.query.honey);
+        if (validHoney) {
+          return next();
+        } else {
+          // If honey not valid, redirect to default line + default honey
+          let defaultHoney = brandConfigs[selectedBrand].lineFlavorsArrays[to.query.line][0]
+          console.log("DEFAULT HONEY", defaultHoney)
+          return next({
+            name: to.name,
+            params: to.params,
+            query: { 
+              ...to.query,
+              line: to.query.line,
+              honey: defaultHoney // default to honey
+            },
+          });
+        }
+      } else {
+        // If honey not valid, redirect to default line + default honey
+        let defaultHoney = brandConfigs[selectedBrand].lineFlavorsArrays[to.query.line][0]
+        console.log("DEFAULT HONEY DEFAULT", defaultHoney)
+        console.log("product/defaultHoney", defaultHoney)
+        return next({
+          name: to.name,
+          params: to.params,
+          query: { 
+            ...to.query,
+            line: to.query.line,
+            honey: defaultHoney // default to honey
+          },
+        });
+      }
+    }
   }
+
+  // If all checks passed or route is not "Product", just go
+  next();
 }
+
 
 router.beforeEach((to, from, next) => {
   emitter.emit('toggleSidebarRoute') //for burger menu icon

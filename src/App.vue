@@ -3,6 +3,7 @@
     <!-- <div v-if="!showContactForm && !isMobile" class="burger-icon-container">
       <BurgerMenuIcon @click="toggleSidebar" class="burger-icon"/>
     </div> -->
+    <ModalCustom/>
     <LoadingScreen></LoadingScreen>
     <NavbarComponent v-show="showNavbarComputed" id="nav"/>
 

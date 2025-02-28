@@ -77,12 +77,19 @@ onBeforeMount(() => {
 
 
 function goToItem(val){
-  console.log('Item selected')
-  console.log(toRaw(val))
+  // console.log('Item selected ===================================>', currentBrand.value)
+  // console.log(toRaw(val))
+  let brandName = ''
+  if(props.brand.name === 'haa') brandName = 'HAA'
+  else brandName = 'Okto'
   if(!moved.value){
     router.push({ 
       name: 'Product', 
-      params: { selectedBrand: props.brand.name},
+      params: { selectedBrand: brandName},
+      query : {
+        line: val.flavourData.lineName,
+        honey: val.flavourData.flavour.urlSlug
+      }
       // query: {
       //   line: val.flavourData.lineName
       // }

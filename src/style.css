@@ -15,6 +15,7 @@
   -webkit-text-size-adjust: 100%;
   --navbar-color: #131313;
   --navbar-text-shadow: none;
+  --okto-text-size: 16px;
 }
 
 a {

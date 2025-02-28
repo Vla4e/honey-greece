@@ -48,10 +48,10 @@
             :id="`image${index}`"
             class="image" 
           />
-          <div :class="person.name"  class="floating-container">
+          <!-- <div :class="person.name"  class="floating-container">
             <span class="name">{{ person.name }}</span>
             <span class="role" v-html="person.role"></span>
-          </div>
+          </div> -->
         </div>
         <div v-if="isMobile" class="text-container">
           <span class="description">{{ person.text }}</span>
@@ -68,39 +68,77 @@ import { ref, onMounted, onUnmounted, nextTick, inject } from 'vue';
 
 const { isMobile } = inject('screenSize')
 
-const imageModules = import.meta.glob('@/assets/pages/about/*.png', {eager: true});
-let personnelTexts = {
-  'antonios': `Antonios, the company owner and our visionary leader, exemplifies dedication by tirelessly accompanying our driver and beekeepers on their journeys, overseeing operations, and making crucial decisions to optimize honey production and create the finest natural blends. His unwavering commitment and hands-on approach are the driving force behind our company's success.`,
-  'christos': `Christos, our dedicated and experienced beekeeper from the region of Fthiotida, meticulously tends to our hives, ensuring the finest quality honey straight from nature's bounty.`,
-  'klion': `Klion, our diligent beekeeper, plays a crucial role in maintaining the excellence of our honey production, embodying dedication and expertise in every hive.`,
-  'kostas': `Kostas, our dedicated driver, expertly navigates the diverse landscapes of Greece, transporting our beehives hundreds of kilometers to ensure they reach optimal floral sources for the finest honey flavors. His commitment to precision and efficiency enables us to harvest the best honey from each region's abundant flora.`,
-  'eleni': `Eleni, the heart of our company, tirelessly coordinates all purchasing activities and oversees the seamless progression of sales from inception to completion. We are deeply grateful for her unwavering dedication and invaluable contributions to our team.`,
-  'vaia': ` Vaia, our meticulous artisan, fills each jar with precision and crafts our delectable spreads in our small kitchen, ensuring every jar is handled with the utmost care and attention to detail. We are proud of her dedication to maintaining the highest standards of quality in every step of our production process.`
-}
-let personnelRoles = {
-  'antonios': `company<br/>owner`,
-  'christos': `beekeeper`,
-  'klion': `beekeeper`,
-  'kostas': `dedicated<br/>driver`,
-  'eleni': `heart of<br/>our company`,
-  'vaia': `meticulous<br/>artisan`
-}
 
-let paths = Object.keys(imageModules).map((path) => {
-  console.log("PATH DEF", path)
-  return path
-})
-let personnel = Object.values(imageModules).map((path, idx) => {
-  console.log("PATH", path.default)
-  let splitPath = paths[idx].split('/')
-  let name = splitPath[5].substring(0, splitPath[5].length-4)
-  return {
-    name,
-    url: path.default,
-    text: personnelTexts[name],
-    role: personnelRoles[name]
+const imageModules = import.meta.glob('@/assets/pages/about/*.png', { eager: true });
+const personnelData = [
+  {
+    name: 'antonios',
+    displayName: 'Antonios',
+    text: `Antonios, the company owner and our visionary leader, exemplifies dedication by tirelessly accompanying our driver and beekeepers on their journeys, overseeing operations, and making crucial decisions to optimize honey production and create the finest natural blends. His unwavering commitment and hands-on approach are the driving force behind our company's success.`,
+    role: `company<br/>owner`,
+    filename: 'antonios.png',
+    filenameMobile: 'antonios-2.png',
+  },
+  {
+    name: 'christos',
+    displayName: 'Christos',
+    text: `Christos, our dedicated and experienced beekeeper from the region of Fthiotida, meticulously tends to our hives, ensuring the finest quality honey straight from nature's bounty.`,
+    role: `beekeeper`,
+    filename: 'christos.png',
+    filenameMobile: 'christos-2.png',
+  },
+  {
+    name: 'klion',
+    displayName: 'Klion',
+    text: `Klion, our diligent beekeeper, plays a crucial role in maintaining the excellence of our honey production, embodying dedication and expertise in every hive.`,
+    role: `beekeeper`,
+    filename: 'klion.png',
+    filenameMobile: 'klion-2.png',
+  },
+  {
+    name: 'kostas',
+    displayName: 'Kostas',
+    text: `Kostas, our dedicated driver, expertly navigates the diverse landscapes of Greece, transporting our beehives hundreds of kilometers to ensure they reach optimal floral sources for the finest honey flavors. His commitment to precision and efficiency enables us to harvest the best honey from each region's abundant flora.`,
+    role: `dedicated<br/>driver`,
+    filename: 'kostas.png',
+    filenameMobile: 'kostas-2.png',
+  },
+  {
+    name: 'eleni',
+    displayName: 'Eleni',
+    text: `Eleni, the heart of our company, tirelessly coordinates all purchasing activities and oversees the seamless progression of sales from inception to completion. We are deeply grateful for her unwavering dedication and invaluable contributions to our team.`,
+    role: `heart of<br/>our company`,
+    filename: 'eleni.png',
+    filenameMobile: 'eleni-2.png',
+  },
+  {
+    name: 'vaia',
+    displayName: 'Vaia',
+    text: `Vaia, our meticulous artisan, fills each jar with precision and crafts our delectable spreads in our small kitchen, ensuring every jar is handled with the utmost care and attention to detail. We are proud of her dedication to maintaining the highest standards of quality in every step of our production process.`,
+    role: `meticulous<br/>artisan`,
+    filename: 'vaia.png',
+    filenameMobile: 'vaia-2.png',
+  },
+];
+
+const personnel = personnelData.map((person) => {
+  let imagePath;
+  if(!isMobile.value){
+    imagePath = `/src/assets/pages/about/${person.filename}`;
+  } else {
+    imagePath = `/src/assets/pages/about/${person.filenameMobile}`;
   }
-})
+
+  return {
+    ...person,
+    // `.default` is how Vite returns the URL in the eager import
+    url: imageModules[imagePath]?.default,
+  };
+});
+
+
+
+
 
 let largeImagePositionReference = null;
 let currentlySelected = ref({})
@@ -279,14 +317,14 @@ onUnmounted(() => {
       flex-direction: column;
       .hero-heading{
         font-family: "DMSans";
-        font-size: 15px;
+        font-size: 24px;
         font-weight: 700;
         text-align: left;
         color: black;
       }
       .hero-text{
         font-family: "DMSans";
-        font-size: 13px;
+        font-size: 16px;
         font-weight: 400;
         text-align: left;
         color: black;
@@ -309,10 +347,11 @@ onUnmounted(() => {
         display: flex;
         flex-direction: column;
         width: 100% !important;
-        margin-bottom: 40px;
+        margin-bottom: 60px;
+        margin-right: 0px !important;
 
         .image{
-          width: 60%;
+          width: 100%;
           // margin-bottom: 15px;
           z-index: 1;
         }
@@ -362,7 +401,7 @@ onUnmounted(() => {
           }
           .text-container{
             .description{
-              text-align: right;
+              text-align: center;
             }
           }
         }
@@ -373,7 +412,7 @@ onUnmounted(() => {
           }
           .text-container{
             .description{
-              text-align: right;
+              text-align: center;
             }
           }
           .floating-container{
@@ -387,7 +426,7 @@ onUnmounted(() => {
           }
           .text-container{
             .description{
-              text-align: left;
+              text-align: center;
             }
           }
         }
@@ -398,7 +437,7 @@ onUnmounted(() => {
           }
           .text-container{
             .description{
-              text-align: right;
+              text-align: center;
             }
           }
         }
@@ -410,7 +449,7 @@ onUnmounted(() => {
           }
           .text-container{
             .description{
-              text-align: left;
+              text-align: center;
             }
           }
           .floating-container{
@@ -424,7 +463,7 @@ onUnmounted(() => {
           }
           .text-container{
             .description{
-              text-align: left;
+              text-align: center;
             }
           }
           .floating-container{

@@ -573,7 +573,7 @@ export default {
       globalScene = new Scene();
 
       let sceneUrl = currentBrand.value === 'okto' ?  
-      '/assets/glb/newJars/uvfixed4.glb':
+      '/assets/glb/newJars/450-300-animation-choppy-v2.glb':
       // '/assets/glb/newJars/450-300-animation-choppy-v2.glb':
       '/assets/glb/newJars/300-150-animation-choppy-v6.glb' 
 
@@ -1527,13 +1527,13 @@ export default {
           jarSizes = ['450g', '300g']
           currentLoadedJars = ['450g', '300g']
           frontJarSize = currentLoadedJars[1] //300g is forefront on okto
-          backJarSize = currentLoadedJars[0] //450g is forefront on okto
+          backJarSize = currentLoadedJars[0] //450g is back on okto
           currentBrand.value = newValues.brand
         } else {
           jarSizes = ['300g', '150g']
           currentLoadedJars = ['300g', '150g']
           frontJarSize = currentLoadedJars[0] //300g is forefront on haa
-          backJarSize = currentLoadedJars[1] //150g is forefront on haa
+          backJarSize = currentLoadedJars[1] //150g is back on haa
           currentBrand.value = newValues.brand
         } 
       }

@@ -27,7 +27,7 @@
             {{ brand.fullName }}
           </span>
           <span class="subheading">
-            Ultra Premium Greek Honey
+            {{ brand.name === 'haa' ? 'Ultra ' : '' }}Premium Greek Honey
           </span>
           <span class="description">
             {{ brand.brandDescription }}

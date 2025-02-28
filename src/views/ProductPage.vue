@@ -330,7 +330,7 @@ export default {
     }, {immediate: true})
 
     watch(currentFlavour, (newFlavour) => {
-      // // console.log("newFlavour", toRaw(newFlavour))
+      console.log("newFlavour PRODUCT PAGE:", toRaw(newFlavour))
       if(newFlavour){
         productStore.setFlavour({name: newFlavour.name, urlSlug: newFlavour.urlSlug })
       }
