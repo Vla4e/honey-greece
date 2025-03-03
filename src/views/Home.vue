@@ -1,6 +1,6 @@
 <template>
   <div class="home-container">
-    <div class="video-container">
+    <div v-if="goodNetwork" class="video-container">
       <video
         v-if="videoReady"
         class="background-video"
@@ -15,6 +15,10 @@
       </video>
       <p v-else>Loading video...</p>
     </div>
+    <div v-else class="image-container">
+      <img src="@/assets/pages/home/bg-new.png" class="background-image"/>
+    </div>
+
 
     <div class="texts-container">
       <div class="home-text-container">
@@ -54,6 +58,22 @@ export default {
     }
 
     // use .default to access the default export of the module = src
+    let goodNetwork =  ref(false)
+    async function determineBackgroundMedia(networkSpeed){
+      globalStore.showLoadingScreen = true;
+      globalStore.loadingProgress = 0;
+      if(networkSpeed > 10){
+        videoSource.value = (
+          await import("@/assets/pages/home/mobile_3mbps.mp4")
+        ).default;
+        goodNetwork.value = true
+        videoReady.value = true;
+      } else {
+        goodNetwork.value = false
+      }
+      globalStore.showLoadingScreen = false;
+    }
+
     async function loadVideo(speed) {
       globalStore.showLoadingScreen = true;
       globalStore.loadingProgress = 0;
@@ -98,10 +118,11 @@ export default {
       const networkSpeed = getNetworkSpeed();
       console.log("NETWORKSPEED", networkSpeed);
       if (networkSpeed !== null) {
-        await loadVideo(networkSpeed);
+        await determineBackgroundMedia(networkSpeed);
         console.log("Current value = ", videoSource.value);
       } else {
-        videoSource.value = await import("@/assets/pages/home/desktop_1mbps.mp4").default;
+        goodNetwork.value = false
+        // videoSource.value = await import("@/assets/pages/home/desktop_1mbps.mp4").default;
       }
     });
     return {
@@ -125,6 +146,21 @@ export default {
   @media (max-width: 768px) {
     align-items: flex-start;
     justify-content: center;
+  }
+}
+.image-container{
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  overflow: hidden !important;
+  z-index: 1;
+  .background-image{
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    overflow: hidden !important;
   }
 }
 

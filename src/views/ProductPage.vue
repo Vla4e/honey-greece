@@ -1,445 +1,350 @@
 <template>
   <div class="product-page-container">
-    <!-- <span class="floating-text" ">
-      {{ currentFlavour.name }}
-    </span> -->
-
     <Transition name="fade" mode="out-in">
-      <span class="floating-text" :style="{ 
-        'font-size': computedTextLength.fontSize + 'px',
-        'line-height': computedTextLength.lineHeight + 'px'
-      }" :key="currentFlavour.name">
-        {{ currentFlavour.name }}
+      <span
+        class="floating-text"
+        :style="{
+          'font-size': computedTextLength.fontSize + 'px',
+          'line-height': computedTextLength.lineHeight + 'px',
+        }"
+        :key="currentFlavour?.name"
+      >
+        {{ currentFlavour?.name }}
       </span>
     </Transition>
-    
+
     <span v-if="isMobile" class="mobile-series">
-          {{ currentProductLine.name }}
-        </span>
+      {{ currentProductLine?.name }}
+    </span>
 
     <div class="series-selection">
-      <div class="pushdown" style="height: 35%; width: 100%;"></div>
+      <div class="pushdown" style="height: 35%; width: 100%"></div>
+
+      <!-- Desktop product line selector -->
       <div v-if="!isMobile" class="series-item-container">
         <div class="series-items">
           <div
             class="series-item"
-            ref="seriesItem"
-            v-for="(brandProductLine, idx) in brandProductLines"
-            :class="isSelected(brandProductLine)"
-            @click="selectProductLine(brandProductLine.name)"
+            v-for="(line, idx) in brandProductLines"
             :key="idx"
+            :class="{ selected: line.name === currentProductLine?.name }"
+            @click="selectProductLine(line)"
           >
-            <span class="series-item-text">
-              Okto - {{ brandProductLine.name }}
-            </span>
-            <div
-              class="stylish-pointer"
-              :style="displayStyle(brandProductLine)"
-            >
-              <img ref="pointerline" :src="pointerLine" class="pointer-line" />
+            <span class="series-item-text">Okto - {{ line.name }}</span>
+            <div class="stylish-pointer" v-show="line.name === currentProductLine?.name">
+              <img :src="pointerLine" class="pointer-line" />
               <img :src="pointerCircle" class="pointer-circle" />
             </div>
           </div>
         </div>
       </div>
+
+      <!-- Description for the selected product line/flavour -->
       <div class="selected-description">
-        <!-- <h1 class="description-heading">{{ currentFlavour.name }}</h1> -->
-        <h2 class="description-subheading">{{ currentFlavour.tagline }}</h2>
-        <span class="description-text">{{ currentFlavour.description }}</span>
+        <h2 class="description-subheading">{{ currentFlavour?.tagline }}</h2>
+        <span class="description-text">{{ currentFlavour?.description }}</span>
       </div>
+
       <div class="technical-sheet">
-        Technical Sheet <img :src="downloadIcon" class="download-sheet" />
+        Technical Sheet
+        <img :src="downloadIcon" class="download-sheet" />
       </div>
     </div>
 
+    <!-- Product Viewer -->
     <div class="product-viewer" ref="productViewer">
-      <!-- <div class="pushdown" style="height: 15%; width: 100%;"></div> -->
-      <ProductSceneFinal />
-      <!-- <ProductScene /> -->
+      <ProductSceneFinal v-if="isCapable" />
+      <ProductImage v-else />
     </div>
 
-
-    <!-- <ColorPicker class="color-picker target"/>
-    <button style="position: absolute; top: 0%; left: 10%; z-index: 200000;" @click="toggleViews()">Toggle views</button> -->
-
+    <!-- Flavour (blend) selection -->
     <div v-if="(isMobile && circleToggled) || !isMobile" class="blend-selection">
-      <img src="../assets/images/x-icon.svg" @click="toggleCircle()" v-if="isMobile"/>
-      <div class="brand-selection pushdown">
-        <!-- <img @click="switchBrand()" class="brand-image" :src="computedLogo"/> -->
-      </div>
+      <img src="../assets/images/x-icon.svg" @click="toggleCircle()" v-if="isMobile" />
+
       <span
-        class="blend"
-        ref="blendItem"
-        :class="flavour.name === currentFlavour.name ? 'selected' : ''"
         v-for="(flavour, idx) in productLineFlavours"
         :key="idx"
+        class="blend"
+        :class="{ selected: flavour.name === currentFlavour?.name }"
         @click="selectFlavour(flavour)"
       >
-        <span class="blend-text">
-          {{ flavour.name }}
-        </span>
+        <span class="blend-text">{{ flavour.name }}</span>
         <div
           class="stylish-pointer-to-left"
-          :style="
-          flavour.name === currentFlavour.name
-              ? 'display: flex;'
-              : 'display: none;'
-          "
+          v-show="flavour.name === currentFlavour?.name"
         >
           <img :src="pointerCircle" class="pointer-circle" />
           <img :src="pointerLine" class="pointer-line" />
         </div>
       </span>
+
+      <!-- Mobile: Switch product lines (displays the other lines in brand) -->
       <div
-        class="blend product-line"
-        v-for="(brandProductLine, idx) in brandProductLines"
-        :style="currentProductLine.name !== brandProductLine.name ? '': 'display: none !important;'"
-        @click="selectProductLine(brandProductLine.name)"
+        v-for="(line, idx) in brandProductLines"
         :key="idx"
+        class="blend product-line"
         v-if="isMobile"
+        v-show="currentProductLine?.name !== line.name"
+        @click="selectProductLine(line)"
       >
-        <span class="blend-text">
-          {{ brandProductLine.name }} &gt;
-        </span>
+        <span class="blend-text">{{ line.name }} &gt;</span>
       </div>
     </div>
 
+    <!-- Mobile circle toggler -->
     <div v-if="isMobile" class="series-selection-mobile">
-      <div @click="toggleCircle()" :class="circleToggled ? 'clicked': ''" class="circle" id="circle">
+      <div
+        class="circle"
+        id="circle"
+        :class="{ clicked: circleToggled }"
+        @click="toggleCircle()"
+      >
         <div class="plus"></div>
       </div>
     </div>
 
-    
-
+    <!-- Mobile: suggested brand section -->
     <div v-if="isMobile" class="suggested-brand-section">
-      <span class="flavor-text">Also discover... </span>
+      <span class="flavor-text">Also discover...</span>
       <div class="suggested-brands">
         <router-link :to="`/product/${suggestedBrandRoute}`" class="brand">
-          <img :src="suggestedBrandLogoUrl" class="logo" alt="Brand"/>
-          <img :src="chevronRight" class="chevron" alt="Go to brand"/>
+          <img :src="suggestedBrandLogoUrl" class="logo" alt="Brand" />
+          <img :src="chevronRight" class="chevron" alt="Go to brand" />
         </router-link>
       </div>
     </div>
   </div>
 </template>
 
-<script>
-import { onUnmounted, onMounted, ref, toRaw, computed, watch, inject } from "vue";
+<script setup>
+import { ref, computed, watch, onMounted, onUnmounted, inject } from "vue";
+import { useRoute, useRouter } from "vue-router";
 import { useWindowSize } from "@vueuse/core";
-import { useRoute } from 'vue-router';
 
+// Assets
 import downloadIcon from "@/assets/pages/product-page/download-icon.png";
 import pointerLine from "@/assets/pages/product-page/pointer-line.svg";
 import pointerCircle from "@/assets/pages/product-page/pointer-circle.svg";
-import arrow from "@/assets/images/arrow.svg";
-import chevronRight from '@/assets/images/arrow.svg';
+import chevronRight from "@/assets/images/arrow.svg";
 
-import brandConfigs from "@/assets/brand-information/index.js"
-import { useProductStore } from '@/store/product.js'
-import ProductSceneFinal from "../components/ProductSceneFinal.vue"
-import ProductScene from "../components/ProductScene.vue"
+// Local
+import ProductSceneFinal from "../components/ProductSceneFinal.vue";
+import brandConfigs from "@/assets/brand-information/index.js";
+import { useProductStore } from "@/store/product.js";
 
-export default {
-  components: { ProductSceneFinal, ProductScene },
-  props: ['line', 'selectedBrand'],
+// Provide or inject screen size
+const { width: windowWidth } = useWindowSize();
+const { isMobile } = inject("screenSize");
 
-  setup(props) {
-    const { width: windowWidth, height: windowHeight } = useWindowSize();
+// Check webgl capabilities
+import { checkCapabilities } from "../helpers/WebGLCapabilities/checkCapabilities";
+let isCapable = ref(false);
 
-    const { isMobile } = inject('screenSize')
-    
-    let showControls = ref(false)
-    function toggleViews(){
-      showControls.value = !showControls.value
-    }
+// Emitter from parent, if relevant
+let emitter = inject("emitter");
 
-    const route = useRoute();
+// === Refs ===
+const productViewer = ref(null);
+const circleToggled = ref(false);
 
-    const productStore = useProductStore()
+// === Route Setup ===
+const route = useRoute();
+const router = useRouter();
+/**
+ * Assuming your route is something like:
+ *  /product/:selectedBrand?line=Blends&honey=<some-flavour>
+ *
+ *  route.params.selectedBrand -> "Okto" or "HAA"
+ *  route.query.line -> "Blends" or "Monoflorals" ...
+ *  route.query.honey -> "Acacia" ...
+ */
 
-    //receives distance of Mesh from Canvas ends
-    let emitter = inject('emitter')
-    emitter.on('meshEdges', (meshEdges)=>{
-      calculateLineWidths(meshEdges)
-    })
-    onUnmounted(() => {
-      emitter.off('meshEdges')
-    })
+// === Brand / Product Line / Flavour from route ===
+const selectedBrandParam = computed(() => route.params.selectedBrand);
+// const selectedLine = computed(() => route.query.line);
+let selectedLine = ref(route.query.line);
+// const selectedHoney = computed(() => route.query.honey);
+let selectedHoney = ref(route.query.honey);
 
-    const productViewer = ref()
-    const blendItem = ref()
-    const seriesItem = ref()
-    
-    // onBeforeMount(()=>{
-    //   // console.log("Before mount")
-    // })
-    // onMounted(() => {
-    //   // console.log("Mounting")
-    // })
+/**
+ * 1) Full brand config from brand-information
+ * 2) brandProductLines for whichever brand
+ * 3) currentProductLine from brandProductLines using query
+ * 4) currentFlavour from productLineFlavours using honey name or slug
+ */
+const selectedBrandConfig = computed(() => {
+  return brandConfigs[selectedBrandParam.value];
+});
 
+const brandProductLines = computed(() => {
+  return selectedBrandConfig.value?.brandProductLines || {};
+});
 
-    let currentFlavour = ref(null)
-    let currentProductLine = ref(null)
-    let selectedBrand = ref(null); // Okto / Haa / Melculum string
-    let brandProductLines = ref(null);
-    let productLineFlavours = ref(null);
+const currentProductLine = computed(() => {
+  return brandProductLines.value[selectedLine.value] || null;
+});
 
-    if(props.selectedBrand){
-      selectedBrand.value = brandConfigs[props.selectedBrand]
-      brandProductLines = ref(selectedBrand.value.brandProductLines)
-      console.log("route query", route.query?.line)
-      if(route.query?.line){
-        currentProductLine.value = brandProductLines.value[route.query.line]
-      } else { // Default if no selectedLine was passed as query
-        currentProductLine.value = selectedBrand.value.brandProductLines['Blends']
-      }
-    } else { //Default to Okto/Blends if no prop was passed as selectedBrand
-      selectedBrand.value = brandConfigs[0]
-      brandProductLines = ref(selectedBrand.value.brandProductLines)
-      currentProductLine.value = brandProductLines.value['Blends']
-    }
-    console.log("currentPRoductLIne", currentProductLine.value)
-    productLineFlavours = computed(() => currentProductLine.value.flavours)
-    currentFlavour.value = productLineFlavours.value[0]
+const productLineFlavours = computed(() => {
+  return currentProductLine.value?.flavours || [];
+});
 
+const currentFlavour = computed(() => {
+  console.log("Computing currentFlavour:");
+  // If you store flavors with a 'urlSlug' property, you might compare that.
+  // If you only store them by name, do a match by 'name' instead.
+  if (!productLineFlavours.value.length) return null;
 
-    //TODO: incorrect usage of computed - asynchronous fetch of url - this should be function with separate reactive variable
-    let computedLogo = computed( async () => {
-      switch(selectedBrand.value.brand){
-        case 'Okto':
-          const imgUrl = new URL('@/assets/pages/tabs/tab2-larger.png', import.meta.url).href;
-          return imgUrl;
-        case 'HAA':
-          // console.log("returnign HAA")
-          const imgUrl2 = new URL('@/assets/pages/tabs/tab1-larger.png', import.meta.url).href;
-          return imgUrl2;
-      }
-    })
+  // Try to find flavor matching the `honey` query
+  let found = productLineFlavours.value.find(
+    (f) => f.urlSlug === selectedHoney.value || f.name === selectedHoney.value
+  );
+  // fallback to first if none found
+  return found || productLineFlavours.value[0];
+});
 
-    async function fetchLogoUrl(){
-      // console.log("Attempting to fetch logourl", selectedBrand.value.brand)
-      let imgUrl = null
-      switch(selectedBrand.value.brand){
-        case 'Okto':
-          suggestedBrandRoute.value = 'HAA'
-          imgUrl = (await import('@/assets/pages/tabs/tab2-larger.png')).default;
-          return imgUrl;
-        case 'HAA':
-          // console.log("returnign HAA")
-          suggestedBrandRoute.value = 'Okto'
-          imgUrl = (await import('@/assets/pages/tabs/tab1-larger.png')).default;
-          return imgUrl;
-      }
-    }
-    let suggestedBrandLogoUrl = ref(null) // does not look cool bro...
-    let suggestedBrandRoute = ref(null)
+// === Setup watchers for store synchronization ===
+const productStore = useProductStore();
 
-    let computedTextLength = computed(()=>{
-      let nameLength = currentFlavour.value.name.length
-      let fontSize;
-      switch(true){
-        case (nameLength > 28):{
-          fontSize = 80
-          break;
-        }
-        case (nameLength < 12):{
-          fontSize = 130
-          break;
-        }
-        case (nameLength < 16):{
-          fontSize = 120
-          break;
-        }
-        case (nameLength < 20):{
-          fontSize = 110
-          break;
-        }
-        case (nameLength < 22):{
-          fontSize = 100
-          break;
-        }
-        case (nameLength <= 24):{
-          fontSize = 100
-          break;
-        }
-        case (nameLength < 28):{
-          fontSize =  90;
-          break;
-        }
-        default: fontSize = 100;
-      }
-      if(windowWidth.value <= 1440 && !isMobile.value){
-        fontSize -= 20
-      }
-      if(isMobile.value){
-        // console.log("DELETING 40px", fontSize)
-        fontSize -= 65
-      } else {
-        fontSize -= 20; // TEMP FIX
-      }
-      // console.log("Calculated fontsize", fontSize)
-      let lineHeight = fontSize * 1.3
-      return {fontSize, lineHeight}
-    })
-
-    const isSelected = function (brandProductLine){
-      // // console.log("HUH", toRaw(brandProductLine.name), currentProductLine.value.name, toRaw(brandProductLine.name) === currentProductLine.value.name)
-      return currentProductLine.value.name === brandProductLine.name ? 'selected' : '';
-    }
-
-    const displayStyle = function (brandProductLine) {
-      // // console.log("DUH", toRaw(brandProductLine.name), currentProductLine.value.name)
-      return { display: currentProductLine.value.name === brandProductLine.name ? 'flex' : 'none' };
-    };
-
-    watch(() => route.params, (params) => {
-      if(params && params.selectedBrand){
-        // // console.log("PARAMS === >", params.selectedBrand)
-        if(params.selectedBrand !== selectedBrand.value.brand){
-          // console.log("Not the same param")
-          switchBrand()
-        }
-      }
-    }, { immediate: true });
-
-    watch(productLineFlavours, (newFlavours) => {
-      if (newFlavours.length > 0) {
-        currentFlavour.value = newFlavours[0];
-      } else {
-        currentFlavour.value = null;
-      }
+// Whenever brand/line/flavour changes, set to store if you need it
+watch(currentFlavour, (newVal) => {
+  if (newVal) {
+    productStore.setFlavour({
+      name: newVal.name,
+      urlSlug: newVal.urlSlug,
     });
+  }
+});
+watch(currentProductLine, (newVal) => {
+  if (newVal) {
+    productStore.setProductLine({
+      name: newVal.name,
+      urlSlug: newVal.urlSlug,
+    });
+  }
+});
+watch(selectedBrandConfig, (newVal) => {
+  if (newVal) {
+    productStore.setBrand({
+      name: newVal.brand,
+      urlSlug: newVal.urlSlug,
+    });
+  }
+});
 
-    watch(selectedBrand, async (newBrand) => {
-      // // console.log("newBrand", toRaw(newBrand))
-      brandProductLines.value = newBrand.brandProductLines
-      currentProductLine.value = brandProductLines.value[route.query?.line ? route.query.line : 'Monoflorals']
-      if(newBrand){
-        productStore.setBrand({name: newBrand.brand, urlSlug: newBrand.urlSlug })
-        suggestedBrandLogoUrl.value = await fetchLogoUrl()
-      }
-    }, {immediate: true})
+function toggleCircle() {
+  circleToggled.value = !circleToggled.value;
+}
 
-    watch(currentProductLine, (newProductLine) => {
-      // // console.log("newProductLine", toRaw(newProductLine))
-      // // console.log("currentProductLine", toRaw(currentProductLine))
-      if(newProductLine){
-        productStore.setProductLine({name: newProductLine.name, urlSlug: newProductLine.urlSlug })
-      }
-    }, {immediate: true})
+function selectFlavour(flavour) {
+  selectedHoney.value = flavour.urlSlug;
+  // close circle menu in mobile
+  if (isMobile.value) circleToggled.value = false;
+}
 
-    watch(currentFlavour, (newFlavour) => {
-      console.log("newFlavour PRODUCT PAGE:", toRaw(newFlavour))
-      if(newFlavour){
-        productStore.setFlavour({name: newFlavour.name, urlSlug: newFlavour.urlSlug })
-      }
-    }, {immediate: true})
-    
-    function selectProductLine(productLine) {
-      if (productLine !== currentProductLine.value.name) {
-        // console.log("Changing productLine Value", productLine)
-        currentProductLine.value = brandProductLines.value[productLine];
-      } else 
-      return
-    }
+function selectProductLine(line) {
+  selectedLine.value = line.name;
+}
 
-    function selectFlavour(flavour) {
-      if(currentFlavour.value !== flavour){
-        currentFlavour.value = flavour;
-        if(isMobile.value){
-          circleToggled.value = !circleToggled.value
-        }
-      } else return
-    }
+if (emitter) {
+  emitter.on("meshEdges", (meshEdges) => {
+    calculateLineWidths(meshEdges);
+  });
+  onUnmounted(() => {
+    emitter.off("meshEdges");
+  });
+}
 
-    function switchBrand() {
-      // console.log("Switching Brand");
-      // Determine the next brand
-      const nextBrandKey = selectedBrand.value.brand === brandConfigs['Okto'].brand ? 'HAA' : 'Okto';
-      const nextBrand = brandConfigs[nextBrandKey];
+function calculateLineWidths(edgeCoordinates) {
+  // console.log("Got EdgeDistance", edgeCoordinates.leftEdge, edgeCoordinates.rightEdge)
+  if (productViewer.value) {
+    const circleDetraction = 45; // Account for circle width, and imprecision in calculation
+    const productViewerWidth = productViewer.value.offsetWidth;
+    const productViewerPositionalData = productViewer.value.getBoundingClientRect();
+    //Distances
+    let leftElementToCanvas =
+      productViewerPositionalData.left -
+      seriesItem.value[0].getBoundingClientRect().right;
+    let rightElementToCanvas =
+      blendItem.value[0].getBoundingClientRect().left - productViewerPositionalData.right;
+    let leftLineDistance =
+      leftElementToCanvas + edgeCoordinates.leftEdge - circleDetraction;
+    let rightLineDistance =
+      rightElementToCanvas + edgeCoordinates.rightEdge - circleDetraction;
+    // console.log("DISTANCE LEFT", leftLineDistance)
+    // console.log("DISTANCE RIGHT", rightLineDistance)
+    //Set variable value to calculated distance
+    document.documentElement.style.setProperty(
+      "--pointer-line-width",
+      `${leftLineDistance}px`
+    );
+    document.documentElement.style.setProperty(
+      "--pointer-line-right-width",
+      `${rightLineDistance}px`
+    );
+    return;
+  }
+}
 
-      // Update the selectedBrand
-      selectedBrand.value = nextBrand;
+const computedTextLength = computed(() => {
+  if (!currentFlavour.value) {
+    return { fontSize: 100, lineHeight: 130 };
+  }
+  let nameLength = currentFlavour.value.name.length;
+  let fontSize;
+  switch (true) {
+    case nameLength > 28:
+      fontSize = 80;
+      break;
+    case nameLength < 12:
+      fontSize = 130;
+      break;
+    case nameLength < 16:
+      fontSize = 120;
+      break;
+    case nameLength < 20:
+      fontSize = 110;
+      break;
+    case nameLength < 22:
+      fontSize = 100;
+      break;
+    case nameLength <= 24:
+      fontSize = 100;
+      break;
+    case nameLength < 28:
+      fontSize = 90;
+      break;
+    default:
+      fontSize = 100;
+      break;
+  }
 
-      // Set the currentProductLine to the default line or the one specified in the route query if applicable
-      if (route.query?.line && nextBrand.brandProductLines[route.query.line]) {
-        // Check if the next brand has the line specified in the query
-        currentProductLine.value = nextBrand.brandProductLines[route.query.line];
-      } else {
-        // Default to 'Blends' or another default if 'Blends' is not available
-        currentProductLine.value = nextBrand.brandProductLines['Blends'] || nextBrand.brandProductLines[Object.keys(nextBrand.brandProductLines)[0]];
-      }
-      // console.log("CPL", toRaw(currentProductLine.value))
-      window.scrollTo({
-        top: 0,
-        behavior: "smooth",
-      });
-    }
+  // Adjust for smaller screens
+  if (windowWidth.value <= 1440 && !isMobile.value) {
+    fontSize -= 20;
+  }
+  // Adjust for mobile
+  if (isMobile.value) {
+    fontSize -= 65;
+  } else {
+    // hardcoded fix
+    fontSize -= 20;
+  }
 
-    function calculateLineWidths(edgeCoordinates){
-      // console.log("Got EdgeDistance", edgeCoordinates.leftEdge, edgeCoordinates.rightEdge)
-      if (productViewer.value) {
+  let lineHeight = fontSize * 1.3;
+  return { fontSize, lineHeight };
+});
 
-        const circleDetraction = 45; // Account for circle width, and imprecision in calculation
-        const productViewerWidth = productViewer.value.offsetWidth;
-        const productViewerPositionalData = productViewer.value.getBoundingClientRect()
-        //Distances
-        let leftElementToCanvas = productViewerPositionalData.left  - seriesItem.value[0].getBoundingClientRect().right
-        let rightElementToCanvas = blendItem.value[0].getBoundingClientRect().left - productViewerPositionalData.right
-        let leftLineDistance = leftElementToCanvas + edgeCoordinates.leftEdge - circleDetraction
-        let rightLineDistance = rightElementToCanvas + edgeCoordinates.rightEdge - circleDetraction
-        // console.log("DISTANCE LEFT", leftLineDistance)
-        // console.log("DISTANCE RIGHT", rightLineDistance)
-        //Set variable value to calculated distance
-        document.documentElement.style.setProperty('--pointer-line-width', `${leftLineDistance}px`);
-        document.documentElement.style.setProperty('--pointer-line-right-width', `${rightLineDistance}px`);
-        return
-      }
-    }
+// For "Also discover..."
+const suggestedBrandLogoUrl = ref(null);
+const suggestedBrandRoute = ref(null);
 
-    let circleToggled = ref(false)
-    function toggleCircle(){
-      // console.log("TOGGLING CIRCLE")
-      circleToggled.value = !circleToggled.value
-    }
-
-
-    return {
-      toggleCircle,
-      circleToggled,
-      downloadIcon,
-      pointerCircle,
-      pointerLine,
-      arrow,
-      productViewer,
-      blendItem,
-      seriesItem,
-      selectedBrand: selectedBrand,
-      brandProductLines,
-      productLineFlavours,
-      currentFlavour,
-      currentProductLine,
-      computedLogo,
-      computedTextLength,
-      suggestedBrandLogoUrl,
-      isSelected,
-      displayStyle,
-      selectProductLine,
-      selectFlavour,
-      switchBrand,
-      toggleViews,
-      showControls,
-      isMobile,
-      chevronRight,
-      suggestedBrandRoute
-    };
-  },
-};
+onMounted(async () => {
+  isCapable.value = await checkCapabilities();
+});
 </script>
 
 <style lang="scss">
-.color-picker{
+.color-picker {
   position: absolute;
   top: 30%;
   left: 80%;
@@ -453,36 +358,37 @@ export default {
   grid-template-columns: 25% 55% 20%;
   flex-grow: 1 !important;
   width: 95% !important;
-  &.hide{
-    .floating-text{
+  &.hide {
+    .floating-text {
       opacity: 0;
     }
-    .blend-selection{
+    .blend-selection {
       opacity: 0;
     }
-    .series-selection{
+    .series-selection {
       opacity: 0;
     }
-    .target{
+    .target {
       opacity: 1;
     }
   }
-  &.show{
-    .floating-text{
+  &.show {
+    .floating-text {
       opacity: 1;
     }
-    .blend-selection{
+    .blend-selection {
       opacity: 1;
     }
-    .series-selection{
+    .series-selection {
       opacity: 1;
     }
-    .target{
+    .target {
       opacity: 0;
     }
   }
 
-  .floating-text, .mobile-series {
+  .floating-text,
+  .mobile-series {
     // opacity: 0;
     z-index: 1;
     color: rgba(0, 0, 0, 0.1);
@@ -562,7 +468,7 @@ export default {
     // padding-top: 55%;
     width: 85%;
     // opacity: 0;
-    .series-item-container{
+    .series-item-container {
       display: flex;
       flex-direction: column;
       width: 90%;
@@ -572,8 +478,7 @@ export default {
         justify-content: flex-end;
         align-items: center;
         width: 100%;
-        .series-item-text{
-            
+        .series-item-text {
         }
         .stylish-pointer {
           display: none !important;
@@ -647,7 +552,7 @@ export default {
         margin-left: 15px;
         cursor: pointer;
         transition: all ease-in-out 0.2s;
-        &:hover{
+        &:hover {
           width: 22px;
           height: 22px;
         }
@@ -672,7 +577,8 @@ export default {
       min-height: 25px;
       cursor: pointer;
       z-index: 6;
-      &:hover, &.selected {
+      &:hover,
+      &.selected {
         font-weight: 700;
       }
     }
@@ -691,14 +597,13 @@ export default {
     }
   }
 
-  
-  @media(max-width: 767px){
+  @media (max-width: 767px) {
     display: flex;
     flex-direction: column;
     width: 100% !important;
     max-width: 100%;
     background: white;
-    .floating-text{
+    .floating-text {
       display: flex;
       align-items: center;
       position: static;
@@ -711,12 +616,12 @@ export default {
       min-height: 125px;
       transition: all 0.3s ease-in-out;
     }
-    .mobile-series{
+    .mobile-series {
       position: static;
       font-size: 24px;
       width: 100%;
       align-self: center;
-      text-align: center; 
+      text-align: center;
       margin-top: 50px;
       border-top: 0.5px solid #8080803b; // margin-top: -20px;
     }
@@ -742,57 +647,57 @@ export default {
       justify-content: center;
       margin-bottom: 30px;
       overflow: hidden !important;
-      .stylish-pointer-to-left{
+      .stylish-pointer-to-left {
         display: none !important;
       }
-      .pushdown{
+      .pushdown {
         display: none;
       }
-      img{
+      img {
         width: 40px;
         height: 40px;
         align-self: flex-end;
         margin-right: 20px;
         margin-bottom: 20px;
       }
-      .blend{
+      .blend {
         width: 95%;
         justify-content: center;
         margin-bottom: 40px;
         min-height: 40px;
-        .blend-text{
+        .blend-text {
           color: white;
           text-align: center;
           transition: font-size 0.3s ease;
           font-size: 16px;
         }
-        &.selected{
-          .blend-text{
+        &.selected {
+          .blend-text {
             position: relative;
             font-size: 22px;
             &::before,
             &::after {
-                content: '';
-                position: absolute;
-                top: 50%;
-                width: 20px;
-                height: 2px;
-                background-color: #fff;
+              content: "";
+              position: absolute;
+              top: 50%;
+              width: 20px;
+              height: 2px;
+              background-color: #fff;
             }
 
             &::before {
-                left: -30px; /* Adjust this value to position the line */
-                transform: translateY(-50%);
+              left: -30px; /* Adjust this value to position the line */
+              transform: translateY(-50%);
             }
 
             &::after {
-                right: -30px; /* Adjust this value to position the line */
-                transform: translateY(-50%);
+              right: -30px; /* Adjust this value to position the line */
+              transform: translateY(-50%);
             }
           }
         }
 
-        &.product-line{
+        &.product-line {
           margin-top: 35px;
           border-top: 1px solid white;
           width: 80%;
@@ -800,12 +705,11 @@ export default {
           padding-top: 30px;
           margin-top: 0px;
           margin-bottom: 0;
-          .blend-text{
+          .blend-text {
             font-size: 22px;
           }
         }
       }
-      
     }
     .series-selection {
       order: 4;
@@ -813,31 +717,31 @@ export default {
       width: 100% !important;
       align-items: center;
       margin-bottom: 30px;
-      .stylish-pointer{
+      .stylish-pointer {
         display: none !important;
       }
-      .selected-description{
+      .selected-description {
         order: 1;
         align-items: center;
-        .description-subheading{
+        .description-subheading {
           text-align: center;
         }
-        .description-text{
+        .description-text {
           text-align: center;
           width: 90%;
         }
       }
-      .technical-sheet{
+      .technical-sheet {
         order: 2;
       }
     }
-    .suggested-brand-section{
+    .suggested-brand-section {
       order: 4;
     }
   }
 }
 
-.series-selection-mobile{
+.series-selection-mobile {
   display: flex;
   flex-direction: column;
   width: 95%;
@@ -860,21 +764,21 @@ export default {
     &.clicked {
       // border-color: white;
       background-color: black;
-      .plus{
+      .plus {
         background-color: white;
-        &:before{
+        &:before {
           background-color: white;
         }
       }
     }
-    
+
     .plus {
       position: absolute;
       width: 25px;
       height: 1px;
       background-color: #000;
-      &:before{
-        content: '';
+      &:before {
+        content: "";
         position: absolute;
         top: 50%;
         left: 50%;
@@ -887,9 +791,9 @@ export default {
     }
   }
 }
-.suggested-brand-section{
+.suggested-brand-section {
   margin-top: 50px;
-  .flavor-text{
+  .flavor-text {
     font-family: "Didact Gothic";
     font-size: 14px;
     font-weight: 400;
@@ -898,24 +802,24 @@ export default {
     text-align: center;
     color: #525151;
   }
-  .suggested-brands{
+  .suggested-brands {
     display: flex;
     flex-direction: column;
     align-items: center;
     justify-content: flex-start;
-    .brand{
+    .brand {
       display: flex;
       align-items: center;
       justify-content: center;
       width: 100%;
       height: 100%;
       position: relative;
-      .logo{
+      .logo {
         width: 50%;
         justify-self: center;
         opacity: 0.3;
       }
-      .chevron{
+      .chevron {
         position: absolute;
         right: 2%;
         width: 30px;
@@ -959,23 +863,24 @@ export default {
 //     animation: fadeInMaskLeft 3s forwards;
 //     /* Additional styling for pointer-line and pointer-circle if needed */
 // }
-.stylish-pointer, .stylish-pointer-to-left {
-    position: relative;
-    overflow: hidden;
-    display: flex;
+.stylish-pointer,
+.stylish-pointer-to-left {
+  position: relative;
+  overflow: hidden;
+  display: flex;
 }
 
-.stylish-pointer::before{
-    content: "";
-    position: absolute;
-    top: 0;
-    bottom: 0;
-    left: 0;
-    right: 0;
-    background: linear-gradient(to right, white 0%, white 100%);
-    animation: fadeEffectLeftToRight 0.5s forwards; // delay for switch animation to play out
+.stylish-pointer::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  background: linear-gradient(to right, white 0%, white 100%);
+  animation: fadeEffectLeftToRight 0.5s forwards; // delay for switch animation to play out
 }
-.stylish-pointer-to-left::before{
+.stylish-pointer-to-left::before {
   content: "";
   position: absolute;
   top: 0;
@@ -986,20 +891,20 @@ export default {
   animation: fadeEffectRightToLeft 0.5s forwards; // delay for switch animation to play out
 }
 @keyframes fadeEffectLeftToRight {
-    0% {
-        left: -100%;
-    }
-    100% {
-        left: 100%;
-    }
+  0% {
+    left: -100%;
+  }
+  100% {
+    left: 100%;
+  }
 }
 @keyframes fadeEffectRightToLeft {
-    0% {
-        right: -100%;
-    }
-    100% {
-        right: 100%;
-    }
+  0% {
+    right: -100%;
+  }
+  100% {
+    right: 100%;
+  }
 }
 .brand-selection {
   height: 30%;
