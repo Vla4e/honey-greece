@@ -17,36 +17,38 @@
       </div>
     </div>
     <template v-for="( brand, idx )  of brands">
-      <div 
-        class="brand"
-        v-if="computeVisibility(brand.name)"
-        :key="idx"
-      >
-        <div v-if="!isMobile" class="brand-info-container">
-          <span class="heading">
-            {{ brand.fullName }}
-          </span>
-          <span class="subheading">
-            {{ brand.name === 'haa' ? 'Ultra ' : '' }}Premium Greek Honey
-          </span>
-          <span class="description">
-            {{ brand.brandDescription }}
-          </span>
-          <router-link :to="`/product/${brand.name === 'haa' ? 'HAA' : 'Okto'}`" class="explore-link">
+      <KeepAlive>
+        <div 
+          class="brand"
+          v-if="computeVisibility(brand.name)"
+          :key="idx"
+        >
+          <div v-if="!isMobile" class="brand-info-container">
+            <span class="heading">
+              {{ brand.fullName }}
+            </span>
+            <span class="subheading">
+              {{ brand.name === 'haa' ? 'Ultra ' : '' }}Premium Greek Honey
+            </span>
+            <span class="description">
+              {{ brand.brandDescription }}
+            </span>
+            <router-link :to="`/product/${brand.name === 'haa' ? 'HAA' : 'Okto'}`" class="explore-link">
+              <span>Explore complete range</span>
+              <img :src="rightArrow" class="arrow"/>
+            </router-link>
+          </div>
+          <Carousel
+            class="carousel"
+            :brand="brand"
+            :brandsData="matchedData"
+          />
+          <router-link v-if="isMobile" :to="`/product/${brand.name === 'haa' ? 'HAA' : 'Okto'}`" class="explore-link">
             <span>Explore complete range</span>
             <img :src="rightArrow" class="arrow"/>
           </router-link>
         </div>
-        <Carousel
-          class="carousel"
-          :brand="brand"
-          :brandsData="matchedData"
-        />
-        <router-link v-if="isMobile" :to="`/product/${brand.name === 'haa' ? 'HAA' : 'Okto'}`" class="explore-link">
-          <span>Explore complete range</span>
-          <img :src="rightArrow" class="arrow"/>
-        </router-link>
-      </div>
+      </KeepAlive>
     </template>
   </div>
 </template>
@@ -69,16 +71,20 @@ let imagePaths = Object.keys(imageModules).map((path) => {
   return path
 })
 let categorizedImageUrls;
-let matchedData = {};
+let matchedData = {
+  "haa" : [],
+  "okto": []
+};
 
 async function fillCategorizedImageUrls(){
   //Fill categorizedImageUrls with paths to images
   let imageUrls = {}
   let allImageUrls = {}
   let infoObject = {}
+  console.log("Matched Data:", matchedData)
   Object.values(imageModules).forEach((path, idx) => {
     let splitPath = imagePaths[idx].split('/');
-    // // console.log("Splitpath", splitPath)
+    console.log("Splitpath", splitPath)
     let brand = splitPath[5];
     let line = splitPath[6];
     let size = splitPath[7];
@@ -100,23 +106,28 @@ async function fillCategorizedImageUrls(){
     //   path,
     //   flavour: flavour.split('.')[0]
     // });
-
+    console.log("Size:", size)
     let flavourData = findFlavourData(brand, line, flavour);
     if (flavourData) {
       if(size === '300g'){
-        if(matchedData[brand]){
+        console.log("!size matched", brand)
+        if(matchedData[brand] && brand !== 'okto'){
+          console.log("brand is HAA")
           matchedData[brand].push({
             path: path.default,
             flavourData: flavourData,
             line: line
           });
-        } else {
-          matchedData[brand] = []
+        }
+      } else if (size === '450g'){
+        console.log("!size 450 matched", brand)
+        if(matchedData[brand] && brand === 'okto'){
+          console.log("brand is Okto")
           matchedData[brand].push({
             path: path.default,
             flavourData: flavourData,
             line: line
-          })
+          });
         }
       }
     }
@@ -152,13 +163,13 @@ function findFlavourData(brandSlug, lineSlug, flavourSlug) {
     brandConfig = oktoConfig
   }
   if (!brandConfig) return null;
-  console.log("BRANDCONFIG:", brandConfig.brand)
-  console.log("lineSLug:", lineSlug)
+  // console.log("BRANDCONFIG:", brandConfig.brand)
+  // console.log("lineSLug:", lineSlug)
 
   if((lineSlug === 'monoflorals' && brandConfig.brand === 'HAA') || (lineSlug === 'multiflorals' && brandConfig.brand === 'Okto')) return;
 
   let lineConfig = brandConfig.brandProductLines[lineSlug.charAt(0).toUpperCase() + lineSlug.slice(1)];
-  console.log("LINE CONFIG CALLED:", lineConfig.name)
+  // console.log("LINE CONFIG CALLED:", lineConfig.name)
   let lineName = lineConfig.name
   if (!lineConfig) return null;
 
@@ -174,11 +185,6 @@ function findFlavourData(brandSlug, lineSlug, flavourSlug) {
 
 const { isMobile } = inject('screenSize')
 let currentlySelectedBrand = ref('haa')
-let computedVisibility = computed(() => {
-  if(isMobile.value){
-    return (brandName) => currentlySelectedBrand.value === brandName; // return function to pass brand.name argument into
-  } else return () => true
-})
 function computeVisibility(brandName) {
   // console.log("COMPUTING VISIBILITY", brandName, toRaw(currentlySelectedBrand.value), toRaw(isMobile.value))
   if(isMobile.value){
@@ -228,6 +234,7 @@ onMounted(async () => {
   display: flex;
   flex-direction: column;
   justify-content: space-around;
+  max-height: 90%;
   .mobile-selection{
     box-shadow: 1px 1px 10px 1px #0000001A;
     min-height: 200px;

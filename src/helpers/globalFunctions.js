@@ -27,7 +27,7 @@ export function parabolicPathCoordinate(pathCoord, startCoord, endCoord){
     distance = Math.abs(endCoord - startCoord)
   } else distance = Math.abs(startCoord - endCoord)
   // let distance = Math.abs(Math.abs(startCoord) - Math.abs(endCoord))
-  console.log("MIDDLE COORD", distance, pathCoord)
+  // console.log("MIDDLE COORD", distance, pathCoord)
   let middleCoord = distance * 2
   if(pathCoord <= middleCoord){
     pathCoord += 0.001

@@ -127,6 +127,7 @@ export default {
 <style lang="scss" scoped>
 .app-container{
   // overflow: hidden;
+  display: flex;
   min-height: 100vh;
   @media(min-width: 1024px){
     height: 100vh;
@@ -135,6 +136,8 @@ export default {
     
     &-Tabs{
       height: 100vh;
+    }
+    &-AllProducts{
     }
   }
   width: 100%;

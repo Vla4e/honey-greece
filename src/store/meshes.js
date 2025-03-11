@@ -6,37 +6,37 @@ import {
   Vector3
 } from 'three';
 
-console.log("subcategory")
 export const useMeshStore = defineStore('mesh', () => {
   let boundingBoxes = ref({});
 
   watch(() => boundingBoxes.value, (newVal) => {
-    console.log("Recieved new BBOXVAL", newVal)
+    // console.log("Received new boundingbox value:", newVal)
   }, {deep: true})
 
-  async function storeBoundingBox(mesh){
-    console.log("MESH BOUNDING BOX", mesh.name)
+  async function storeBoundingBox(mesh, size){
+    console.log("storeBoundingBox mesh name:", mesh)
     const boundingBox = new Box3();
 
-    // Reference box (the 300g jar)
+    // Reference box (300g jar)
     boundingBox.setFromObject(mesh);
     const refMin = boundingBox.min.clone();
     const refMax = boundingBox.max.clone();
     const refSize = new Vector3().subVectors(refMax, refMin);
     
-    // Store these for uniform use
+    // Store these for use in shader uniforms
     const referenceBounds = {
       min: refMin,
       size: refSize
     };
-    let size = mesh.name.split("_")[2]
+    console.log("MeshName:", mesh.name)
+    console.log("BoundingBox:", boundingBox)
     boundingBoxes.value[size] = {
       referenceBounds,
       boundingBox,
       name: mesh.name,
       size: size //s
     }
-    console.log("BBOXES", boundingBoxes.value)
+    console.log("Final boundingboxes in store:", boundingBoxes.value)
   }
 
   return {

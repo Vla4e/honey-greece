@@ -24,7 +24,7 @@
         >
           <slot :name="index">
             <img :src="obj.path" class="jar-image" loading="lazy" :draggable="false"/>
-            <span class="name"> {{obj.flavourData.flavour.name}} </span>
+            <span class="name"> {{ obj.flavourData.flavour.name }} </span>
             <span class="product-line"> {{obj.flavourData.lineName}} </span>
           </slot>
         </div>
@@ -35,15 +35,14 @@
   </div>
 </template>
 
-<script>
-export default {
-  name: "Carousel"
-}
-</script>
 
 <script setup>
 import { ref, onMounted, onBeforeMount, onBeforeUnmount, watchEffect, inject, computed, toRaw } from 'vue';
 import router from '@/router/index.js'
+
+defineOptions({
+  name: "Carousel"
+})
 
 const props = defineProps({
   brand: {
@@ -148,6 +147,7 @@ function updateTranslateBounds() {
 onMounted(() => {
   calculateItemWidth();
   window.addEventListener('resize', calculateItemWidth);
+  console.log("Brands data:", props.brandsData)
 });
 
 onBeforeUnmount(() => {
@@ -287,17 +287,19 @@ function preventDefaultSelection(event) {
   flex-direction: column;
   align-items: center;
   justify-content: flex-start;
-  height: 100%;
+  height: 85%;
   .jar-image {
-    width: 100%;
+    height: 80%;
     /* Disable drag behavior on the image */
     // pointer-events: none;
+    object-fit: contain;
     cursor: pointer;
     @media(min-width: 1440px){
-      width: 80%;
+      // width: 80%;
     }
     @media(max-width: 450px){
-      min-height: 200px;
+      // min-height: 200px;
+      max-width: 100%;
     }
   }
   .name{
@@ -334,7 +336,7 @@ function preventDefaultSelection(event) {
   top: 0;
   height: 100%;
   width: 10%; /* Adjust for the fade effect size */
-  background: linear-gradient(to right, rgba(255, 255, 255, 0), rgba(255, 255, 255, 1));
+  background: linear-gradient(to right, rgba(255, 255, 255, 0) 60%, rgba(255, 255, 255, 1) 100%);
   pointer-events: none;
 }
 .fade-overflow-left{

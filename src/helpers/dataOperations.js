@@ -7,14 +7,10 @@ let brandConfigs = {
 
 export async function isHoneyAllowed(brand, productLine, honeyType){
   try{
-    console.log("IHA?", brand, productLine, honeyType)
-    console.log("brandconfig:", brandConfigs)
-    let boolCheck = brandConfigs[brand.toLowerCase()].lineFlavorsArrays[productLine].find((item)=> {
-      console.log("item:", item, honeyType)
+    let boolCheck = brandConfigs[brand.toLowerCase()].lineFlavorsArrays[productLine].find((item, idx)=> {
       return item === honeyType
     })
     // let boolCheck = false
-    console.log("BoolCHECK", boolCheck)
     if(boolCheck){
       return true
     } else return false

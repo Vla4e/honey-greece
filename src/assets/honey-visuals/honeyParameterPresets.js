@@ -7,7 +7,9 @@ const honeyPresets = {
     viscosity: 0.85,
     viscosityWaviness: 20.00,
     colorCode: "#d2800f",
-    jarGridPosition: {"x": -0.057753862875979396, "y": -0.0805144177377224, "z": -0.00008241005707532167}
+    jarGridPosition: {"x": -0.057753862875979396, "y": -0.0805144177377224, "z": -0.00008241005707532167},
+    hardCodedMediumJarRatio: 0.9 
+    // Was manually testing the values inside playfulMaterial2's vertex shader, and 0.9 seemed to replicate the same visual as chosen by client
   },
   
   'chestnut': {
@@ -17,7 +19,7 @@ const honeyPresets = {
     viscosity: 1.71,
     viscosityWaviness: 32.00,
     colorCode: "#fbac23",
-    jarGridPosition: {"x": 0.17224613712402062, "y": 0.1494855822622776, "z": -0.00008241005707532167}
+    jarGridPosition: {"x": 0.17224613712402062, "y": 0.1494855822622776, "z": -0.00008241005707532167},
   },
   
   'cotton': {
@@ -27,7 +29,7 @@ const honeyPresets = {
     viscosity: 1.71,
     viscosityWaviness: 30.00,
     colorCode: "#fbac23",
-    jarGridPosition: {"x": 0.17224613712402062, "y": 0.1494855822622776, "z": -0.00008241005707532167}
+    jarGridPosition: {"x": 0.17224613712402062, "y": 0.1494855822622776, "z": -0.00008241005707532167},
   },
   
   'fir': {
@@ -37,7 +39,7 @@ const honeyPresets = {
     viscosity: 0.85,
     viscosityWaviness: 20.00,
     colorCode: "#a57531",
-    jarGridPosition: {"x": 0.05724613712402061, "y": 0.2644855822622776, "z": -0.00008241005707532167}
+    jarGridPosition: {"x": 0.05724613712402061, "y": 0.2644855822622776, "z": -0.00008241005707532167},
   },
   
   'forest': {

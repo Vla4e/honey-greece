@@ -128,7 +128,7 @@ const router = createRouter({
 })
 
 async function processRouteTransition(to, next) {
-  console.log("process route transition", to.name, to.params, to.query);
+  console.log("Processing Route transition", to.name, to.params, to.query);
 
   if (!to.matched.length) {
     return next({ name: 'Home' });
@@ -137,7 +137,6 @@ async function processRouteTransition(to, next) {
   
   if (to.name === 'Product') {
     let selectedBrand = to.params.selectedBrand
-    console.log("Product/selectedBrand", selectedBrand)
     if (selectedBrand && !allowedSelectedBrands.includes(selectedBrand)) {
       return next({
         name: 'Product',
@@ -147,13 +146,11 @@ async function processRouteTransition(to, next) {
     }
 
     if (!to.query.line) {
-      console.log("Product/defaultLine", allowedLines[selectedBrand][0])
       to.query.line = allowedLines[selectedBrand][0];
     }
 
     // 2. Validate the "line" query
     if (allowedLines[selectedBrand].includes(to.query.line)) {
-      console.log("Product/allowedLine/honey", to.query.honey)
       if (to.query.honey) {
         // Check if honey is valid for the selectedBrand + line
         const validHoney = await isHoneyAllowed(selectedBrand, to.query.line, to.query.honey);
@@ -162,7 +159,6 @@ async function processRouteTransition(to, next) {
         } else {
           // If honey not valid, redirect to default line + default honey
           let defaultHoney = brandConfigs[selectedBrand].lineFlavorsArrays[to.query.line][0]
-          console.log("DEFAULT HONEY", defaultHoney)
           return next({
             name: to.name,
             params: to.params,
@@ -176,8 +172,6 @@ async function processRouteTransition(to, next) {
       } else {
         // If honey not valid, redirect to default line + default honey
         let defaultHoney = brandConfigs[selectedBrand].lineFlavorsArrays[to.query.line][0]
-        console.log("DEFAULT HONEY DEFAULT", defaultHoney)
-        console.log("product/defaultHoney", defaultHoney)
         return next({
           name: to.name,
           params: to.params,

@@ -36,12 +36,7 @@
   </div>
 </template>
 
-<script>
-export default {
-  name: "Tab0",
-  phases: 2, // 0 indexed
-};
-</script>
+
 <script setup>
 import { ref, onMounted, inject, watch } from "vue";
 import router from "@/router/index.js";
@@ -50,6 +45,10 @@ import { getNetworkSpeed } from "@/helpers/checkNetworkSpeed.js";
 import gridImage1 from "@/assets/pages/history/tab-0-card-1.png";
 import gridImage2 from "@/assets/pages/history/tab-0-card-2.png";
 import gridImage3 from "@/assets/pages/history/tab-0-card-3.png";
+
+defineOptions({
+  name: "Tab0"
+})
 
 const maxPhases = 2; //3 counted from 0
 const { isMobile } = inject("screenSize");

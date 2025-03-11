@@ -7,7 +7,7 @@
 <script setup>
 import { ref, onMounted, onUnmounted } from 'vue';
 
-let showModal = ref(true)
+let showModal = ref(false)
 function toggleModal(){
   console.log("TogglingModal", showModal.value)
   showModal.value = !showModal.value

@@ -38,6 +38,7 @@ export async function loadGlb(loader, url) {
 }
 
 export async function loadGlbReturnParts(loader, url){
+  console.log("Loading GLB, returning parts.")
   let loaderPromise = await loader.loadAsync(url)
   if(loaderPromise){
     loaderPromise.scene.name = url
@@ -56,6 +57,7 @@ export async function loadGlbReturnParts(loader, url){
     // let jar450 = new Object3D;
     scene.traverse((obj)=>{
       if(obj.isMesh){
+        console.log("Obj.name:", obj.name)
         if(obj.name.includes('300')){
           sizeDuringTraversal = '300g'
           // jar300.add(obj)
@@ -79,11 +81,12 @@ export async function loadGlbReturnParts(loader, url){
           obj.size = sizeDuringTraversal
           obj.type = 'glass'
         } else if (obj.name.includes('honey')){
-          obj.trackingName = `label_${sizeDuringTraversal}`
+          obj.trackingName = `honey_${sizeDuringTraversal}`
           obj.size = sizeDuringTraversal
-          obj.type= 'label'
+          obj.type= 'honey'
+          console.log("SIZE:", obj.size)
           honeyMeshes[sizeDuringTraversal] = obj
-          meshStore.storeBoundingBox(obj)
+          meshStore.storeBoundingBox(obj, obj.size)
         } else {
 
           meshes.push(obj)
@@ -101,7 +104,7 @@ export async function loadGlbReturnParts(loader, url){
       }
       return mesh.name
     })
-    console.log("SIZES", jarSizes)
+    // console.log("SIZES", jarSizes)
     // // console.log('meshNames', meshNames)
 
     return { 
@@ -120,7 +123,7 @@ export async function loadGlbReturnParts(loader, url){
 }
 
 export async function loadTexture(url) {
-  console.log("ATTEMPTING TO LOAD TEXT")
+  console.log("loading texture from url:", url)
     return textureLoader.loadAsync(url);
 }
 

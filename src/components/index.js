@@ -12,6 +12,7 @@ import OktoText from './OktoText.vue'
 import LoadingIndicator from './LoadingIndicator.vue'
 import LoadingScreen from './LoadingScreen.vue'
 import ModalCustom from './ModalCustom.vue'
+import ProductImage from './ProductPage/ProductImage.vue'
 
 import PositionSliders from './PositionSliders.vue'
 export default [
@@ -29,5 +30,6 @@ export default [
     OktoText,
     LoadingIndicator,
     LoadingScreen,
-    ModalCustom
+    ModalCustom,
+    ProductImage
 ]

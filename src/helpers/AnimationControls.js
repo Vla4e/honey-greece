@@ -7,8 +7,6 @@ export function initializeMixer(scene) {
 }
 
 export async function setupAnimations(mixer, animations) {
-    console.log("SETTING UP ANIMATIONS ===========================================================================", mixer)
-    console.log("SETTING UP ANIMATIONS ===========================================================================", animations)
     const clipActions = [];
     const animationState = new Map();
 

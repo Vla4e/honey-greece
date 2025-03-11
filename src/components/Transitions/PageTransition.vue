@@ -72,7 +72,6 @@ export default {
     }
 
     watch(route, (newVal) => {
-      console.log("ROUTE CHANGE TRIGGERED", route.path)
       lastRoutePath.value = newVal.path
       if (transitionIterator) {
         let interval = setInterval(() => { //Check whether firstSlide animation is finished.
@@ -89,8 +88,6 @@ export default {
 
     //ROUTER TRANSITION
     watch(playAnimationOnEnter, (newVal) => {
-      console.log("PAOE ACTIVATED", newVal)
-      console.log("RP, LRP", route.path, lastRoutePath.value, route.path === lastRoutePath.value)
       if (newVal) {
         // if(route.path === lastRoutePath.value) return
         firstSlideTransitionStatus.value = false;

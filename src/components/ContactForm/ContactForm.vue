@@ -61,15 +61,12 @@
   </div>
 </template>
 
-<script>
-  export default {
-    name: "ContactForm"
-  }
-</script>
 
 <script setup>
 import { reactive, ref, inject, onMounted, nextTick } from 'vue';
-
+defineOptions({
+  name: 'ContactForm'
+})
 const emitter = inject('emitter')
 const { isMobile } = inject('screenSize')
 

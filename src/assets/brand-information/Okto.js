@@ -14,7 +14,7 @@ const oktoConfig = {
       "thyme_honey",
       "cotton_honey",
       "fir_honey",
-      "pinewood_honey",
+      "pine_honey",
       "chestnut_honey"
     ],
     'Multiflorals': []
@@ -85,8 +85,8 @@ const oktoConfig = {
           description: "Fir tree honey from the Agrafa region offers a gentle sweetness and a unique aroma that evokes the mountain peaks where it's produced. Its deep amber color and smooth texture add to its appeal. This honey never crystallizes, making it one of the finest and most flavorful Greek honeys."
         },
         {
-          urlSlug: "pinewood_honey",
-          name: "Pinewood Honey",
+          urlSlug: "pine_honey",
+          name: "Pine Honey",
           tagline: "Collected in Greece",
           description: "Selected on Thassos island, with a deep, earthy profile, a hint of resin and a touch of caramelized sweetness. Its complex aroma carries subtle notes of pine forests and wild herbs."
         },

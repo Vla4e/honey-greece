@@ -32,7 +32,6 @@ const props = defineProps({
 watch(
   () => props.fontSize,
   (newVal) => {
-    console.log("Received a propPPPPPPPPPPPPPPPPP:", newVal);
     let fontSize;
     if (isMobile) fontSize = props.fontSizeMobile;
     else fontSize = props.fontSize;
@@ -42,23 +41,6 @@ watch(
     immediate: true,
   }
 );
-const baseOktFontSize = 36;
-const baseOmegaFontSize = 44;
-const ratio = baseOmegaFontSize / baseOktFontSize; // 1.22(2)
-let fontSizeOkt = computed(() => {
-  if (isMobile.value) return props.fontSizeMobile;
-  else return props.fontSize;
-});
-let fontSizeOmega = computed(() => {
-  if (isMobile.value) return props.fontSizeMobile * ratio;
-  else return props.fontSize * ratio;
-});
-onMounted(() => {
-  console.log("OKTOTEXT", props.fontSize);
-});
-onBeforeMount(() => {
-  console.log("OKTOTEXT1", props.fontSize);
-});
 </script>
 
 <style lang="scss" scoped>

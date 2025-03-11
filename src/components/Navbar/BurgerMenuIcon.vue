@@ -5,17 +5,18 @@
         <div class="bar"></div>
     </div>
 </template>
-<script>
-export default {
-  name: 'BurgerMenuIcon'
-}
-</script>
+
+
 <script setup>
 import { ref, inject, onMounted, onUnmounted } from 'vue';
+defineOptions({
+  name: 'BurgerMenuIcon'
+})
+
 let emitter = inject('emitter')
 let menuOpened = ref(false)
 function toggleMenu() {
-  console.log("TOGGLING")
+  // console.log("TOGGLING")
   menuOpened.value = !menuOpened.value
 }
 onMounted(()=>{

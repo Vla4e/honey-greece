@@ -5,13 +5,15 @@
         v-if="videoReady"
         class="background-video"
         :class="isMobile ? 'mobile' : ''"
+        poster="@/assets/pages/home/bg-new.png"
+        preload="metadata"
         autoplay
         muted
         loop
         playsinline
         disableremoteplayback
       >
-        <source :src="videoSource" type="video/webm" />
+        <source :src="videoSource" type="video/mp4" />
       </video>
       <p v-else>Loading video...</p>
     </div>
@@ -22,7 +24,7 @@
 
     <div class="texts-container">
       <div class="home-text-container">
-        <span class="home-text">Essence of <br />Nature</span>
+        <span class="home-text">Honey <br/>Essence of <br />Nature</span>
         <router-link
           class="route-button small-button"
           style="color: #131313"
@@ -62,10 +64,17 @@ export default {
     async function determineBackgroundMedia(networkSpeed){
       globalStore.showLoadingScreen = true;
       globalStore.loadingProgress = 0;
-      if(networkSpeed > 10){
-        videoSource.value = (
-          await import("@/assets/pages/home/mobile_3mbps.mp4")
-        ).default;
+      if(networkSpeed >= 10){
+        if(isMobile.value){
+          videoSource.value = (
+            await import("@/assets/pages/home/mobile_3mbps.mp4")
+          ).default;
+        } else {
+          
+          videoSource.value = (
+            await import("@/assets/pages/home/desktop_2mbps.mp4")
+          ).default;
+        }
         goodNetwork.value = true
         videoReady.value = true;
       } else {
@@ -131,6 +140,7 @@ export default {
       isMobile,
       videoSource,
       videoReady,
+      goodNetwork
     };
   },
 };

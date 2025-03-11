@@ -88,15 +88,14 @@ export default {
     }, { immediate: true });
     
     function goToPage(brand, linkTo){
-      console.log("going to linktree:", brand, linkTo)
       if(brand === 'All Products' || linkTo === '/all-products'){
         router.push({ name: 'AllProducts'}).catch(err => {
-          console.log("error while routing", err)
+          console.error("error while routing", err)
         });
       } else {
         currentBrandPage.value = true
         router.push({ name: 'Product', params: { selectedBrand: brand}}).catch(err => {
-          console.log("error while routing", err)
+          console.error("error while routing", err)
         });
       }
     }
@@ -111,8 +110,6 @@ export default {
     
     let computedColor = ref(null)
     watch(() => props.rightHalfOppositeColor, (newVal) => {
-      console.log("oppcolor", newVal)
-      console.log("props brand", props.brand.name, props.brand.name == 'All products')
       if(props.brand.name === 'Melculum' || props.brand.linkTo == '/all-products'){
         if(newVal){
           computedColor.value = 'black'

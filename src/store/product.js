@@ -20,18 +20,19 @@ export const useProductStore = defineStore('productStore', {
   }),
   getters: {
     getProductLineSlug: (state) => {
-      // console.log("productLine getter", state.currentProductLine.urlSlug)
+      // console.log("Getting productLine.slug", state.currentProductLine.urlSlug)
       return state.currentProductLine.urlSlug
     },
     getFlavourSlug: (state) => {
-      console.log("flavour getter", state.currentFlavour.urlSlug)
+      // console.log("Getting currentFlavour.slug", state.currentFlavour.urlSlug)
       return state.currentFlavour.urlSlug
     },
     getBrandSlug: (state) => {
-      // console.log("brand getter", state.selectedBrand.urlSlug)
+      // console.log("Getting selectedBrand.urlSlug", state.selectedBrand.urlSlug)
       return state.selectedBrand.urlSlug
     },
     getBrandObject: (state) => {
+      // console.log("Getting selectedBrand", state.selectedBrand)
       return state.selectedBrand
     }
   },

@@ -78,12 +78,7 @@
   </div>
 </template>
 
-<script>
-export default {
-  name: 'Tab1',
-  phases: 3, // 0 indexed
-}
-</script>
+
 <script setup>
 import { ref, watch, onMounted, nextTick, toRaw } from 'vue';
 import { useWindowSize } from "@vueuse/core";
@@ -93,6 +88,11 @@ import beekeeperImage from '@/assets/pages/history/beekeeper-new.jpg'
 import okto from '@/assets/pages/history/okto.png'
 import haa from '@/assets/pages/history/haa.png'
 import melculum from '@/assets/pages/history/melculum.png'
+
+defineOptions({
+  name: "Tab1",
+  phases: 3
+})
 
 const {width, height} = useWindowSize()
 console.log("WIDTH AND HEIGHT", toRaw(width.value), toRaw(height.value))

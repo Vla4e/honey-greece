@@ -114,7 +114,6 @@ export default {
 
     watchEffect(() => {
       if (props.jarMedium.length > 0 && props.jarSmall.length > 0 && !initialized.value) {
-        console.log("HUH")
         initialized.value = true;
         onPropsPassed(); // Function to trigger when props are passed
       }
@@ -123,7 +122,6 @@ export default {
     function onPropsPassed(){
       initialMedium.value = []
       initialSmall.value = []
-      console.log("CALLED ON PROPS PASSED")
       props.jarMedium.forEach(mesh => {
           initialMedium.value.push({
             x: mesh.position.x,
@@ -140,12 +138,9 @@ export default {
           });
         });
 
-        console.log("Initial Medium Positions:", toRaw(initialMedium.value));
-        console.log("Initial Small Positions:", toRaw(initialSmall.value));
     }
     onMounted(() => { // Assuming 2 seconds is enough for the initial scene setup
       emitter.on('getPositions', onPropsPassed)
-      console.log("PROPS:", props.jarMedium, props.jarSmall)
     });
 
     onUnmounted(() => {

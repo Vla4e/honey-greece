@@ -10,6 +10,7 @@ let originalCameraPosition = new Vector3(0.35, 0.06, 0);
 let hasStoredOriginalPositions = false;
 
 async function moveSceneToGridPosition(scene, camera, singleJarPos, type) {
+  console.log("Moving scene to grid position")
   // 1) If this is the first time, store the original scene/camera positions (for revert later).
   if (!hasStoredOriginalPositions) {
     originalScenePosition.copy(scene.position);

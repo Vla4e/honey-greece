@@ -168,12 +168,7 @@
   </div>
 </template>
 
-<script>
-export default {
-  name: "TabMobile",
-  phases: 3, // 0 indexed
-};
-</script>
+
 <script setup>
 import { ref, watch, onMounted, nextTick, toRaw } from "vue";
 import { useWindowSize } from "@vueuse/core";
@@ -187,6 +182,11 @@ import melculum from "@/assets/pages/history/melculum.png";
 import quoteStart from "@/assets/pages/history/quote-start.png";
 import quoteEnd from "@/assets/pages/history/quote-end.png";
 import background from "@/assets/pages/history/greece-mobile.png";
+
+defineOptions({
+  name: "TabMobile",
+  phases: 3, // 0 indexed
+})
 </script>
 
 <style lang="scss" scoped>

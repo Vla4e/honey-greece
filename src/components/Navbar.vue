@@ -47,7 +47,6 @@ export default {
     let rightHalfOppositeColor = ref(false)
     onMounted(() => {
       emitter.on('rightHalfOppositeColor', () => {
-        console.log("Switched opp color.")
         rightHalfOppositeColor.value = !rightHalfOppositeColor.value
       })
     })
@@ -64,10 +63,6 @@ export default {
     let currentTextColor = ref('white');
     let previousTextColor = ref(null)
     watch(() => navbarStore.getNavbarColor, (newObj) => {
-      console.log("watcher Getter triggered")
-      console.log("ismobile", isMobile.value)
-      console.log("mobile", newObj.mobile)
-      console.log("desktop", newObj.desktop)
       if(isMobile.value){
         document.documentElement.style.setProperty('--navbar-color', newObj.mobile);
         currentTextColor.value = newObj.mobile
@@ -76,7 +71,6 @@ export default {
         if(newObj.desktop === 'white'){
           document.documentElement.style.setProperty('--navbar-text-shadow', "1px 1px 2px #00000080");
         } else {
-          console.log("setting to none")
           document.documentElement.style.setProperty('--navbar-text-shadow', "none");
         }
         currentTextColor.value = newObj.desktop

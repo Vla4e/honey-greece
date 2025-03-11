@@ -264,7 +264,7 @@ export default {
                   // console.log("CREATING COMPELXMATOPT", idx)
                   // obj.material = claudeComplexOptions(idx,  density.value, light.value, viscosity.value, hPosition.value, hIntensity.value, envMapIntensity.value, viscosityWaviness.value)
                   // obj.material = createComplexMaterialOptions(idx,  density.value, light.value, viscosity.value, hPosition.value, hIntensity.value, envMapIntensity.value, viscosityWaviness.value)
-                  obj.material = oldComplexOptions(idx, density.value, light.value, viscosity.value, hPosition.value, hIntensity.value, envMapIntensity.value, viscosityWaviness.value);
+                  obj.material = createComplexMaterialOptions(idx, density.value, light.value, viscosity.value, hPosition.value, hIntensity.value, envMapIntensity.value, viscosityWaviness.value);
                   obj.updateMatrixWorld(true);
                   let meshMatrix = obj.matrixWorld.clone();
                   let matrixElements = meshMatrix.elements;
@@ -751,7 +751,7 @@ export default {
           } else if( useMaterial.value === 'complexOptions'){
             console.log("Calling Complex OPTIONS")
             // obj.material = createComplexMaterialOptions(idx, density.value, light.value, viscosity.value, hPosition.value, hIntensity.value, envMapIntensity.value, viscosityWaviness.value);
-            obj.material = oldComplexOptions(idx, density.value, light.value, viscosity.value, hPosition.value, hIntensity.value, envMapIntensity.value, viscosityWaviness.value);
+            obj.material = createComplexMaterialOptions(idx, density.value, light.value, viscosity.value, hPosition.value, hIntensity.value, envMapIntensity.value, viscosityWaviness.value);
           } else {
             obj.material = createComplexMaterial(idx, density.value, light.value, viscosity.value);
           }
@@ -781,7 +781,7 @@ export default {
               obj.material = createMatcapMaterial(idx)
             } else if( useMaterial.value === 'complexOptions'){
               // obj.material = createComplexMaterialOptions(idx, density.value, light.value, viscosity.value, hPosition.value, hIntensity.value, envMapIntensity.value, viscosityWaviness.value);
-              obj.material = oldComplexOptions(idx, density.value, light.value, viscosity.value, hPosition.value, hIntensity.value, envMapIntensity.value, viscosityWaviness.value);
+              obj.material = createComplexMaterialOptions(idx, density.value, light.value, viscosity.value, hPosition.value, hIntensity.value, envMapIntensity.value, viscosityWaviness.value);
             } else {
               obj.material = createComplexMaterial(idx, density.value, light.value, viscosity.value);
             }

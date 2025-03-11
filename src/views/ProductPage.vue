@@ -53,14 +53,21 @@
 
     <!-- Product Viewer -->
     <div class="product-viewer" ref="productViewer">
+      <!-- <ProductSceneFinal v-if="isCapable && isStoreReady" /> -->
       <ProductSceneFinal v-if="isCapable" />
-      <ProductImage v-else />
+      <ProductImage 
+        v-else 
+        :flavour="currentFlavour" 
+        :productLine="currentProductLine" 
+        :jarSizes="selectedBrandConfig.jarSizes"
+        :brandUrlSlug="selectedBrandConfig.urlSlug"
+      />
     </div>
 
     <!-- Flavour (blend) selection -->
     <div v-if="(isMobile && circleToggled) || !isMobile" class="blend-selection">
       <img src="../assets/images/x-icon.svg" @click="toggleCircle()" v-if="isMobile" />
-
+      <div v-if="!isMobile" style="height: 30%;" class="pushdown"/>
       <span
         v-for="(flavour, idx) in productLineFlavours"
         :key="idx"
@@ -117,9 +124,9 @@
 </template>
 
 <script setup>
-import { ref, computed, watch, onMounted, onUnmounted, inject } from "vue";
+import { ref, computed, watch, onMounted, onUnmounted, inject, watchEffect } from "vue";
 import { useRoute, useRouter } from "vue-router";
-import { useWindowSize } from "@vueuse/core";
+import { tryOnUnmounted, useWindowSize } from "@vueuse/core";
 
 // Assets
 import downloadIcon from "@/assets/pages/product-page/download-icon.png";
@@ -127,12 +134,18 @@ import pointerLine from "@/assets/pages/product-page/pointer-line.svg";
 import pointerCircle from "@/assets/pages/product-page/pointer-circle.svg";
 import chevronRight from "@/assets/images/arrow.svg";
 
-// Local
+// Components
 import ProductSceneFinal from "../components/ProductSceneFinal.vue";
-import brandConfigs from "@/assets/brand-information/index.js";
-import { useProductStore } from "@/store/product.js";
 
-// Provide or inject screen size
+// Configs
+import brandConfigs from "@/assets/brand-information/index.js";
+
+//Product Store
+import { useProductStore } from "@/store/product.js";
+const productStore = useProductStore();
+let isStoreReady = ref(false)
+
+// Provide/inject
 const { width: windowWidth } = useWindowSize();
 const { isMobile } = inject("screenSize");
 
@@ -140,31 +153,36 @@ const { isMobile } = inject("screenSize");
 import { checkCapabilities } from "../helpers/WebGLCapabilities/checkCapabilities";
 let isCapable = ref(false);
 
-// Emitter from parent, if relevant
+// Emitter
 let emitter = inject("emitter");
 
-// === Refs ===
 const productViewer = ref(null);
 const circleToggled = ref(false);
 
 // === Route Setup ===
 const route = useRoute();
 const router = useRouter();
-/**
- * Assuming your route is something like:
- *  /product/:selectedBrand?line=Blends&honey=<some-flavour>
- *
- *  route.params.selectedBrand -> "Okto" or "HAA"
- *  route.query.line -> "Blends" or "Monoflorals" ...
- *  route.query.honey -> "Acacia" ...
- */
 
-// === Brand / Product Line / Flavour from route ===
-const selectedBrandParam = computed(() => route.params.selectedBrand);
-// const selectedLine = computed(() => route.query.line);
 let selectedLine = ref(route.query.line);
-// const selectedHoney = computed(() => route.query.honey);
 let selectedHoney = ref(route.query.honey);
+let selectedBrand = ref(route.params.selectedBrand)
+
+watch(() => selectedBrand.value, (value) => {
+  if(value.selectedBrand){
+    selectedBrand.value = value.selectedBrand
+  }
+}, {immediate: true})
+
+watch(() => route.params, (value) => {
+  if(value.selectedBrand){
+    selectedBrand.value = value.selectedBrand
+  }
+}, {immediate: true})
+
+watch(() => route.query, (query) => {
+  selectedLine.value = query.line;
+  selectedHoney.value = query.honey;
+}, {immediate: true})
 
 /**
  * 1) Full brand config from brand-information
@@ -173,11 +191,13 @@ let selectedHoney = ref(route.query.honey);
  * 4) currentFlavour from productLineFlavours using honey name or slug
  */
 const selectedBrandConfig = computed(() => {
-  return brandConfigs[selectedBrandParam.value];
+  if(selectedBrand.value){
+    return brandConfigs[selectedBrand.value];
+  } else return brandConfigs['Okto']
 });
 
 const brandProductLines = computed(() => {
-  return selectedBrandConfig.value?.brandProductLines || {};
+  return selectedBrandConfig.value.brandProductLines || {};
 });
 
 const currentProductLine = computed(() => {
@@ -188,8 +208,8 @@ const productLineFlavours = computed(() => {
   return currentProductLine.value?.flavours || [];
 });
 
+
 const currentFlavour = computed(() => {
-  console.log("Computing currentFlavour:");
   // If you store flavors with a 'urlSlug' property, you might compare that.
   // If you only store them by name, do a match by 'name' instead.
   if (!productLineFlavours.value.length) return null;
@@ -202,18 +222,16 @@ const currentFlavour = computed(() => {
   return found || productLineFlavours.value[0];
 });
 
-// === Setup watchers for store synchronization ===
-const productStore = useProductStore();
-
 // Whenever brand/line/flavour changes, set to store if you need it
-watch(currentFlavour, (newVal) => {
+watch(() => currentFlavour.value, (newVal) => {
   if (newVal) {
     productStore.setFlavour({
       name: newVal.name,
       urlSlug: newVal.urlSlug,
     });
+    isStoreReady.value = tryOnUnmounted
   }
-});
+}, { immediate: true });
 watch(currentProductLine, (newVal) => {
   if (newVal) {
     productStore.setProductLine({
@@ -221,7 +239,7 @@ watch(currentProductLine, (newVal) => {
       urlSlug: newVal.urlSlug,
     });
   }
-});
+}, { immediate: true });
 watch(selectedBrandConfig, (newVal) => {
   if (newVal) {
     productStore.setBrand({
@@ -229,7 +247,7 @@ watch(selectedBrandConfig, (newVal) => {
       urlSlug: newVal.urlSlug,
     });
   }
-});
+}, { immediate: true });
 
 function toggleCircle() {
   circleToggled.value = !circleToggled.value;

@@ -44,12 +44,7 @@
   </div>
 </template>
 
-<script>
-export default {
-  name: 'Tab2',
-  phases: 2, // 0 indexed
-}
-</script>
+
 <script setup>
 import {ref, computed, inject } from 'vue';
 import router from '@/router/index.js'
@@ -58,6 +53,10 @@ import quoteStart from '@/assets/pages/history/quote-start.png'
 import quoteEnd from '@/assets/pages/history/quote-end.png'
 import background from '@/assets/pages/history/16-9.jpg';
 
+defineOptions({
+  name: 'Tab2',
+  phases: 2,// 0 indexed
+})
 
 let props = defineProps({
   currentPhase: Number
