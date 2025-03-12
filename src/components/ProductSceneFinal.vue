@@ -327,7 +327,7 @@ export default {
 
     let currentJarScene = null;
     let upcomingJarScene = null;
-    let currentJarSize = ref(jarConfigs["300g"].name);
+    let currentJarSize = ref('300g');
     let previousJarSize = ref(null);
     let currentJarSizeGrams = ref(null);
     let upcomingJarSize = ref("");
@@ -488,28 +488,8 @@ export default {
       //   '450g',
       //   honeyMeshes
       // )
-      const honeyMaterials = {
-        [jarSizes[0]]:  await playfulMaterial2(
-          globalTextureLoader,
-          globalScene.environment,
-          type,
-          jarSizes[0],
-          honeyMeshes,
-          currentBrand.value,
-          globalCamera
-        ),
-        [jarSizes[1]]: await playfulMaterial2(
-          globalTextureLoader,
-          globalScene.environment,
-          type,
-          jarSizes[1],
-          honeyMeshes,
-          currentBrand.value,
-          globalCamera
-        )
-      }
       // const honeyMaterials = {
-      //   [jarSizes[0]]: await playfulMaterial3(
+      //   [jarSizes[0]]:  await playfulMaterial2(
       //     globalTextureLoader,
       //     globalScene.environment,
       //     type,
@@ -518,7 +498,7 @@ export default {
       //     currentBrand.value,
       //     globalCamera
       //   ),
-      //   [jarSizes[1]]: await playfulMaterial3(
+      //   [jarSizes[1]]: await playfulMaterial2(
       //     globalTextureLoader,
       //     globalScene.environment,
       //     type,
@@ -526,8 +506,28 @@ export default {
       //     honeyMeshes,
       //     currentBrand.value,
       //     globalCamera
-      //   ),
-      // };
+      //   )
+      // }
+      const honeyMaterials = {
+        [jarSizes[0]]: await playfulMaterial3(
+          globalTextureLoader,
+          globalScene.environment,
+          type,
+          jarSizes[0],
+          honeyMeshes,
+          currentBrand.value,
+          globalCamera
+        ),
+        [jarSizes[1]]: await playfulMaterial3(
+          globalTextureLoader,
+          globalScene.environment,
+          type,
+          jarSizes[1],
+          honeyMeshes,
+          currentBrand.value,
+          globalCamera
+        ),
+      };
 
       console.log("Materials:", honeyMaterials);
       console.log("HONEYMESHES:::::", honeyMeshes);
@@ -606,20 +606,20 @@ export default {
       isLoading.value = true;
       globalScene = new Scene();
 
-      let sceneUrl =
-        currentBrand.value === "okto"
-          ? '/assets/glb/newJars/uvfixed4.glb':
-            // '/assets/glb/newJars/450-300-animation-choppy-v2.glb':
-            // '/assets/glb/newJars/uvfixed4.glb':
-            "/assets/glb/newJars/300-150-animation-choppy-v6.glb";
-
       // let sceneUrl =
       //   currentBrand.value === "okto"
-      //     ? "/assets/glb/300-450.glb"
-      //     : // '/assets/glb/newJars/uvfixed4.glb':
+      //     ? '/assets/glb/300-450-baked.glb':
       //       // '/assets/glb/newJars/450-300-animation-choppy-v2.glb':
       //       // '/assets/glb/newJars/uvfixed4.glb':
-      //       "/assets/glb/150-300.glb";
+      //       "/assets/glb/newJars/300-150-animation-choppy-v6.glb";
+
+      let sceneUrl =
+        currentBrand.value === "okto"
+          ? "/assets/glb/300-450.glb"
+          : // '/assets/glb/newJars/uvfixed4.glb':
+            // '/assets/glb/newJars/450-300-animation-choppy-v2.glb':
+            // '/assets/glb/newJars/uvfixed4.glb':
+            "/assets/glb/150-300.glb";
       let sceneParts = await loadGlbReturnParts(loader, sceneUrl);
       console.log("SceneParts:", sceneParts)
       // reference to mesh within loaded Scene - changes affect scene directly
@@ -762,7 +762,7 @@ export default {
       // globalRenderer.useLegacyLights = false;
       // globalRenderer.render(globalScene, globalCamera);
 
-      // updateTexture()
+      updateTexture()
 
       await setLightingEXR(globalRenderer);
       // await setLighting(globalRenderer)
@@ -1146,7 +1146,7 @@ export default {
     async function setLighting(renderer){
       let pmremGenerator = new PMREMGenerator( renderer );
       // let rgbeTexture = await new RGBELoader().loadAsync('/assets/HDR/garden.hdr')
-      let rgbeTexture = await loadEnvironment('/assets/HDR/studio_country_hall_4k.hdr')
+      let rgbeTexture = await loadEnvironment('/assets/HDR/output2.hdr')
       var envMap = pmremGenerator.fromEquirectangular( rgbeTexture ).texture;
       globalScene.background = null;
       globalScene.environment = envMap;
@@ -1187,7 +1187,6 @@ export default {
     let wipeStep = 0.01;
     let count = 0;
     const animate = () => {
-      // console.count("animate called")
       if (!isAnimating) return;
       stats.begin();
       // if(labelTest){
@@ -1298,6 +1297,10 @@ export default {
     }
 
     onMounted(async () => {
+
+      // emitter.on('rotatingJar', (flag) => {
+      //   isAnimating = flag
+      // })
       await nextTick();
       updateContainerSize(); // Set initial size
       window.addEventListener("resize", debouncedUpdateSize);
@@ -1309,6 +1312,7 @@ export default {
 
       //If composer fails or is commented out, revert to regular renderer
       let frontJarPosition = new Vector3();
+      console.log("HoneyMeshes", honeyMeshes)
       honeyMeshes['300g'].getWorldPosition(frontJarPosition)
       // composer = await addPostProcessing(globalRenderer, globalScene, globalCamera, frontJarPosition)
       // composer = await addNativePostProcessing(globalRenderer, globalScene, globalCamera, frontJarPosition)
@@ -1326,19 +1330,6 @@ export default {
       await renderMatcap()
       await nextTick();
       animate();
-
-      // setTimeout(() => {
-      //   globalScene.traverse((obj) => {
-      //     if(obj.isMesh){
-      //       if(obj.name.includes('label')){
-      //         console.log("deleting:", obj.name)
-      //         obj.material.dispose();
-      //         obj.geometry.dispose();
-      //       }
-      //     }
-      //   })
-      // }, 8000)
-      // changeMat();
     });
 
     onBeforeUnmount(() => {
@@ -1510,7 +1501,7 @@ export default {
             ...textureUrlSlugs,
             flavour: newValues.flavour,
           };
-          // updateTexture();
+          updateTexture();
           // allCurrentTextures = await loadAllTextures()
         }
       },

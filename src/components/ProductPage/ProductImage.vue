@@ -44,12 +44,12 @@ async function selectJarSize(size){
 }
 
 // Auto-import all images (lazy-loaded)
-const images = import.meta.glob('/src/assets/images/products/**/*.png');
+const images = import.meta.glob('/src/assets/images/jar-labels/**/*.png');
 // console.log("Images:", images)
 const imageUrl = ref(null);
 async function loadImage() {
   console.log(`LoadImage ${props.brandUrlSlug}/${props.productLine.urlSlug}/${currentJarSize.value}/${props.flavour.urlSlug}.png`)
-  const filePath = `/src/assets/images/products/${props.brandUrlSlug}/${props.productLine.urlSlug}/${currentJarSize.value}/${props.flavour.urlSlug}.png`;
+  const filePath = `/src/assets/images/jar-labels/${props.brandUrlSlug}/${props.productLine.urlSlug}/${currentJarSize.value}/${props.flavour.urlSlug}.png`;
 
   if (images[filePath]) {
     // console.log("actually found it")
@@ -70,7 +70,7 @@ onMounted(async () => {
 
 <template>
   <div class="product-image">
-    <div class="image-container">
+    <div class="product-image-container">
       <Transition name="slide" class="slide-transition" mode="out-in">
         <img :key="imageUrl" class="jar-image" :src="imageUrl"/>
       </Transition>
@@ -99,7 +99,7 @@ onMounted(async () => {
   flex-direction: column;
   justify-content: center;
   align-items: center;
-  .image-container{
+  .product-image-container{
     width: 100%;
     height: 100%;
     overflow: hidden;

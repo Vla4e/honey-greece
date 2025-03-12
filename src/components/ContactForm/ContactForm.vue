@@ -35,6 +35,11 @@
               <label for="message">Message</label>
               <textarea id="message" v-model="form.message" required></textarea>
             </div>
+            
+            <!-- <div class="form-group newsletter">
+              <input id="newsletter" type="checkbox" v-model="form.newsletter"/>
+              <label for="newsletter">Also subscribe to our newsletter.</label>
+            </div> -->
             <div class="button-recaptcha">
               <button class="submit-button" type="submit">Submit</button>
               <div class="recaptcha-disclaimer" style="text-align: center; margin-top: 10px;">
@@ -63,7 +68,7 @@
 
 
 <script setup>
-import { reactive, ref, inject, onMounted, nextTick } from 'vue';
+import { reactive, ref, inject, onMounted, nextTick, watch } from 'vue';
 defineOptions({
   name: 'ContactForm'
 })
@@ -79,8 +84,12 @@ const form = reactive({
   lastName: '',
   email: '',
   subject: '',
-  message: ''
+  message: '',
+  newsletter: ''
 });
+watch(() => form.newsletter, (val) => {
+  console.log("Val:", val)
+})
 async function handleSubmit() {
   grecaptcha.ready(async () => {
     grecaptcha.execute(siteKey.value, {action: 'submit'}).then(async (captchaToken) => {
@@ -106,7 +115,7 @@ async function submitForm(captchaToken) {
       },
       body: JSON.stringify(formData)
     });
-
+    console.log("Resp from sendMail:", response)
     if (response.ok) {
       alert('Email sent successfully');
       setTimeout(() => {
@@ -246,6 +255,51 @@ function toggleContactForm(){
               &:active, &:focus{
                 border-radius: 0px !important;
                 outline: none !important;
+              }
+            }
+            &.newsletter{
+              display: flex;
+              flex-direction: row;
+              // justify-content: center;
+              align-items: center;
+              margin-bottom: 10px;
+              
+              label {
+                font-size: 12px;
+                font-weight: 400;
+              }
+
+              input {
+                -webkit-appearance: none;
+                -moz-appearance: none;
+                appearance: none;
+                min-height: 15px;
+                width: 15px;
+                margin: 0 15px 0 0;
+                box-sizing: border-box;
+                background-color: #F2F2F2;
+                border: 1px solid #C8C5C5;
+                outline: none;
+                cursor: pointer;
+                display: flex;
+                justify-content: center;
+                align-items: center;
+
+                &::after {
+                  content: "";
+                  width: 7px; 
+                  height: 7px;
+                  background-color: transparent;
+                }
+
+                &:checked::after {
+                  background-color: black;
+                }
+
+                &:active {
+                  // Optional: style for when user clicks down
+                  border: 1px solid #131313;
+                }
               }
             }
           }

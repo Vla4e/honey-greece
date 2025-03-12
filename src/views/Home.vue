@@ -5,7 +5,7 @@
         v-if="videoReady"
         class="background-video"
         :class="isMobile ? 'mobile' : ''"
-        poster="@/assets/pages/home/bg-new.png"
+        poster="@/assets/pages/home/landing-fallback.png"
         preload="metadata"
         autoplay
         muted
@@ -18,13 +18,13 @@
       <p v-else>Loading video...</p>
     </div>
     <div v-else class="image-container">
-      <img src="@/assets/pages/home/bg-new.png" class="background-image"/>
+      <img src="@/assets/pages/home/landing-fallback.png" class="background-image"/>
     </div>
 
 
     <div class="texts-container">
       <div class="home-text-container">
-        <span class="home-text">Honey <br/>Essence of <br />Nature</span>
+        <h1 class="home-text">Honey <br/>Essence of <br />Nature</h1>
         <router-link
           class="route-button small-button"
           style="color: #131313"
@@ -41,8 +41,6 @@ import { ref, inject, onMounted, onBeforeMount } from "vue";
 import { getNetworkSpeed } from "@/helpers/checkNetworkSpeed.js";
 import { useGlobalStore } from "@/store/global.js";
 
-import bgNew from "@/assets/pages/home/bg-new.png";
-import WebGL from "three/addons/capabilities/WebGL.js";
 
 export default {
   name: "Home",
@@ -67,7 +65,7 @@ export default {
       if(networkSpeed >= 10){
         if(isMobile.value){
           videoSource.value = (
-            await import("@/assets/pages/home/mobile_3mbps.mp4")
+            await import("@/assets/pages/home/mobile_1mbps.mp4")
           ).default;
         } else {
           
@@ -88,29 +86,10 @@ export default {
       globalStore.loadingProgress = 0;
       if (isMobile.value) {
         console.log("Will load mobile vid");
-        if (speed >= 9) {
-          videoSource.value = (
-            await import("@/assets/pages/home/mobile_3mbps.mp4")
-          ).default;
-        } else if (speed >= 6) {
-          videoSource.value = (
-            await import("@/assets/pages/home/mobile_2mbps.mp4")
-          ).default;
-        } else {
-          videoSource.value = (
-            await import("@/assets/pages/home/mobile_1mbps.mp4")
-          ).default;
-        }
+        videoSource.value = (
+          await import("@/assets/pages/home/mobile_1mbps.mp4")
+        ).default;
       } else {
-        // if (speed >= 25) {
-        //   videoSource.value = (await import('@/assets/pages/home/desktop_10mbps.mp4')).default;
-        // } else if (speed >=10) {
-        //   videoSource.value = (await import('@/assets/pages/home/desktop_5mbps.mp4')).default;
-        // } else if (speed >= 6) {
-        //   videoSource.value = (await import('@/assets/pages/home/desktop_2mbps.mp4')).default;
-        // } else {
-        //   videoSource.value = (await import('@/assets/pages/home/desktop_1mbps.mp4')).default;
-        // }
         let vid = await import("@/assets/pages/home/landing-compressed.webm");
         console.log("VID:", vid.default)
         videoSource.value = vid.default

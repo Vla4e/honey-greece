@@ -1,11 +1,15 @@
 import { createApp } from 'vue'
 import { createPinia } from 'pinia'
-import './style.css'
+import './style.scss'
 import '@/assets/styles/fonts.scss'
+import '@/assets/styles/form.scss'
 import App from './App.vue'
 import router from './router'
 import components from './components'
 import emitter from './helpers/emitter.js'; 
+
+// For prod - disable on dev
+console.log = () => {};
 
 const app = createApp(App)
 const pinia  = createPinia();

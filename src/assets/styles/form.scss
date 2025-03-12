@@ -1,0 +1,70 @@
+.form-group{
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  flex: 1;
+  label{
+    font-family: 'DMSans';
+    font-weight: 700;
+    text-transform: uppercase;
+    color: #131313;
+    text-align: start;
+  }
+  input{
+    min-height: 40px;
+    
+  }
+  .radio-container{
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    label{
+      margin-right: 10px;
+    }
+    .radio{
+      min-height: 15px;
+      margin: 0px;
+    }
+  }
+  textarea{
+    min-height: 200px;
+    resize: none;
+  }
+  input, textarea{
+    width: 100%;
+    box-sizing: border-box;
+    background-color: #F2F2F2;
+    border: 1px solid #C8C5C5;
+    color: #131313;
+    &:-webkit-autofill {
+      background-color: #F2F2F2 !important; /* force background */
+      color: #131313 !important;
+      border: 1px solid #C8C5C5 !important;
+      -webkit-text-fill-color: #131313 !important; /* enforce text color */
+      transition: none !important;
+    }
+    &:active, &:focus{
+      border-radius: 0px !important;
+      outline: none !important;
+    }
+  }
+  
+  .validation {
+    color: #dc3545;
+    font-size: 0.875rem;
+    display: block;
+    margin-top: 0.25rem;
+  }
+  &-small{
+    input{
+      min-height: 25px;
+    }
+    textarea{
+      min-height: 100px;
+      resize: none;
+    }
+    label{
+      font-size: 12px;
+    }
+  }
+}

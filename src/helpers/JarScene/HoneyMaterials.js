@@ -27,7 +27,7 @@ async function honeyMaterial(honeyMeshes, textureLoader, envMap, honeyType) {
     const honeyColor = new Color(honeyParameters.colorCode)
   
     // Load matcap texture
-    const matcapTexture = await textureLoader.loadAsync(`/assets/matcaps2/${honeyParameters.matcapId}.png`);
+    const matcapTexture = await textureLoader.loadAsync(`/assets/matcaps/${honeyParameters.matcapId}.png`);
 
     const fixedGridPositionl = new Vector3( 0.05, 0.2, 0)
 
@@ -156,7 +156,7 @@ async function oldHoneyMaterial(textureLoader, environment, honeyType, jarSize){
   
   console.log("ID OF TEX:", honeyParameters.matcapId)
   // Load matcap texture
-  const matcapTexture = await textureLoader.loadAsync(`/assets/matcaps2/${honeyParameters.matcapId}.png`);
+  const matcapTexture = await textureLoader.loadAsync(`/assets/matcaps/${honeyParameters.matcapId}.png`);
   console.log("Applying matcap TEXTURE:", matcapTexture)
   let worldPosition = new Vector3(0.15000002, -0.1, 0.0)
   return new ShaderMaterial({
@@ -316,7 +316,7 @@ async function playfulMaterial2(textureLoader, environment, honeyType, jarSize, 
 
   let honeyParameters = honeyPresets[honeyType]
   const honeyColor = new Color(honeyParameters.colorCode)
-  const matcapTexture = await textureLoader.loadAsync(`/assets/matcaps2/${honeyParameters.matcapId}.png`);
+  const matcapTexture = await textureLoader.loadAsync(`/assets/matcaps/${honeyParameters.matcapId}.png`);
   let ratio = mediumJarBoxProperties.height/otherJarBoxProperties.height;
   console.log("ACTUAL RATIO:::::::::::::::::: m/o, o/m", ratio, otherJarBoxProperties.height/mediumJarBoxProperties.height)
   const hardCodedMediumJarRatio = 0.9; // looks closest to needed visual
@@ -490,7 +490,7 @@ async function playfulMaterial3(textureLoader, environment, honeyType, jarSize, 
   
   let honeyParameters = honeyPresets[honeyType]
   const honeyColor = new Color(honeyParameters.colorCode)
-  const matcapTexture = await textureLoader.loadAsync(`/assets/matcaps2/${honeyParameters.matcapId}.png`);
+  const matcapTexture = await textureLoader.loadAsync(`/assets/matcaps/${honeyParameters.matcapId}.png`);
   
   // Calculate the height ratio between medium jar and current jar
   let ratio = mediumJarBoxProperties.height/otherJarBoxProperties.height;

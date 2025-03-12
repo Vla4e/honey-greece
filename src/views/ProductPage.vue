@@ -53,7 +53,7 @@
 
     <!-- Product Viewer -->
     <div class="product-viewer" ref="productViewer">
-      <!-- <ProductSceneFinal v-if="isCapable && isStoreReady" /> -->
+      <!-- <ProductScene /> -->
       <ProductSceneFinal v-if="isCapable" />
       <ProductImage 
         v-else 
@@ -136,6 +136,7 @@ import chevronRight from "@/assets/images/arrow.svg";
 
 // Components
 import ProductSceneFinal from "../components/ProductSceneFinal.vue";
+import ProductScene from "../components/ProductScene.vue";
 
 // Configs
 import brandConfigs from "@/assets/brand-information/index.js";
@@ -357,7 +358,8 @@ const suggestedBrandLogoUrl = ref(null);
 const suggestedBrandRoute = ref(null);
 
 onMounted(async () => {
-  isCapable.value = await checkCapabilities();
+  // isCapable.value = await checkCapabilities();
+  isCapable.value = false;
 });
 </script>
 

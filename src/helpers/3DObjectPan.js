@@ -1,6 +1,8 @@
 import { debounce } from '@/helpers/globalFunctions.js'
 import { Vector3, Quaternion, AxesHelper } from 'three';
 
+import emitter from '@/helpers/emitter.js'; 
+
 const rotationFactorX = 0.005;
 const rotationFactorY = 0.005;
 const debounceInterval = 0; // milliseconds
@@ -54,11 +56,13 @@ let lastTouchY = 0;
 function handleMouseDown() {
   // console.log("MouseDown")
   mouseDown = true;
+  emitter.emit('rotatingJar', true)
 }
 
 function handleMouseUp() {
   // console.log("MouseUp")
   mouseDown = false;
+  emitter.emit('rotatingJar', false)
 }
 
 function handleTouchStart(event) {

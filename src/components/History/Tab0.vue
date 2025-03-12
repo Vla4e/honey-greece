@@ -66,11 +66,7 @@ async function loadVideo(speed) {
       await import("@/assets/pages/history/smoker-mobile.mp4")
     ).default;
   } else {
-    if (speed >= 5) {
-      videoSource.value = (await import("@/assets/pages/history/smoker-hd.mp4")).default;
-    } else {
-      videoSource.value = (await import("@/assets/pages/history/smoker.mp4")).default;
-    }
+    videoSource.value = (await import("@/assets/pages/history/smoker.mp4")).default;
   }
   videoReady.value = true;
 }

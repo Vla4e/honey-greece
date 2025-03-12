@@ -3,7 +3,9 @@
     <!-- <div v-if="!showContactForm && !isMobile" class="burger-icon-container">
       <BurgerMenuIcon @click="toggleSidebar" class="burger-icon"/>
     </div> -->
-    <ModalCustom/>
+    <Transition name="fade">
+      <ModalCustom :showModal="showModal"/>
+    </Transition>
     <LoadingScreen></LoadingScreen>
     <NavbarComponent v-show="showNavbarComputed" id="nav"/>
 
@@ -31,6 +33,8 @@ import { useRoute } from 'vue-router';
 
 
 import { useScreenSize } from './composables/useScreenSize'
+
+import { newsletterManager } from './helpers/Modal/localStorage';
 
 import burgerIcon from '@/assets/images/burger-icon.svg'
 
@@ -84,10 +88,14 @@ export default {
     // function toggleSidebar(){
     //   showSidebar.value = !showSidebar.value
     // }
+    let showModal = ref(false)
     onMounted(()=>{
       emitter.on('toggleContactForm', ()=>{
         showContactForm.value = !showContactForm.value
       })
+
+      console.log("route", route.name)
+      showModal.value = newsletterManager.shouldShowModal(route.name, false)
       // emitter.on('toggleSidebarRoute', ()=>{
       //   if(showSidebar.value){
       //     toggleSidebar();
@@ -114,7 +122,8 @@ export default {
       // toggleSidebar,
       showNavbarComputed,
       showContactForm, 
-      showNavbar, 
+      showNavbar,
+      showModal,
       burgerIcon, 
       isMobile, 
       hideOverflow,
@@ -191,6 +200,7 @@ export default {
   cursor: pointer;
 }
 
+// Contact form animation
 .contact-form-enter-active, .contact-form-leave-active{
   transition: transform 0.3s ease-out, opacity 0.3s ease-out;
 }
@@ -210,6 +220,7 @@ export default {
   opacity: 0;
 }
 
+// Sidebar animation
 .sidebar-enter-active, .sidebar-leave-active{
   transition: transform 0.3s ease-out, opacity 0.3s ease-out;
 }
@@ -226,6 +237,23 @@ export default {
 
 .sidebar-leave-to {
   transform: translateX(-100%);
+  opacity: 0;
+}
+
+//Modal animation
+.fade-enter-active, .fade-leave-active{
+  transition: opacity 0.3s ease-out;
+}
+
+.fade-enter-from {
+  opacity: 0;
+}
+
+.fade-enter-to, .fade-leave-from {
+  opacity: 1;
+}
+
+.fade-leave-to {
   opacity: 0;
 }
 </style>

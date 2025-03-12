@@ -57,6 +57,9 @@
         <span class="link-subheading">Unveiling Our Hive: Meet our Team</span>
       </router-link>
 
+      <div @click="toggleNewsletterModal" class="sidebar-link">
+        <span class="link-newsletter">>Subscribe to our Newsletter</span>
+      </div>
       <div class="sidebar-link recaptcha">
         <div class="recaptcha-disclaimer" style="text-align: center; margin-top: 10px;">
           <span class="disclaimer-text">
@@ -101,6 +104,10 @@ function toggleContactAccordion(){
 function toggleContactForm(){
   // console.log("Called toggle contact form")
   emitter.emit('toggleContactForm')
+}
+
+function toggleNewsletterModal(){
+  emitter.emit('toggleNewsletterModal')
 }
 </script>
 
@@ -216,6 +223,18 @@ function toggleContactForm(){
       transition: height ease-in-out 0.5s, opacity ease-in-out 0.3s;
       overflow: hidden;
     }
+    .link-newsletter{
+      color: #000;
+      font-family: "DMSans";
+      font-size: 14px;
+      font-style: normal;
+      font-weight: 400;
+      line-height: normal;
+      letter-spacing: 4px;
+      text-transform: uppercase;
+      text-align: left;
+      cursor: default;
+    }
   }
   
   @media(max-width:767px){ // Mobile
@@ -249,6 +268,9 @@ function toggleContactForm(){
         @media(max-height: 790px){
           font-size: 20px;
         }
+      }
+      .link-newsletter{
+        color: white;
       }
       .link-subheading, .link-info{
         // display: none;

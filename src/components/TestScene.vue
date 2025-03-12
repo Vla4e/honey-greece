@@ -328,7 +328,7 @@ export default {
     function createFixedMaterial(id){
       console.log("CREATING FIXED MAT ==========>")
       const textureLoader = new TextureLoader();
-      const matcapTexture = textureLoader.load(`/assets/matcaps2/${id+1}.png`);
+      const matcapTexture = textureLoader.load(`/assets/matcaps/${id+1}.png`);
       matcapTexture.encoding = SRGBColorSpace
       // Step 2: Create a MeshMatcapMaterial with the loaded texture
       return  new MeshMatcapMaterial({
@@ -341,7 +341,7 @@ export default {
     function createMatcapMaterial(id) {
       console.log("CREATING MATCAP MAT ==========>")
       
-      const matcapTexture = globalTextureLoader.load(`/assets/matcaps2/${id+1}.png`);
+      const matcapTexture = globalTextureLoader.load(`/assets/matcaps/${id+1}.png`);
       return new ShaderMaterial({
         uniforms: {
           matcap: { value: matcapTexture },
@@ -401,7 +401,7 @@ export default {
       console.log("CREATING COMPLEX MAT ==========>")
       // console.log("Applying with values: ", density, light, viscosity)
       
-      const matcapTexture = globalTextureLoader.load(`/assets/matcaps2/${id+1}.png`);
+      const matcapTexture = globalTextureLoader.load(`/assets/matcaps/${id+1}.png`);
 
 
       return new ShaderMaterial({
@@ -493,7 +493,7 @@ export default {
     ) {
       console.log("CREATING MAT OPTIONS ==========>")
       // console.log("Applying with values: ", worldPosition)
-      const matcapTexture = globalTextureLoader.load(`/assets/matcaps2/${id+1}.png`);
+      const matcapTexture = globalTextureLoader.load(`/assets/matcaps/${id+1}.png`);
 
 
       return new ShaderMaterial({
@@ -610,7 +610,7 @@ export default {
     ) {
       console.log("OLD OPTIONS +=========================")
       
-      const matcapTexture = globalTextureLoader.load(`/assets/matcaps2/42.png`);
+      const matcapTexture = globalTextureLoader.load(`/assets/matcaps/42.png`);
 
       console.log("Applying matcap TEXTURE:", matcapTexture)
 
@@ -831,7 +831,7 @@ export default {
       globalScene = new Scene();
 
       // let jarPromise = await loadGlbReturnParts(loader, jarConfigs.medium.source)
-      let mediumSmallScene = await loadGlbReturnParts(loader, '/assets/glb/newJars/300-150-animation-choppy-v6.glb')
+      let mediumSmallScene = await loadGlbReturnParts(loader, '/assets/glb/newJars/150-300.glb')
       // let largeMediumScene = await loadGlbReturnParts(loader, '/assets/glb/newJars/450-300-animation-choppy-v1.glb')
       labelMeshes = mediumSmallScene.labelMeshes
       // for (let mesh of mediumSmallScene.meshes){
