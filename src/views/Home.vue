@@ -62,7 +62,7 @@ export default {
     async function determineBackgroundMedia(networkSpeed){
       globalStore.showLoadingScreen = true;
       globalStore.loadingProgress = 0;
-      if(networkSpeed >= 10){
+      if(networkSpeed >= 5){
         if(isMobile.value){
           videoSource.value = (
             await import("@/assets/pages/home/mobile_1mbps.mp4")

@@ -124,38 +124,63 @@ const router = createRouter({
         }
       }
     },
+    {
+      path: '/JarTest',
+      name: 'JarTest',
+      component: lazyLoad('JarTestView'),
+      meta: { 
+        hasNavbar: false, 
+        playAnimationOnEnter: true,
+        navbarColor: {
+          mobile: 'black',
+          desktop: 'black',
+        }
+      }
+    },
   ]
 })
 
 async function processRouteTransition(to, next) {
   console.log("Processing Route transition", to.name, to.params, to.query);
-
-  if (!to.matched.length) {
-    return next({ name: 'Home' });
-  }
-
+  try{
+    if (!to.matched.length) {
+      return next({ name: 'Home' });
+    }
+    
+    if (to.name === 'Product') {
+      let selectedBrand = to.params.selectedBrand
+      if (selectedBrand && !allowedSelectedBrands.includes(selectedBrand)) {
+        return next({
+          name: 'Product',
+          params: { selectedBrand: 'Okto' },
+          query: allowedLines['Okto'][0],
+        });
+      }
   
-  if (to.name === 'Product') {
-    let selectedBrand = to.params.selectedBrand
-    if (selectedBrand && !allowedSelectedBrands.includes(selectedBrand)) {
-      return next({
-        name: 'Product',
-        params: { selectedBrand: 'Okto' },
-        query: allowedLines['Okto'][0],
-      });
-    }
-
-    if (!to.query.line) {
-      to.query.line = allowedLines[selectedBrand][0];
-    }
-
-    // 2. Validate the "line" query
-    if (allowedLines[selectedBrand].includes(to.query.line)) {
-      if (to.query.honey) {
-        // Check if honey is valid for the selectedBrand + line
-        const validHoney = await isHoneyAllowed(selectedBrand, to.query.line, to.query.honey);
-        if (validHoney) {
-          return next();
+      if (!to.query.line) {
+        to.query.line = allowedLines[selectedBrand][0];
+      }
+  
+      // 2. Validate the "line" query
+      if (allowedLines[selectedBrand].includes(to.query.line)) {
+        if (to.query.honey) {
+          // Check if honey is valid for the selectedBrand + line
+          const validHoney = await isHoneyAllowed(selectedBrand, to.query.line, to.query.honey);
+          if (validHoney) {
+            return next();
+          } else {
+            // If honey not valid, redirect to default line + default honey
+            let defaultHoney = brandConfigs[selectedBrand].lineFlavorsArrays[to.query.line][0]
+            return next({
+              name: to.name,
+              params: to.params,
+              query: { 
+                ...to.query,
+                line: to.query.line,
+                honey: defaultHoney // default to honey
+              },
+            });
+          }
         } else {
           // If honey not valid, redirect to default line + default honey
           let defaultHoney = brandConfigs[selectedBrand].lineFlavorsArrays[to.query.line][0]
@@ -170,23 +195,15 @@ async function processRouteTransition(to, next) {
           });
         }
       } else {
-        // If honey not valid, redirect to default line + default honey
-        let defaultHoney = brandConfigs[selectedBrand].lineFlavorsArrays[to.query.line][0]
         return next({
-          name: to.name,
-          params: to.params,
-          query: { 
-            ...to.query,
-            line: to.query.line,
-            honey: defaultHoney // default to honey
-          },
-        });
+          name: 'Home'
+        })
       }
     }
+    next();
+  } catch (error){
+    next({name: 'Home'});
   }
-
-  // If all checks passed or route is not "Product", just go
-  next();
 }
 
 
@@ -214,7 +231,7 @@ router.beforeEach((to, from, next) => {
 
   if (to.meta.playAnimationOnEnter) {
     globalStore.changeAnimationFlag(true);
-    setTimeout(() => {
+    setTimeout(async () => {
       processRouteTransition(to, next);
     }, transitionDelay);
   } else {

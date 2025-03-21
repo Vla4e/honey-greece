@@ -93,9 +93,12 @@ export default {
       emitter.on('toggleContactForm', ()=>{
         showContactForm.value = !showContactForm.value
       })
-
-      console.log("route", route.name)
-      showModal.value = newsletterManager.shouldShowModal(route.name, false)
+      
+      // newsletterManager.clearModalLocalStorage();
+      window.newsletterManager = newsletterManager;
+      console.log("route", route.value)
+      showModal.value = newsletterManager.shouldShowModal(route.path, false)
+      console.log("Show Modal VAL CHANGED IN APP", showModal.value)
       // emitter.on('toggleSidebarRoute', ()=>{
       //   if(showSidebar.value){
       //     toggleSidebar();

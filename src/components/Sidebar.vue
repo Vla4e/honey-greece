@@ -10,7 +10,7 @@
           <span class="link-heading">History</span>
           <span class="link-subheading">Looking Back and Inspiring the Future</span>
         </router-link>
-        <router-link class="sidebar-link" to="/product/HAA?line=Monoflorals">
+        <router-link class="sidebar-link" to="/product/HAA?line=Blends">
           <span class="link-heading">Honey apiary academy</span>
           <span class="link-subheading">Ultra Premium Greek Honey</span>
         </router-link>
@@ -57,7 +57,7 @@
         <span class="link-subheading">Unveiling Our Hive: Meet our Team</span>
       </router-link>
 
-      <div @click="toggleNewsletterModal" class="sidebar-link">
+      <div @click="toggleNewsletterModal" class="sidebar-link newsletter-link">
         <span class="link-newsletter">>Subscribe to our Newsletter</span>
       </div>
       <div class="sidebar-link recaptcha">
@@ -233,7 +233,12 @@ function toggleNewsletterModal(){
       letter-spacing: 4px;
       text-transform: uppercase;
       text-align: left;
-      cursor: default;
+    }
+    &.newsletter-link{
+      cursor: pointer !important;
+      &:hover{
+        transform: scale(1.1);
+      }
     }
   }
   

@@ -101,6 +101,7 @@ export default {
         name: 'Melculum',
         linkTo: '',
         disabled: true,
+        urlSlug: 'Melculum',
         lines: [
           {
             text: 'Monofloral series',
@@ -120,7 +121,8 @@ export default {
         name: 'All Products',
         disabled: false,
         linkTo: '/all-products',
-        lines: []
+        lines: [],
+        urlSlug: 'AllProducts'
       }
     ]
     tempBrand.forEach((brand) => {

@@ -624,8 +624,428 @@ async function playfulMaterial3(textureLoader, environment, honeyType, jarSize, 
     `
   });
 }
+async function playfulMaterial4(textureLoader, environment, honeyType, jarSize, honeyMeshes, brand, camera){
+  console.log("Creating pm2, with jarSize", jarSize, brand)
+  const meshStore = useMeshStore();
+  const boundingBoxes = toRaw(meshStore.boundingBoxes);
+  
+  // Mesh of jar we're currently creating shader for
+  let currentHoneyMesh = honeyMeshes[jarSize]
+  const currentBoundingBox = boundingBoxes[jarSize].boundingBox
+  
+  // Store initial position at shader creation time
+  const initialJarPosition = new Vector3()
+  initialJarPosition.copy(currentHoneyMesh.position)
+  
+  // Get the base position (bottom of the jar)
+  const currentJarMeshPosition = new Vector3(0, 0, 0);
+  currentJarMeshPosition.copy(initialJarPosition);
+  currentJarMeshPosition.y += currentBoundingBox.min.y;
 
+  // Bounding box calculations for both jars
+  let mediumJarBoxSize = '300g';
+  let otherJarBoxSize = null;
+  if(brand === 'haa'){
+    otherJarBoxSize = '150g'
+  } else otherJarBoxSize = '450g'
+  
+  const mediumJarBox = boundingBoxes[mediumJarBoxSize].boundingBox
+  const mediumJarBoxProperties = {
+    box: mediumJarBox,
+    jarMinY: mediumJarBox.min.y,
+    jarMaxY: mediumJarBox.max.y,
+    jarCenter: (mediumJarBox.max.y + mediumJarBox.min.y) / 2,
+    height: mediumJarBox.max.y - mediumJarBox.min.y
+  }
+  
+  const otherJarBox = boundingBoxes[otherJarBoxSize].boundingBox
+  const otherJarBoxProperties = {
+    box: otherJarBox,
+    jarMinY: otherJarBox.min.y,
+    jarMaxY: otherJarBox.max.y,
+    jarCenter: (otherJarBox.max.y + otherJarBox.min.y) / 2,
+    height: otherJarBox.max.y - otherJarBox.min.y
+  }
+  
+  // Get current jar properties
+  const currentJarProperties = jarSize === '300g' ? mediumJarBoxProperties : otherJarBoxProperties;
+  
+  let honeyParameters = honeyPresets[honeyType]
+  const honeyColor = new Color(honeyParameters.colorCode)
+  const matcapTexture = await textureLoader.loadAsync(`/assets/matcaps/${honeyParameters.matcapId}.png`);
+  
+  // The medium jar's visual properties we want to preserve
+  const mediumJarVisualCenter = mediumJarBoxProperties.jarCenter;
+  const mediumJarVisualHeight = mediumJarBoxProperties.height;
+  const hardCodedMediumJarRatio = 0.9; // The perfect ratio for medium jar
+  
+  return new ShaderMaterial({
+    uniforms: {
+      matcap: { value: matcapTexture },
+      colorAdjust: { value: honeyColor},
+      time: { value: 0 },
+      envMap: { value: environment },
+      IOR: { value: honeyParameters.density},
+      subSurfaceScatter: { value: honeyParameters.light},
+      viscosity: { value: honeyParameters.viscosity},
+      viscosityWaviness: { value: honeyParameters.viscosityWaviness},
+      highlightPosition: { value: 1.50 },
+      highlightIntensity: { value: 0.50 },
+      envMapIntensity: { value: 1.0},
+      mediumJarMinY: { value: mediumJarBoxProperties.jarMinY },
+      mediumJarMaxY: { value: mediumJarBoxProperties.jarMaxY },
+      mediumJarHeight: { value: mediumJarBoxProperties.height },
+      mediumJarCenter: { value: mediumJarBoxProperties.jarCenter },
+      currentJarMinY: { value: currentJarProperties.jarMinY },
+      currentJarMaxY: { value: currentJarProperties.jarMaxY },
+      currentJarHeight: { value: currentJarProperties.height },
+      currentJarCenter: { value: currentJarProperties.jarCenter },
+      jarBasePosition: { value: currentJarMeshPosition },
+      initialJarPosition: { value: initialJarPosition },
+      hardCodedRatio: { value: hardCodedMediumJarRatio },
+      isMediumJar: { value: jarSize === '300g' ? 1.0 : 0.0 }
+    },
+    vertexShader: `
+      uniform float mediumJarMinY;
+      uniform float mediumJarMaxY;
+      uniform float mediumJarHeight;
+      uniform float mediumJarCenter;
+      uniform float currentJarMinY;
+      uniform float currentJarMaxY;
+      uniform float currentJarHeight;
+      uniform float currentJarCenter;
+      uniform vec3 jarBasePosition;
+      uniform vec3 initialJarPosition;
+      uniform float hardCodedRatio;
+      uniform float isMediumJar;
+      
+      varying vec3 vNormal;
+      varying vec3 vViewPosition;
+      varying vec3 vWorldPosition;
+      varying vec3 vNormalizedPosition;
 
+      void main() {
+        vNormal = normalize(normalMatrix * normal);
+        vec4 mvPosition = modelViewMatrix * vec4(position, 1.0);
+        vViewPosition = -mvPosition.xyz;
+        
+        // Calculate the world position
+        vWorldPosition = (modelMatrix * vec4(position, 1.0)).xyz;
+        
+        // Store the actual world position for visual calculations
+        vec3 actualWorldPos = vWorldPosition;
+        
+        // Calculate the current mesh position in world space
+        vec3 currentMeshWorldPos = (modelMatrix * vec4(0.0, 0.0, 0.0, 1.0)).xyz;
+        
+        // For medium jar, apply the hardcoded ratio that gives the perfect look
+        if (isMediumJar > 0.5) {
+          // For medium jar, just use the actual positions with the hardcoded ratio
+          // that already gives the perfect look
+          vec3 relativePos = actualWorldPos - currentMeshWorldPos;
+          float normalizedY = (relativePos.y / currentJarHeight);
+          vNormalizedPosition = relativePos;
+          vNormalizedPosition.y = normalizedY * hardCodedRatio * mediumJarHeight;
+          vNormalizedPosition += currentMeshWorldPos;
+        } else {
+          // For other jars, we need to normalize the position relative to the medium jar
+          // 1. Get position relative to current jar's world position
+          vec3 relativePos = actualWorldPos - currentMeshWorldPos;
+          
+          // 2. Normalize the Y position to 0-1 range within current jar's bounds
+          float normalizedY = (relativePos.y / currentJarHeight);
+          
+          // 3. Map this normalized position to equivalent position in medium jar
+          // using the hardcoded ratio that gave the perfect look
+          vNormalizedPosition = relativePos;
+          vNormalizedPosition.y = normalizedY * hardCodedRatio * mediumJarHeight;
+          
+          // 4. Add back the current jar's world position
+          vNormalizedPosition += currentMeshWorldPos;
+        }
+
+        gl_Position = projectionMatrix * mvPosition;
+      }
+    `,
+    fragmentShader: `
+      uniform sampler2D matcap;
+      uniform vec3 colorAdjust;
+      uniform float time;
+      uniform samplerCube envMap;
+      uniform float envMapIntensity;
+      uniform float IOR;
+      uniform float subSurfaceScatter;
+      uniform float viscosity;
+      uniform float highlightIntensity;
+      uniform float highlightPosition;
+      uniform float viscosityWaviness;
+
+      varying vec3 vNormal;
+      varying vec3 vViewPosition;
+      varying vec3 vWorldPosition;
+      varying vec3 vNormalizedPosition;
+
+      vec3 getEnvironmentReflection(vec3 viewDir, vec3 normal) {
+        vec3 reflectVec = reflect(viewDir, normal);
+        vec3 envMapCoord = reflectVec * 20.0;
+        return textureCube(envMap, envMapCoord).rgb;
+      }
+
+      void main() {
+        vec3 viewDir = normalize(vViewPosition);
+        vec3 normal = normalize(vNormal);
+
+        vec3 refractColor = refract(viewDir, normal, 1.0 / IOR);
+        vec2 matcapUV = refractColor.xy * 0.5 + 0.5;
+        vec3 matcapColor = texture2D(matcap, matcapUV).rgb;
+
+        vec3 reflColor = getEnvironmentReflection(viewDir, normal) * envMapIntensity;
+
+        float fresnelPower = 3.0;
+        float fresnel = pow(1.0 - dot(viewDir, normal), fresnelPower);
+
+        vec3 scatterColor = colorAdjust * (1.0 - fresnel) * subSurfaceScatter;
+
+        // Use normalized position for all visual effects
+        float viscosityEffect = sin(vNormalizedPosition.y * viscosityWaviness + time * 0.1) * viscosity;
+        matcapColor += vec3(viscosityEffect);
+
+        // Use normalized position for highlight
+        float verticalHighlight = smoothstep(highlightPosition - 0.1, highlightPosition + 0.1, abs(vNormalizedPosition.y));
+        verticalHighlight = pow(verticalHighlight, 2.0) * highlightIntensity * 2.0;
+
+        vec3 baseColor = mix(matcapColor, reflColor, fresnel * 0.8);
+        vec3 finalColor = mix(baseColor, colorAdjust, 0.5);
+        finalColor += scatterColor;
+        finalColor += vec3(verticalHighlight);
+
+        // Use normalized position for color depth
+        float depth = (vNormalizedPosition.y + 1.0) * 0.5;
+        finalColor *= mix(vec3(1.0), colorAdjust, depth);
+
+        float transparency = smoothstep(0.2, 0.8, abs(dot(viewDir, normal)));
+        finalColor = mix(finalColor, reflColor, transparency * 0.2);
+
+        gl_FragColor = vec4(finalColor, 1.0);
+      }
+    `
+  });
+}
+async function playfulMaterial5(textureLoader, environment, honeyType, jarSize, honeyMeshes, brand, camera){
+  console.log("Creating pm2, with jarSize", jarSize, brand)
+  const meshStore = useMeshStore();
+  const boundingBoxes = toRaw(meshStore.boundingBoxes);
+  
+  // Mesh of jar we're currently creating shader for
+  let currentHoneyMesh = honeyMeshes[jarSize]
+  const currentBoundingBox = boundingBoxes[jarSize].boundingBox
+  
+  // Store initial position at shader creation time
+  const initialJarPosition = new Vector3()
+  initialJarPosition.copy(currentHoneyMesh.position)
+  
+  // Get the base position (bottom of the jar)
+  const currentJarMeshPosition = new Vector3(0, 0, 0);
+  currentJarMeshPosition.copy(initialJarPosition);
+  currentJarMeshPosition.y += currentBoundingBox.min.y;
+
+  // Bounding box calculations for both jars
+  let mediumJarBoxSize = '300g';
+  let otherJarBoxSize = null;
+  if(brand === 'haa'){
+    otherJarBoxSize = '150g'
+  } else otherJarBoxSize = '450g'
+  
+  const mediumJarBox = boundingBoxes[mediumJarBoxSize].boundingBox
+  const mediumJarBoxProperties = {
+    box: mediumJarBox,
+    jarMinY: mediumJarBox.min.y,
+    jarMaxY: mediumJarBox.max.y,
+    jarCenter: (mediumJarBox.max.y + mediumJarBox.min.y) / 2,
+    height: mediumJarBox.max.y - mediumJarBox.min.y
+  }
+  
+  const otherJarBox = boundingBoxes[otherJarBoxSize].boundingBox
+  const otherJarBoxProperties = {
+    box: otherJarBox,
+    jarMinY: otherJarBox.min.y,
+    jarMaxY: otherJarBox.max.y,
+    jarCenter: (otherJarBox.max.y + otherJarBox.min.y) / 2,
+    height: otherJarBox.max.y - otherJarBox.min.y
+  }
+  
+  // Get current jar properties
+  const currentJarProperties = jarSize === '300g' ? mediumJarBoxProperties : otherJarBoxProperties;
+  
+  let honeyParameters = honeyPresets[honeyType]
+  const honeyColor = new Color(honeyParameters.colorCode)
+  const matcapTexture = await textureLoader.loadAsync(`/assets/matcaps/${honeyParameters.matcapId}.png`);
+  
+  // The medium jar's visual properties we want to preserve
+  const mediumJarVisualCenter = mediumJarBoxProperties.jarCenter;
+  const mediumJarVisualHeight = mediumJarBoxProperties.height;
+  const hardCodedMediumJarRatio = 0.9; // The perfect ratio for medium jar
+  let saturationValue = jarSize === '300g' ? 1.0 : 0.75;
+  let brightnessValue = jarSize === '300g' ? 1.0 : 1.2;
+  return new ShaderMaterial({
+    uniforms: {
+      matcap: { value: matcapTexture },
+      colorAdjust: { value: honeyColor},
+      time: { value: 0 },
+      brightness: { value: brightnessValue},
+      saturation: { value: saturationValue},
+      envMap: { value: environment },
+      IOR: { value: honeyParameters.density},
+      subSurfaceScatter: { value: honeyParameters.light},
+      viscosity: { value: honeyParameters.viscosity},
+      viscosityWaviness: { value: honeyParameters.viscosityWaviness},
+      highlightPosition: { value: 1.50 },
+      highlightIntensity: { value: 0.50 },
+      envMapIntensity: { value: 1.0},
+      mediumJarMinY: { value: mediumJarBoxProperties.jarMinY },
+      mediumJarMaxY: { value: mediumJarBoxProperties.jarMaxY },
+      mediumJarHeight: { value: mediumJarBoxProperties.height },
+      mediumJarCenter: { value: mediumJarBoxProperties.jarCenter },
+      currentJarMinY: { value: currentJarProperties.jarMinY },
+      currentJarMaxY: { value: currentJarProperties.jarMaxY },
+      currentJarHeight: { value: currentJarProperties.height },
+      currentJarCenter: { value: currentJarProperties.jarCenter },
+      jarBasePosition: { value: currentJarMeshPosition },
+      initialJarPosition: { value: initialJarPosition },
+      hardCodedRatio: { value: hardCodedMediumJarRatio },
+      isMediumJar: { value: jarSize === '300g' ? 1.0 : 0.0 }
+    },
+    vertexShader: `
+      uniform float mediumJarMinY;
+      uniform float mediumJarMaxY;
+      uniform float mediumJarHeight;
+      uniform float mediumJarCenter;
+      uniform float currentJarMinY;
+      uniform float currentJarMaxY;
+      uniform float currentJarHeight;
+      uniform float currentJarCenter;
+      uniform vec3 jarBasePosition;
+      uniform vec3 initialJarPosition;
+      uniform float hardCodedRatio;
+      uniform float isMediumJar;
+      
+      varying vec3 vNormal;
+      varying vec3 vViewPosition;
+      varying vec3 vWorldPosition;
+      varying vec3 vNormalizedPosition;
+
+      void main() {
+        vNormal = normalize(normalMatrix * normal);
+        vec4 mvPosition = modelViewMatrix * vec4(position, 1.0);
+        vViewPosition = -mvPosition.xyz;
+        
+        // Calculate the world position
+        vWorldPosition = (modelMatrix * vec4(position, 1.0)).xyz;
+        
+        // Store the actual world position for visual calculations
+        vec3 actualWorldPos = vWorldPosition;
+        
+        // Calculate the current mesh position in world space
+        vec3 currentMeshWorldPos = (modelMatrix * vec4(0.0, 0.0, 0.0, 1.0)).xyz;
+        
+        // For medium jar, apply the hardcoded ratio that gives the perfect look
+        if (isMediumJar > 0.5) {
+          // For medium jar, just use the actual positions with the hardcoded ratio
+          // that already gives the perfect look
+          vec3 relativePos = actualWorldPos - currentMeshWorldPos;
+          float normalizedY = (relativePos.y / currentJarHeight);
+          vNormalizedPosition = relativePos;
+          vNormalizedPosition.y = normalizedY * hardCodedRatio * mediumJarHeight;
+          vNormalizedPosition += currentMeshWorldPos;
+        } else {
+          // For other jars, we need to normalize the position relative to the medium jar
+          // 1. Get position relative to current jar's world position
+          vec3 relativePos = actualWorldPos - currentMeshWorldPos;
+          
+          // 2. Normalize the Y position to 0-1 range within current jar's bounds
+          float normalizedY = (relativePos.y / currentJarHeight);
+          
+          // 3. Map this normalized position to equivalent position in medium jar
+          // using the hardcoded ratio that gave the perfect look
+          vNormalizedPosition = relativePos;
+          vNormalizedPosition.y = normalizedY * hardCodedRatio * mediumJarHeight;
+          
+          // 4. Add back the current jar's world position
+          vNormalizedPosition += currentMeshWorldPos;
+        }
+
+        gl_Position = projectionMatrix * mvPosition;
+      }
+    `,
+    fragmentShader: `
+      uniform sampler2D matcap;
+      uniform vec3 colorAdjust;
+      uniform float time;
+      uniform float brightness;
+      uniform float saturation;
+      uniform samplerCube envMap;
+      uniform float envMapIntensity;
+      uniform float IOR;
+      uniform float subSurfaceScatter;
+      uniform float viscosity;
+      uniform float highlightIntensity;
+      uniform float highlightPosition;
+      uniform float viscosityWaviness;
+
+      varying vec3 vNormal;
+      varying vec3 vViewPosition;
+      varying vec3 vWorldPosition;
+      varying vec3 vNormalizedPosition;
+
+      vec3 getEnvironmentReflection(vec3 viewDir, vec3 normal) {
+        vec3 reflectVec = reflect(viewDir, normal);
+        vec3 envMapCoord = reflectVec * 20.0;
+        return textureCube(envMap, envMapCoord).rgb;
+      }
+
+      void main() {
+        vec3 viewDir = normalize(vViewPosition);
+        vec3 normal = normalize(vNormal);
+
+        vec3 refractColor = refract(viewDir, normal, 1.0 / IOR);
+        vec2 matcapUV = refractColor.xy * 0.5 + 0.5;
+        vec3 matcapColor = texture2D(matcap, matcapUV).rgb;
+
+        vec3 reflColor = getEnvironmentReflection(viewDir, normal) * envMapIntensity;
+
+        float fresnelPower = 3.0;
+        float fresnel = pow(1.0 - dot(viewDir, normal), fresnelPower);
+
+        vec3 scatterColor = colorAdjust * (1.0 - fresnel) * subSurfaceScatter;
+
+        // Use normalized position for all visual effects
+        float viscosityEffect = sin(vNormalizedPosition.y * viscosityWaviness + time * 0.1) * viscosity;
+        matcapColor += vec3(viscosityEffect);
+
+        // Use normalized position for highlight
+        float verticalHighlight = smoothstep(highlightPosition - 0.1, highlightPosition + 0.1, abs(vNormalizedPosition.y));
+        verticalHighlight = pow(verticalHighlight, 2.0) * highlightIntensity * 2.0;
+
+        vec3 baseColor = mix(matcapColor, reflColor, fresnel * 0.8);
+        vec3 finalColor = mix(baseColor, colorAdjust, 0.5);
+        finalColor += scatterColor;
+        finalColor += vec3(verticalHighlight);
+
+        // Use normalized position for color depth
+        float depth = (vNormalizedPosition.y + 1.0) * 0.5;
+        finalColor *= mix(vec3(1.0), colorAdjust, depth);
+
+        float transparency = smoothstep(0.2, 0.8, abs(dot(viewDir, normal)));
+        finalColor = mix(finalColor, reflColor, transparency * 0.2);
+        float luminance = dot(finalColor, vec3(0.299, 0.587, 0.114));
+        vec3 grayscale = vec3(luminance);
+        finalColor = mix(grayscale, finalColor, saturation);
+        finalColor *= brightness;
+        gl_FragColor = vec4(finalColor, 1.0);
+      }
+    `
+  });
+}
 
 import { toRaw } from 'vue';
 import { useMeshStore } from '../../store/meshes';
@@ -635,5 +1055,7 @@ export {
   honeyMaterial,
   oldHoneyMaterial,
   playfulMaterial2,
-  playfulMaterial3
+  playfulMaterial3,
+  playfulMaterial4,
+  playfulMaterial5
 }

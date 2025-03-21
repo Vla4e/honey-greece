@@ -17,16 +17,74 @@
               <div class="form-group">
                 <label for="firstName">First Name</label>
                 <input type="text" id="firstName" v-model="form.firstName" required>
+                <span v-if="validationResult.firstName.invalid" class="validation">{{ validationResult.firstName.message }}</span>
               </div>
               <div class="form-group">
                 <label for="lastName">Last Name</label>
                 <input type="text" id="lastName" v-model="form.lastName" required>
+                <span v-if="validationResult.lastName.invalid" class="validation">{{ validationResult.lastName.message }}</span>
               </div>
             </div>
             <div class="form-group">
               <label for="email">Email</label>
               <input type="email" id="email" v-model="form.email" required>
+              <span v-if="validationResult.email.invalid" class="validation">{{ validationResult.email.message }}</span>
             </div>
+            <div class="form-group radio-group form-group-small">
+              <div class="radio-container">
+                <label for="consumer">
+                  Private
+                </label>
+                <input 
+                  type="radio" 
+                  class="radio"
+                  id="consumer"
+                  value="consumer"
+                  v-model="form.customerType"
+                >
+              </div>
+
+              <div class="radio-container">
+                <label for="business">
+                  Business
+                </label>
+                <input 
+                  type="radio" 
+                  class="radio"
+                  id="business"
+                  value="business"
+                  v-model="form.customerType"
+                >
+              </div>
+            </div>
+            
+            <Transition name="expand">
+              <div v-show="form.customerType === 'business'" class="business-form">
+                <div class="form-group form-group-small">
+                  <label for="company">Company Name</label>
+                  <input type="text" autocomplete="off" id="company" v-model="form.companyName">
+                  <span v-if="validationResult.companyName.invalid" class="validation">{{ validationResult.companyName.message }}</span>
+                </div>
+                
+                <div class="form-group form-group-small">
+                  <label for="phoneNumber">Phone Number</label>
+                  <input 
+                    type="tel" 
+                    id="phoneNumber" 
+                    minlength="8"
+                    maxlength="20"
+                    v-model="form.phoneNumber"
+                  >
+                  <span v-if="validationResult.phoneNumber.invalid" class="validation">{{ validationResult.phoneNumber.message }}</span>
+                </div>
+                                  
+                <div class="form-group form-group-small">
+                    <CountrySelect v-model="form.location"/>
+                  </div>
+
+              </div>
+            </Transition>
+
             <div class="form-group">
               <label for="subject">Subject</label>
               <input type="subject" id="subject" v-model="form.subject" required>
@@ -36,12 +94,13 @@
               <textarea id="message" v-model="form.message" required></textarea>
             </div>
             
-            <!-- <div class="form-group newsletter">
+            <div class="form-group newsletter">
               <input id="newsletter" type="checkbox" v-model="form.newsletter"/>
               <label for="newsletter">Also subscribe to our newsletter.</label>
-            </div> -->
+            </div>
+
             <div class="button-recaptcha">
-              <button class="submit-button" type="submit">Submit</button>
+              <button class="submit-button" :class="isSubmitting ? 'disabled': ''" :disabled="isSubmitting" type="submit">Submit</button>
               <div class="recaptcha-disclaimer" style="text-align: center; margin-top: 10px;">
                 <span class="disclaimer-text">
                   This site is protected by reCAPTCHA and the Google
@@ -69,14 +128,16 @@
 
 <script setup>
 import { reactive, ref, inject, onMounted, nextTick, watch } from 'vue';
+
+import { getCaptchaToken } from '../../helpers/Form/captcha';
+import { validateForm } from '../../helpers/Form/validations';
+
 defineOptions({
   name: 'ContactForm'
 })
+
 const emitter = inject('emitter')
 const { isMobile } = inject('screenSize')
-
-//Recaptcha
-const siteKey = ref('6LeduiYqAAAAAM0sVYQ7IRkiObV6HU5w-ZPFkLbQ');
 
 //Form
 const form = reactive({
@@ -85,20 +146,75 @@ const form = reactive({
   email: '',
   subject: '',
   message: '',
-  newsletter: ''
+  newsletter: false,
+  customerType: 'consumer',
+  companyName: '',
+  phoneNumber: '',
+  location: ''
 });
+let validationResult = reactive({
+  email: {
+    invalid: false,
+    message: ''
+  },
+  firstName: {
+    invalid: false,
+    message: ''
+  },
+  lastName: {
+    invalid: false,
+    message: ''
+  },
+  location: {
+    invalid: false,
+    message: ''
+  },
+  companyName: {
+    invalid: false,
+    message: ''
+  },
+  phoneNumber: {
+    invalid: false,
+    message: ''
+  }
+})
 watch(() => form.newsletter, (val) => {
   console.log("Val:", val)
 })
-async function handleSubmit() {
-  grecaptcha.ready(async () => {
-    grecaptcha.execute(siteKey.value, {action: 'submit'}).then(async (captchaToken) => {
-      await submitForm(captchaToken);
-    }).catch(error => {
-      console.error('reCAPTCHA execution failed:', error);
-      alert('reCAPTCHA verification failed. Please try again.');
-    });
+
+async function validateInputs(){
+  Object.keys(validationResult).forEach(key => {
+    validationResult[key].invalid = false;
+    validationResult[key].message = '';
   });
+
+  const { isValid, errors } = validateForm(form);
+
+  if (!isValid) {
+    Object.entries(errors).forEach(([field, message]) => {
+      console.log("f,m", field,message)
+      if (message && validationResult[field]) {
+        validationResult[field].invalid = true;
+        validationResult[field].message = message;
+      }
+    });
+    console.log("Valres", validationResult)
+    return false;
+  } else return true
+}
+
+let isSubmitting = ref(false)
+async function handleSubmit() {
+  console.log("Attempting submission")
+  isSubmitting.value = true;
+  
+  const validity = await validateInputs()
+  if(!validity) return
+  
+  let captchaToken = await getCaptchaToken();
+  await submitForm(captchaToken);
+  console.log("Will return value to false/allow submission")
+  isSubmitting.value = false;
 }
 
 async function submitForm(captchaToken) {
@@ -107,8 +223,10 @@ async function submitForm(captchaToken) {
     captchaToken
   };
 
+  // http://localhost:3000/send-email
+  // https://api.premiumhoney.gr/send-email
   try {
-    const response = await fetch('https://api.premiumhoney.gr/send-email', {
+    const response = await fetch('http://localhost:3000/send-email', {
       method: 'POST',
       headers: {
         "Content-Type": "application/json",
@@ -121,12 +239,15 @@ async function submitForm(captchaToken) {
       setTimeout(() => {
         emitter.emit('toggleContactForm');
       }, 1500);
+      return
     } else {
       alert('Failed to send email. Please try again.');
+      return
     }
   } catch (error) {
     console.error('Error sending email:', error);
     alert('Error sending email');
+    return
   }
 }
 
@@ -166,8 +287,8 @@ function toggleContactForm(){
       stroke: black;
       stroke-width: 1px;
       position: absolute;
-      top: 2%;
-      right: 2%;
+      top: 0%;
+      right: 0%;
       cursor: pointer;
     }
     .white-box-cover{
@@ -238,12 +359,13 @@ function toggleContactForm(){
               text-transform: uppercase;
               color: #131313;
               text-align: start;
+              font-size: 14px;
             }
             input{
-              min-height: 40px;
+              min-height: 25px;
             }
             textarea{
-              min-height: 200px;
+              min-height: 130px;
               resize: none;
             }
             input, textarea{
@@ -307,6 +429,47 @@ function toggleContactForm(){
             display: flex;
             justify-content: space-between;
           }
+          
+          .radio-group{
+            flex-direction: row;
+            justify-content: space-around;
+            label {
+                  font-size: 12px;
+                  font-weight: 400;
+                }
+    
+                input {
+                  -webkit-appearance: none;
+                  -moz-appearance: none;
+                  appearance: none;
+                  min-height: 15px;
+                  width: 15px;
+                  margin: 0 15px 0 0;
+                  box-sizing: border-box;
+                  background-color: #F2F2F2;
+                  border: 1px solid #C8C5C5;
+                  outline: none;
+                  cursor: pointer;
+                  display: flex;
+                  justify-content: center;
+                  align-items: center;
+    
+                  &::after {
+                    content: "";
+                    width: 7px; 
+                    height: 7px;
+                    background-color: transparent;
+                  }
+    
+                  &:checked::after {
+                    background-color: black;
+                  }
+    
+                  &:active {
+                    border: 1px solid #131313;
+                  }
+                }
+          }
           .submit-button{
             width: 30%;
             font-family: 'DMSans';
@@ -319,6 +482,9 @@ function toggleContactForm(){
             // margin-top: 15px;
             &:hover{
               border-color: #131313;
+            }
+            &.disabled{
+              opacity: 0.7;
             }
           }
         }
@@ -361,6 +527,7 @@ function toggleContactForm(){
   display: flex;
   width: 100%;
   align-items: center;
+  margin: 5px;
   .recaptcha-disclaimer{
     display:flex;
     flex-direction: column;
@@ -395,5 +562,32 @@ function toggleContactForm(){
       padding: 10px;
     }
   }
+}
+
+.expand-enter-active,
+.expand-leave-active {
+  transition: all 0.3s ease;
+  max-height: 500px;
+  overflow: hidden;
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.expand-enter-from,
+.expand-leave-to {
+  max-height: 0;
+  opacity: 0;
+  transform: translateY(-20px);
+  overflow: hidden;
+}
+
+.business-form .form-group {
+  transition: opacity 0.2s ease;
+  transition-delay: 0.1s;
+}
+
+.expand-enter-from .form-group,
+.expand-leave-to .form-group {
+  opacity: 0;
 }
 </style>

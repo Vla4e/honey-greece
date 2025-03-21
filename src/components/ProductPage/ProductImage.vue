@@ -1,6 +1,6 @@
 
 <script setup>
-import { ref, onMounted, computed, watch} from 'vue'
+import { ref, onMounted, computed, watch } from 'vue'
 defineOptions({
   name: 'ProductImage'
 })
@@ -22,23 +22,32 @@ let props = defineProps({
     type: Array,
     required: true
   },
+  modelValue: {
+    type: String,
+    required: false
+  }
 })
 
 let jarSizes = computed( ()=> props.jarSizes )
 let currentJarSize = ref(null)
 watch(() => jarSizes.value, (sizes) => {
   console.log("SIZE:", sizes)
-  currentJarSize.value = sizes[0]
+  console.log("brandUrl", props.brandUrlSlug)
+  if(props.brandUrlSlug && props.brandUrlSlug === 'haa'){
+    currentJarSize.value = sizes[1]
+  } else currentJarSize.value = sizes[0]
 }, { immediate: true })
 watch(() => props.flavour, async (flavour) => {
   console.log("Flavour changed:", flavour)
   await loadImage()
 })
 
+const emit = defineEmits(['update:modelValue']);
 async function selectJarSize(size){
   console.log("Size selected: ", size)
   if(currentJarSize.value !== size){
     currentJarSize.value = size
+    emit('update:modelValue', size)
     await loadImage()
   } else return
 }
@@ -72,7 +81,7 @@ onMounted(async () => {
   <div class="product-image">
     <div class="product-image-container">
       <Transition name="slide" class="slide-transition" mode="out-in">
-        <img :key="imageUrl" class="jar-image" :src="imageUrl"/>
+        <img :key="imageUrl" class="jar-image" :src="imageUrl" id="imageRef"/>
       </Transition>
     </div>
 
@@ -114,6 +123,8 @@ onMounted(async () => {
     display: flex;
     justify-content: center;
     width: 100%;
+    // margin-top: -40px;
+    z-index: 11;
     .size-selection-button{
       color: #000;
       font-family: 'DMSans';

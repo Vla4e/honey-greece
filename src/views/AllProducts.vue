@@ -84,7 +84,6 @@ async function fillCategorizedImageUrls(){
   console.log("Matched Data:", matchedData)
   Object.values(imageModules).forEach((path, idx) => {
     let splitPath = imagePaths[idx].split('/');
-    console.log("Splitpath", splitPath)
     let brand = splitPath[5];
     let line = splitPath[6];
     let size = splitPath[7];
@@ -110,9 +109,7 @@ async function fillCategorizedImageUrls(){
     let flavourData = findFlavourData(brand, line, flavour);
     if (flavourData) {
       if(size === '300g'){
-        console.log("!size matched", brand)
         if(matchedData[brand] && brand !== 'okto'){
-          console.log("brand is HAA")
           matchedData[brand].push({
             path: path.default,
             flavourData: flavourData,
@@ -120,9 +117,7 @@ async function fillCategorizedImageUrls(){
           });
         }
       } else if (size === '450g'){
-        console.log("!size 450 matched", brand)
         if(matchedData[brand] && brand === 'okto'){
-          console.log("brand is Okto")
           matchedData[brand].push({
             path: path.default,
             flavourData: flavourData,

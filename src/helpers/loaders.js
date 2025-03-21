@@ -38,37 +38,49 @@ export async function loadGlb(loader, url) {
 }
 
 export async function loadGlbReturnParts(loader, url){
-  console.log("Loading GLB, returning parts.")
+  // console.log("Loading GLB, returning parts.")
   let loaderPromise = await loader.loadAsync(url)
   if(loaderPromise){
+    // console.log("Loader Promise:", loaderPromise)
     loaderPromise.scene.name = url
     let scene = loaderPromise.scene;
     scene.position.set(0, 0, 0)
     // const axesHelperNew = new AxesHelper(5)
     // scene.add(axesHelperNew)
+    let meshesCategorized = {
+      '150g': [],
+      '300g': [],
+      '450g': []
+    };
     let meshes = [];
     let labelMeshes = [];
     let labelMeshesClones = [];
     let glassMeshes = []
     let honeyMeshes = []
     let sizeDuringTraversal = '';
+    let searchQuery;
     // let jar150 = new Object3D;
     // let jar300 = new Object3D;
     // let jar450 = new Object3D;
     scene.traverse((obj)=>{
       if(obj.isMesh){
-        console.log("Obj.name:", obj.name)
+        // console.log("Obj.name:", obj.name)
         if(obj.name.includes('300')){
           sizeDuringTraversal = '300g'
+          searchQuery = '300'
           // jar300.add(obj)
         } else if (obj.name.includes('450')){
           sizeDuringTraversal = '450g'
+          searchQuery = '450'
           // jar450.add(obj)
         } else {
           sizeDuringTraversal = '150g'
+          searchQuery = '150'
           // jar150.add(obj)
         }
-
+        // if(obj.name.includes(searchQuery)){
+        //   meshesCategorized[sizeDuringTraversal].push(obj)
+        // }
         if(obj.name.includes('label')){
           obj.trackingName = `label_${sizeDuringTraversal}`
           obj.size = sizeDuringTraversal
@@ -81,10 +93,11 @@ export async function loadGlbReturnParts(loader, url){
           obj.size = sizeDuringTraversal
           obj.type = 'glass'
         } else if (obj.name.includes('honey')){
+          // console.log("HONEY:", obj.name)
           obj.trackingName = `honey_${sizeDuringTraversal}`
           obj.size = sizeDuringTraversal
           obj.type= 'honey'
-          console.log("SIZE:", obj.size)
+          // console.log("SIZE:", obj.size)
           honeyMeshes[sizeDuringTraversal] = obj
           meshStore.storeBoundingBox(obj, obj.size)
         } else {
@@ -96,21 +109,22 @@ export async function loadGlbReturnParts(loader, url){
     let targetMesh = meshes[0];
     let jarSizes = []
     const meshNames = meshes.map((mesh) => {
-      // // console.log("MESHNAME", mesh.name)
-      // console.log("mesh ss", mesh.name.substring(mesh.name.length-4, mesh.name.length))
+      // // // console.log("MESHNAME", mesh.name)
+      // // console.log("mesh ss", mesh.name.substring(mesh.name.length-4, mesh.name.length))
       if(mesh.name.includes('label')){
         jarSizes.push(mesh.name.substring(mesh.name.length-4, mesh.name.length))
         mesh.jarSize = mesh.name.substring(mesh.name.length-4, mesh.name.length)
       }
       return mesh.name
     })
-    // console.log("SIZES", jarSizes)
-    // // console.log('meshNames', meshNames)
+    // // console.log("SIZES", jarSizes)
+    // // // console.log('meshNames', meshNames)
 
     return { 
       gltf: loaderPromise, 
       scene, 
-      meshes, 
+      meshes,
+      meshesCategorized,
       labelMeshes, 
       labelMeshesClones, 
       glassMeshes, 
@@ -118,12 +132,13 @@ export async function loadGlbReturnParts(loader, url){
       targetMesh, 
       meshNames, 
       jarSizes, 
-      loaded: true }
+      loaded: true
+     }
   } else return { loaded: false }
 }
 
 export async function loadTexture(url) {
-  console.log("loading texture from url:", url)
+  // console.log("loading texture from url:", url)
     return textureLoader.loadAsync(url);
 }
 

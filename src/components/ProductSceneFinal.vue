@@ -146,41 +146,14 @@ import {
   oldHoneyMaterial,
   playfulMaterial2,
   playfulMaterial3,
+  playfulMaterial4,
+  playfulMaterial5
 } from "../helpers/JarScene/HoneyMaterials.js";
 
 //Label
 
 /* "ENUMS" */
 // IMPORTANT: JAR HEIGHTS and WIDTHS are 0.3 < n < 1 in World Scale //
-const jarConfigs = Object.freeze({
-  "150g": {
-    name: "150g",
-    source: "/assets/glb/jar-150g-v8.glb",
-    position: {
-      x: 0,
-      y: 0,
-      z: 0.02,
-    },
-  },
-  "300g": {
-    name: "300g",
-    source: "/assets/glb/jar-300g-v4.glb",
-    position: {
-      x: 0,
-      y: 0,
-      z: 0.02,
-    },
-  },
-  "400g": {
-    name: "400g",
-    source: "/assets/glb/jar-450g-v4.glb",
-    position: {
-      x: 0,
-      y: 0,
-      z: 0.02,
-    },
-  },
-});
 
 import * as TWEEN from "@tweenjs/tween.js";
 import { zoomIn, zoomOut } from "@/helpers/cameraZoom.js";
@@ -327,7 +300,7 @@ export default {
 
     let currentJarScene = null;
     let upcomingJarScene = null;
-    let currentJarSize = ref('300g');
+    let currentJarSize = ref('450g');
     let previousJarSize = ref(null);
     let currentJarSizeGrams = ref(null);
     let upcomingJarSize = ref("");
@@ -509,7 +482,7 @@ export default {
       //   )
       // }
       const honeyMaterials = {
-        [jarSizes[0]]: await playfulMaterial3(
+        [jarSizes[0]]: await playfulMaterial5(
           globalTextureLoader,
           globalScene.environment,
           type,
@@ -518,7 +491,7 @@ export default {
           currentBrand.value,
           globalCamera
         ),
-        [jarSizes[1]]: await playfulMaterial3(
+        [jarSizes[1]]: await playfulMaterial5(
           globalTextureLoader,
           globalScene.environment,
           type,
@@ -608,7 +581,7 @@ export default {
 
       // let sceneUrl =
       //   currentBrand.value === "okto"
-      //     ? '/assets/glb/300-450-baked.glb':
+      //     ? '/assets/glb/300-450-baked-2.glb':
       //       // '/assets/glb/newJars/450-300-animation-choppy-v2.glb':
       //       // '/assets/glb/newJars/uvfixed4.glb':
       //       "/assets/glb/newJars/300-150-animation-choppy-v6.glb";
@@ -762,7 +735,7 @@ export default {
       // globalRenderer.useLegacyLights = false;
       // globalRenderer.render(globalScene, globalCamera);
 
-      updateTexture()
+      // updateTexture()
 
       await setLightingEXR(globalRenderer);
       // await setLighting(globalRenderer)
@@ -1092,7 +1065,7 @@ export default {
           action.play();
           currentJarSize.value = size;
         });
-        console.log("initiated obj ROTATION");
+        console.log("initiated obj ROTATION", currentJarSize.value);
         initiateObjectRotation(globalScene, webGl.value, currentJarSize.value);
         console.log("CJS", currentJarSize.value);
         if (isMobile.value) {
@@ -1146,7 +1119,7 @@ export default {
     async function setLighting(renderer){
       let pmremGenerator = new PMREMGenerator( renderer );
       // let rgbeTexture = await new RGBELoader().loadAsync('/assets/HDR/garden.hdr')
-      let rgbeTexture = await loadEnvironment('/assets/HDR/output2.hdr')
+      let rgbeTexture = await loadEnvironment('/assets/HDR/output-2.hdr')
       var envMap = pmremGenerator.fromEquirectangular( rgbeTexture ).texture;
       globalScene.background = null;
       globalScene.environment = envMap;
@@ -1501,7 +1474,7 @@ export default {
             ...textureUrlSlugs,
             flavour: newValues.flavour,
           };
-          updateTexture();
+          // updateTexture();
           // allCurrentTextures = await loadAllTextures()
         }
       },

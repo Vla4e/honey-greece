@@ -1,7 +1,7 @@
 <template>
   <div ref="oktoText" :class="hoverable ? 'hoverable' : ''" class="okto-text">
-    <span class="okt">Okt</span>
-    <span class="omega">ώ</span>
+    <span class="okt" :style="computedBold ? 'font-weight: 700 !important;': ''">Okt</span>
+    <span class="omega" :style="computedBold ? 'font-weight: 700 !important;':''">ώ</span>
     <!-- <img :src="oktoOmega" class="okto-omega"/> -->
   </div>
 </template>
@@ -27,20 +27,30 @@ const props = defineProps({
     required: false,
     default: false,
   },
+  isBold: {
+    type: Boolean,
+    required: false,
+    default: false
+  }
 });
 
+//NOT WORKING BUT DONT FIX
 watch(
   () => props.fontSize,
   (newVal) => {
     let fontSize;
+    console.log("SIMOB", isMobile.value)
     if (isMobile) fontSize = props.fontSizeMobile;
-    else fontSize = props.fontSize;
+    else fontSize = newVal;
+    console.log("FONTSIZE:", fontSize, newVal, props.fontSizeMobile)
     document.documentElement.style.setProperty("--okto-font-size", fontSize + "px");
   },
   {
     immediate: true,
   }
 );
+
+let computedBold = computed(() => props.isBold)
 </script>
 
 <style lang="scss" scoped>

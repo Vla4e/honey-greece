@@ -10,6 +10,12 @@
         :key="currentFlavour?.name"
       >
         {{ currentFlavour?.name }}
+        <span v-if="selectedBrandConfig.brand === 'HAA'" class="brand-line">
+          {{ selectedBrandConfig.fullBrandName }} - {{  currentProductLine.name  }}
+        </span>
+        <span class="brand-line" v-else>
+          <OktoText :fontSize="30"/> - {{  currentProductLine.name  }}
+        </span>
       </span>
     </Transition>
 
@@ -18,7 +24,7 @@
     </span>
 
     <div class="series-selection">
-      <div class="pushdown" style="height: 35%; width: 100%"></div>
+      <div class="pushdown" style="height: 30%; width: 100%"></div>
 
       <!-- Desktop product line selector -->
       <div v-if="!isMobile" class="series-item-container">
@@ -30,7 +36,7 @@
             :class="{ selected: line.name === currentProductLine?.name }"
             @click="selectProductLine(line)"
           >
-            <span class="series-item-text">Okto - {{ line.name }}</span>
+            <!-- <span class="series-item-text">Okto - {{ line.name }}</span> -->
             <div class="stylish-pointer" v-show="line.name === currentProductLine?.name">
               <img :src="pointerLine" class="pointer-line" />
               <img :src="pointerCircle" class="pointer-circle" />
@@ -47,7 +53,24 @@
 
       <div class="technical-sheet">
         Technical Sheet
-        <img :src="downloadIcon" class="download-sheet" />
+        <div class="sheet-size">
+          <span 
+            @click="selectSheetSize(selectedBrandConfig.jarSizes[0])" 
+            class="size-button"
+            :class="selectedSheetSize === selectedBrandConfig.jarSizes[0] ? 'selected' : ''"
+          >
+          {{ selectedBrandConfig.jarSizes[0] }}
+          </span>
+          <span>|</span>
+          <span 
+            @click="selectSheetSize(selectedBrandConfig.jarSizes[1])" 
+            class="size-button"
+            :class="selectedSheetSize === selectedBrandConfig.jarSizes[1] ? 'selected' : ''"
+          >
+            {{ selectedBrandConfig.jarSizes[1] }}
+          </span>
+        </div>
+        <img :src="downloadIcon" @click="downloadSheet" class="download-sheet" />
       </div>
     </div>
 
@@ -61,6 +84,7 @@
         :productLine="currentProductLine" 
         :jarSizes="selectedBrandConfig.jarSizes"
         :brandUrlSlug="selectedBrandConfig.urlSlug"
+        v-model="selectedJarSize"
       />
     </div>
 
@@ -71,6 +95,7 @@
       <span
         v-for="(flavour, idx) in productLineFlavours"
         :key="idx"
+        :id="`flavour_${flavour.urlSlug}`"
         class="blend"
         :class="{ selected: flavour.name === currentFlavour?.name }"
         @click="selectFlavour(flavour)"
@@ -78,7 +103,7 @@
         <span class="blend-text">{{ flavour.name }}</span>
         <div
           class="stylish-pointer-to-left"
-          v-show="flavour.name === currentFlavour?.name"
+          v-show="(flavour.name === currentFlavour?.name) && isSet"
         >
           <img :src="pointerCircle" class="pointer-circle" />
           <img :src="pointerLine" class="pointer-line" />
@@ -167,6 +192,11 @@ const router = useRouter();
 let selectedLine = ref(route.query.line);
 let selectedHoney = ref(route.query.honey);
 let selectedBrand = ref(route.params.selectedBrand)
+let selectedSheetSize = ref('300g')
+let selectedJarSize = ref(null)
+watch(() => selectedJarSize.value, (val)=>{
+  calculateLineWidthImage(val)
+})
 
 watch(() => selectedBrand.value, (value) => {
   if(value.selectedBrand){
@@ -258,10 +288,24 @@ function selectFlavour(flavour) {
   selectedHoney.value = flavour.urlSlug;
   // close circle menu in mobile
   if (isMobile.value) circleToggled.value = false;
+  
+  calculateLineWidthImage()
 }
 
 function selectProductLine(line) {
   selectedLine.value = line.name;
+}
+
+function selectSheetSize(size){
+  console.log("selecting size", size)
+  selectedSheetSize.value = size
+}
+function downloadSheet(){
+  console.log("Downloading", 
+  "\n Brand: ", selectedBrand.value, 
+  "\n Line: ", selectedLine.value, 
+  "\n Flavour: ", selectedHoney.value, 
+  "\n Size:", selectedSheetSize.value)
 }
 
 if (emitter) {
@@ -274,7 +318,7 @@ if (emitter) {
 }
 
 function calculateLineWidths(edgeCoordinates) {
-  // console.log("Got EdgeDistance", edgeCoordinates.leftEdge, edgeCoordinates.rightEdge)
+  console.log("Got EdgeDistance", edgeCoordinates.leftEdge, edgeCoordinates.rightEdge)
   if (productViewer.value) {
     const circleDetraction = 45; // Account for circle width, and imprecision in calculation
     const productViewerWidth = productViewer.value.offsetWidth;
@@ -302,6 +346,56 @@ function calculateLineWidths(edgeCoordinates) {
     );
     return;
   }
+}
+
+//413, 328, 1.259, 0.2058, 0.794
+// 908, 821
+
+let isSet = ref(false)
+function calculateLineWidthImage() {
+  isSet.value = false;
+  setTimeout(() => {
+
+    let imageRef = document.getElementById('imageRef');
+    let imageBounding = imageRef.getBoundingClientRect();
+    let imageWidth = imageBounding.width;
+    
+    let flavourRef = document.getElementById(`flavour_${selectedHoney.value}`)
+    let flavourRefBounding = flavourRef.getBoundingClientRect()
+  
+    const fixedCircleWidth = 35;
+    let cylinderRightEdge = imageBounding.left + (imageWidth * 0.794);
+    let distanceBetweenElements = flavourRefBounding.left - cylinderRightEdge - fixedCircleWidth
+  
+    // // Right cylinder edge visual indicator
+    // const line = document.createElement('div');
+    // line.style.position = 'absolute';
+    // line.style.top = imageBounding.top + 'px';
+    // line.style.left = cylinderRightEdge + 'px';
+    // line.style.width = '2px';
+    // line.style.height = '10px';
+    // line.style.backgroundColor = 'red';
+    // line.style.zIndex = '1000';
+    // document.body.appendChild(line);
+    
+    // // Left flavour edge visual indicator
+    // const line2 = document.createElement('div');
+    // line2.style.position = 'absolute';
+    // line2.style.top =  flavourRefBounding.top + 'px';
+    // line2.style.left = flavourRefBounding.left + 'px';
+    // line2.style.width = '2px';
+    // line2.style.height = '10px';
+    // line2.style.backgroundColor = 'red';
+    // line2.style.zIndex = '1000';
+    // document.body.appendChild(line2);
+  
+    console.log("Distance Between el", distanceBetweenElements)
+    document.documentElement.style.setProperty(
+      "--pointer-line-right-width",
+      `${distanceBetweenElements}px`
+    );
+    isSet.value = true;
+  }, 1000)
 }
 
 const computedTextLength = computed(() => {
@@ -357,9 +451,11 @@ const computedTextLength = computed(() => {
 const suggestedBrandLogoUrl = ref(null);
 const suggestedBrandRoute = ref(null);
 
+
 onMounted(async () => {
-  // isCapable.value = await checkCapabilities();
+  //  isCapable.value = await checkCapabilities();
   isCapable.value = false;
+  calculateLineWidthImage();
 });
 </script>
 
@@ -444,6 +540,26 @@ onMounted(async () => {
     //   font-size: 65px;
     //   max-width: 95%;
     // }
+    // .brand-line{
+    //   font-size: 
+    // }
+  }
+  .floating-text{
+    display: flex;
+    flex-direction: column;
+    .brand-line{
+      display: flex;
+      font-size: 20px;
+      line-height: 100%;
+      .okt{
+        color: rgba(0, 0, 0, 0.1) !important;
+        font-family: "DMSans" !important;
+        font-weight: 700 !important;
+      }
+      .omega{
+        font-weight: 700 !important;
+      }
+    }
   }
 
   .blend-selection {
@@ -461,7 +577,7 @@ onMounted(async () => {
       margin-bottom: 15px;
       width: 80%;
       .stylish-pointer-to-left {
-        display: none !important;
+        // display: none !important;
         position: absolute;
         right: 100%;
         top: 50%;
@@ -486,7 +602,7 @@ onMounted(async () => {
     align-items: flex-start;
     // justify-content: center;
     // padding-top: 55%;
-    width: 85%;
+    width: 100%;
     // opacity: 0;
     .series-item-container {
       display: flex;
@@ -555,11 +671,12 @@ onMounted(async () => {
     .technical-sheet {
       display: flex;
       flex-direction: row;
-      justify-content: flex-start;
+      justify-content: space-between;
       align-items: center;
+      width: 100%;
       color: #000;
       font-family: "DMSans";
-      font-size: 20px;
+      font-size: 16px;
       font-style: normal;
       font-weight: 400;
       letter-spacing: 1.2px;
@@ -575,6 +692,15 @@ onMounted(async () => {
         &:hover {
           width: 22px;
           height: 22px;
+        }
+      }
+      .sheet-size{
+        .size-button{
+          font-size: 15px;
+          margin: 0 5px 0 5px;
+          &.selected{
+            font-weight: 700;
+          }
         }
       }
     }
@@ -613,7 +739,7 @@ onMounted(async () => {
     height: 100%;
     z-index: 10;
     .product-image {
-      max-height: 60vh;
+      max-height: 70vh;
     }
   }
 

@@ -1,15 +1,30 @@
 <template>
   <div :class="brand.disabled ? 'disabled' : ''" class="link-tree">
     
+    <!-- Navbar link -->
     <span 
+      v-if="!brand.disabled"
       @click="goToPage(typedBrands.urlSlug, typedBrands.link)" 
       class="tree-route" 
       :class="currentBrandPage ? 'active': ''"
     >
-      <OktoText :fontSize="16" v-if="typedBrands.name === 'Oktώ'"/>
+      <OktoText :fontSize="16" v-if="typedBrands.name === 'Oktώ'" :isBold="boldOkto"/>
       <span :class="computedColor" v-else>{{typedBrands.name}}</span>
     </span>
+    <span 
+      v-else
+      class="tree-route" 
+      :class="currentBrandPage ? 'active': ''"
+      @mouseover="hoverTrigger(true)"
+      @mouseleave="hoverTrigger(false)"
+    >
+      <Transition name="slide-vertical" mode="out-in">
+        <div v-if="!hovered" :class="computedColor">{{typedBrands.name}}</div>
+        <div v-else :class="computedColor">coming soon</div>
+      </Transition>
+    </span>
     
+    <!-- Dropdown Tree -->
     <div v-if="renderDropdownTree" class="dropdown-tree">
       <img :src="treeRoot" class="root"/>
       <div class="branches">
@@ -31,7 +46,7 @@ import treeNode from "@/assets/components/link-tree/tree-node.svg"
 import treeLeftmost from "@/assets/components/link-tree/tree-leftmost.svg"
 import treeRightmost from "@/assets/components/link-tree/tree-rightmost.svg"
 
-import { ref, watch } from 'vue'
+import { onMounted, ref, watch } from 'vue'
 import router from '@/router/index.js'
 import { useRoute } from 'vue-router';
 
@@ -72,19 +87,42 @@ export default {
     }
     
     //Check whether route matches component's brand, set to active if true
+    let boldOkto = ref(false)
     watch(() => [
       route.name,
-      route.params
-    ], ([name, params]) => {
-      if(name && params){
-        if(params.selectedBrand){
-          if(props.brand.name === params.selectedBrand){
-            currentBrandPage.value = true
-          } else {
-            currentBrandPage.value = false
-          }
+      route.params,
+      route.path
+    ], ([name, params, path]) => {
+      console.log(`=== Route Change Detected ${props.brand.name}===`);
+      console.log(`Path: ${path}`);
+      console.log(`Route Name: ${name}`, !!name);
+      console.log(`Route Params:`, params, !!params);
+      
+      console.log(`Has Name & Params: ${Boolean(name && params)}`);
+      
+      if (params?.selectedBrand !== undefined) {
+        // console.log(`Selected Brand in Params: ${params.selectedBrand}`);
+        // console.log(`Current Brand URL Slug: ${props.brand.urlSlug}`);
+        // console.log(`Is Current Brand Page: ${props.brand.urlSlug === params.selectedBrand}`);
+        if(props.brand.urlSlug === 'Okto' && route.params.selectedBrand === 'Okto'){
+          console.log("BOLDING")
+          boldOkto.value = true;
         }
       }
+      
+      if (name && params) {
+        if (params.selectedBrand) {
+          currentBrandPage.value = props.brand.urlSlug === params.selectedBrand;
+        } else if (path === props.brand.linkTo) {
+          currentBrandPage.value = true;
+        } else{
+          currentBrandPage.value = false
+          boldOkto.value = false;
+        }
+      }
+      
+      // console.log(`Final State - currentBrandPage: ${currentBrandPage.value}`);
+      // console.log("================================");
     }, { immediate: true });
     
     function goToPage(brand, linkTo){
@@ -116,6 +154,11 @@ export default {
         }
       }
     })
+
+    let hovered = ref(false)
+    function hoverTrigger(val){
+      hovered.value = val
+    }
     return {
       treeRoot,
       treeNode,
@@ -128,8 +171,10 @@ export default {
       currentBrandPage,
       computeSource,
       computedColor,
-      goToPage
-      
+      goToPage,
+      hovered,
+      hoverTrigger,
+      boldOkto
     }
   }
 }
@@ -252,10 +297,14 @@ export default {
     letter-spacing: 1.5px;
     text-transform: uppercase;
     text-shadow: var(--navbar-text-shadow);
+    position: relative;
     cursor: pointer;
     
     &.active{
-      font-weight: 700;
+      font-weight: 700 !important;
+      .okt, .omega{
+        font-weight: 700 !important;
+      }
     }
     .okto-text{
       line-height: 0px !important;
@@ -271,10 +320,35 @@ export default {
     }
   }
   &.disabled{
-    pointer-events: none !important;
+    // pointer-events: none !important;
     .dropdown-tree{
       pointer-events: none !important;
     }
   }
+}
+
+.slide-vertical-enter-active,
+.slide-vertical-leave-active {
+  transition: transform 0.3s ease-in-out, opacity 0.3s ease-in-out;
+}
+
+.slide-vertical-enter-from {
+  transform: translateY(-20px);
+  opacity: 0;
+}
+
+.slide-vertical-enter-to {
+  transform: translateY(0);
+  opacity: 1;
+}
+
+.slide-vertical-leave-from {
+  transform: translateY(0);
+  opacity: 1;
+}
+
+.slide-vertical-leave-to {
+  transform: translateY(20px);
+  opacity: 0;
 }
 </style>

@@ -8,19 +8,23 @@
 import { ref, reactive, watch, onMounted, onUnmounted, inject } from 'vue';
 
 import { validateForm } from '../helpers/Form/validations';
+import { getCaptchaToken } from '../helpers/Form/captcha';
 
 import { newsletterManager } from '../helpers/Modal/localStorage';
 
 const props = defineProps({
   showModal: {
     type: Boolean,
-    required: false
+    required: false,
+    default: false
   }
 })
 const emitter = inject('emitter');
 
-let isSubscribed = ref(false)
+
+//Get initial value (creates new ref with initial value of props.showModal)
 let showModal = ref(props.showModal)
+
 function closeModal(){
   console.log("TogglingModal", showModal.value)
   showModal.value = false
@@ -66,8 +70,7 @@ let validationResult = reactive({
     message: ''
   }
 })
-
-async function subscribeToNewsletter() {
+async function validateInputs(){
   Object.keys(validationResult).forEach(key => {
     validationResult[key].invalid = false;
     validationResult[key].message = '';
@@ -84,44 +87,64 @@ async function subscribeToNewsletter() {
       }
     });
     console.log("Valres", validationResult)
-    return;
+    return false;
+  } else return true
+}
+
+let isSubmitting = ref(false)
+let isSubscribed = ref(false)
+
+watch(() => props.showModal, (newValue) => {
+  if(newValue === true){
+    isSubscribed.value = false
   }
+  showModal.value = newValue  
+}, { immediate: true })
 
-  console.log("Submitting form:", form);
-  
-  const siteKey = ref('6LeduiYqAAAAAM0sVYQ7IRkiObV6HU5w-ZPFkLbQ');
-  grecaptcha.ready(async () => {
-    grecaptcha.execute(siteKey.value, {action: 'submit'}).then(async (captchaToken) => {
-      let formData = {
-        ...form,
-        captchaToken
-      }
-      const response = await fetch('https://api.premiumhoney.gr/send-email', {
-        method: 'POST',
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(formData)
-      });
-      console.log("response:", response)
-      if (response.ok) {
-        isSubscribed.value = true;
-        newsletterManager.markAsSubscribed()
-      } else {
-        alert('Failed to send email. Please try again.');
-      }
-    }).catch(error => {
-      console.error('reCAPTCHA execution failed:', error);
-      alert('reCAPTCHA verification failed. Please try again.');
+async function subscribeToNewsletter() {
+  isSubmitting.value = true;
+
+  try {
+    const validity = await validateInputs();
+    if (!validity) {
+      throw new Error('Invalid inputs');
+    }
+
+    const captchaToken = await getCaptchaToken();
+
+    const formData = {
+      ...form,
+      captchaToken
+    };
+
+    const response = await fetch('http://localhost:3000/subscribe', {
+      method: 'POST',
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(formData)
     });
-  });
 
+    if (response.ok) {
+      isSubscribed.value = true;
+      newsletterManager.markAsSubscribed();
+    } else {
+      throw new Error('Subscription request was not successful');
+    }
+
+  } catch (error) {
+    console.error('Subscription failed:', error);
+    alert(error.message || 'Subscription failed, please try again.');
+  } finally {
+    isSubmitting.value = false;
+  }
 }
 
 
 onMounted(()=>{
+  console.log("SHOWMODALVAL local onMOunted", showModal.value)
   emitter.on('toggleNewsletterModal', ()=>{
-    newsletterManager.shouldShowModal
+    newsletterManager.shouldShowModal(null, true) // (route, forceShowModal)
     showModal.value = true;
   })
 })
@@ -147,7 +170,7 @@ onMounted(()=>{
           </div>
 
           <div class="form-container">
-            <form class="contact-form" @submit.prevent="handleSubmit">
+            <form class="contact-form" @submit.prevent="subscribeToNewsletter">
 
               <div class="form-group form-group-small">
                 <label for="email">Email</label>
@@ -230,7 +253,15 @@ onMounted(()=>{
               </Transition>
 
               <div class="button-recaptcha">
-                <button @click="subscribeToNewsletter" class="submit-button submit-button-small" type="submit">Subscribe</button>
+                <button 
+                  @click="subscribeToNewsletter" 
+                  :disabled="isSubmitting" 
+                  :class="isSubmitting ? 'disabled' : ''"
+                  class="submit-button submit-button-small" 
+                  type="submit"
+                >
+                Subscribe
+                </button>
                 <div class="recaptcha-disclaimer" style="text-align: center; margin-top: 10px;">
                 <span class="disclaimer-text">
                   This site is protected by reCAPTCHA and the Google
@@ -277,7 +308,7 @@ onMounted(()=>{
 <style lang="scss" scoped>
 .modal-container{
   padding: 15px;
-  max-width: 35%;
+  max-width: 25%;
   min-height:300px;
   display: flex;
   position: fixed;
@@ -344,6 +375,7 @@ onMounted(()=>{
       position: relative;
       min-width: 90%;
       padding: 20px;
+      border: none !important;
       .business-form{
         display: flex;
         flex-direction: column;
@@ -376,31 +408,44 @@ onMounted(()=>{
           display: flex;
           flex-direction: column;
           border-color: gray;
-          border: 1px dashed;
-          border-radius: 8px;
+          border: none !important;
           .button-recaptcha{
             flex-direction: column;
             .submit-button{
               font-size: 14px;
-              margin-bottom: 10px;
+              margin-bottom: 0px;
               width: auto;
+              &.disabled{
+                opacity: 0.7;
+              }
             }
           }
           .form-group{
             display: flex;
             flex-direction: column;
-            width: 100%;
-            margin-bottom: 20px;
+            width: 85%;
+            margin-bottom: 5px;
+            margin-top: 5px;
+            margin-right: auto;
+            margin-left: auto;
+            @media(max-width: 450px){
+              width: 100%;
+            }
           }
           .form-groups-row{
             display: flex;
             flex-direction: row;
             justify-content: space-between;
-            width: 100%;
+            width: 85%;
+            margin-right: auto;
+            margin-left: auto;
+            @media(max-width: 450px){
+              width: 100%;
+            }
             .form-group{
               width: 45%;
               &:not(:last-child){
-                margin-right: 5px;
+                margin-right: 15px;
               }
             }
           }
@@ -486,6 +531,8 @@ onMounted(()=>{
     }
   }
 }
+
+// Expand animation
 .expand-enter-active,
 .expand-leave-active {
   transition: all 0.3s ease;

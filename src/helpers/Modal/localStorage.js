@@ -22,15 +22,23 @@ export const newsletterManager = {
   },
   
   // Dismiss modal for a period (default 7 days)
-  dismissModal(days = 7) {
+  dismissModal(days = 1) {
+    // const dismissUntil = new Date().getTime() + (days * 24 * 60 * 60 * 1000);
     const dismissUntil = new Date().getTime() + (days * 24 * 60 * 60 * 1000);
     localStorage.setItem(this.DISMISSED_KEY, dismissUntil.toString());
   },
-  
+
+  clearModalLocalStorage(){
+    console.log("Clearing Storage", this.SUBSCRIBED_KEY, this.DISMISSED_KEY)
+    localStorage.setItem(this.SUBSCRIBED_KEY, 'false');
+    localStorage.setItem(this.DISMISSED_KEY, 'false');
+  },
+
   // Should show modal based on all conditions
   shouldShowModal(currentRoute, forceShow = false) {
     if (forceShow) return true
     // Only show on homepage or specific routes
+    console.log("Checking show modal", currentRoute)
     const allowedRoutes = ['/', '/home'];
     const isAllowedRoute = allowedRoutes.includes(currentRoute);
 
