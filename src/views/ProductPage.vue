@@ -70,7 +70,9 @@
             {{ selectedBrandConfig.jarSizes[1] }}
           </span>
         </div>
-        <img :src="downloadIcon" @click="downloadSheet" class="download-sheet" />
+        <a download :href="computedDownloadLink">
+          <img :src="downloadIcon" @click="downloadSheet" class="download-sheet" />
+        </a>
       </div>
     </div>
 
@@ -165,11 +167,12 @@ import ProductScene from "../components/ProductScene.vue";
 
 // Configs
 import brandConfigs from "@/assets/brand-information/index.js";
+import { nameMap } from "../../public/assets/pdf/nameArray";
 
 //Product Store
 import { useProductStore } from "@/store/product.js";
 const productStore = useProductStore();
-let isStoreReady = ref(false)
+// let isStoreReady = ref(false)
 
 // Provide/inject
 const { width: windowWidth } = useWindowSize();
@@ -194,6 +197,8 @@ let selectedHoney = ref(route.query.honey);
 let selectedBrand = ref(route.params.selectedBrand)
 let selectedSheetSize = ref('300g')
 let selectedJarSize = ref(null)
+
+let computedDownloadLink = ref(null)
 watch(() => selectedJarSize.value, (val)=>{
   calculateLineWidthImage(val)
 })
@@ -255,12 +260,14 @@ const currentFlavour = computed(() => {
 
 // Whenever brand/line/flavour changes, set to store if you need it
 watch(() => currentFlavour.value, (newVal) => {
+  console.log("CurrentFlavour.Value", newVal)
   if (newVal) {
     productStore.setFlavour({
       name: newVal.name,
       urlSlug: newVal.urlSlug,
     });
-    isStoreReady.value = tryOnUnmounted
+    // isStoreReady.value = tryOnUnmounted // wrong
+    computeDownloadLink();
   }
 }, { immediate: true });
 watch(currentProductLine, (newVal) => {
@@ -299,6 +306,7 @@ function selectProductLine(line) {
 function selectSheetSize(size){
   console.log("selecting size", size)
   selectedSheetSize.value = size
+  computeDownloadLink()
 }
 function downloadSheet(){
   console.log("Downloading", 
@@ -307,6 +315,15 @@ function downloadSheet(){
   "\n Flavour: ", selectedHoney.value, 
   "\n Size:", selectedSheetSize.value)
 }
+
+function computeDownloadLink(){
+  let sizeNumber = selectedSheetSize.value.substring(0, selectedSheetSize.value.length-1)
+  console.log(sizeNumber)
+  let computedString = encodeURIComponent(nameMap[selectedBrand.value][`${selectedHoney.value}_${sizeNumber}`])
+
+  computedDownloadLink.value = `/assets/pdf/${selectedBrand.value}/${computedString}.pdf`
+  console.log("COMPUTING", computedDownloadLink.value)
+} 
 
 if (emitter) {
   emitter.on("meshEdges", (meshEdges) => {

@@ -9,7 +9,7 @@ import components from './components'
 import emitter from './helpers/emitter.js'; 
 
 // For prod - disable on dev
-console.log = () => {};
+// console.log = () => {};
 
 const app = createApp(App)
 const pinia  = createPinia();

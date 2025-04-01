@@ -19,11 +19,18 @@
           <OktoText class="link-heading" :fontSize="36" :fontSizeMobile="24" :hoverable="true"/>
           <span class="link-subheading">Premium Greek Honey</span>
         </router-link>
-        <router-link class="sidebar-link disabled" to="/">
-          <span class="link-heading">
-          Melculum
-          <!-- <span v-if="!isMobile" style="font-size: 15px;">coming soon</span> -->
-          </span>
+        <router-link
+          @mouseenter="melculumHovered = true"
+          @mouseleave="melculumHovered = false"
+          @click.stop
+          class="sidebar-link"
+          to="/"
+        >
+          <Transition name="slide" mode="out-in">
+            <span :key="melculumHovered" class="link-heading melculum-link">
+              {{ melculumHovered ? 'Coming soon' : 'Melculum' }}
+            </span>
+          </Transition>
           <span class="link-subheading">Diversity Series</span>
         </router-link>
         <router-link v-if="isMobile" class="sidebar-link" to="/all-products">
@@ -94,6 +101,8 @@ import { inject, ref } from 'vue'
 
 const { isMobile } = inject('screenSize')
 const emitter = inject('emitter')
+
+let melculumHovered = ref(false)
 
 let toggledContact = ref(false)
 function toggleContactAccordion(){
@@ -353,5 +362,28 @@ function toggleNewsletterModal(){
       }
     }
   }
+}
+
+.slide-enter-active, .slide-leave-active {
+  transition: transform 0.3s ease, opacity 0.3s ease;
+  display: inline-block;
+}
+
+.slide-enter-from {
+  transform: translateX(120px);
+  opacity: 0;
+}
+.slide-enter-to {
+  transform: translateX(0);
+  opacity: 1;
+}
+
+.slide-leave-from {
+  transform: translateX(0);
+  opacity: 1;
+}
+.slide-leave-to {
+  transform: translateX(-120px);
+  opacity: 0;
 }
 </style>

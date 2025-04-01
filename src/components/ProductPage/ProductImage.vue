@@ -35,7 +35,7 @@ watch(() => jarSizes.value, (sizes) => {
   console.log("brandUrl", props.brandUrlSlug)
   if(props.brandUrlSlug && props.brandUrlSlug === 'haa'){
     currentJarSize.value = sizes[1]
-  } else currentJarSize.value = sizes[0]
+  } else currentJarSize.value = sizes[1]
 }, { immediate: true })
 watch(() => props.flavour, async (flavour) => {
   console.log("Flavour changed:", flavour)

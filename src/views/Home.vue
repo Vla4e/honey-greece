@@ -1,8 +1,90 @@
+<script setup>
+import { ref, inject, onMounted, onBeforeMount } from 'vue'
+import { useGlobalStore } from '@/store/global.js'
+import { testNetworkSpeedViaDownload } from '@/helpers/checkNetworkSpeed.js'
+
+const { isMobile } = inject('screenSize')
+const globalStore = useGlobalStore()
+
+const videoReady = ref(false)
+const goodNetwork = ref(false)
+const videoSource = ref(null)
+const fallbackLoaded = ref(false)
+
+// Preload fallback image immediately
+function preloadFallbackImage () {
+  console.log("Preloading fallback image")
+  const img = new Image()
+  img.src = new URL('@/assets/pages/home/landing-fallback.png', import.meta.url).href
+  img.onload = () => {
+    fallbackLoaded.value = true
+  }
+}
+
+async function determineBackgroundMedia (speed) {
+  console.log("Determining BG media", speed)
+  try {
+    console.log("Try speed:", speed)
+    if (speed >= 5) {
+      if(isMobile.value){
+        videoSource.value = (
+          await import("@/assets/pages/home/mobile_1mbps.mp4")
+        ).default;
+      } else {
+        videoSource.value = (
+          await import("@/assets/pages/home/desktop_2mbps.mp4")
+        ).default;
+      }
+      console.log("Video Module loaded")
+      goodNetwork.value = true
+      videoReady.value = true
+      globalStore.showLoadingScreen = false
+    }
+  } catch (e) {
+    return
+  }
+}
+
+
+onBeforeMount(()=>{
+  globalStore.showLoadingScreen = true
+})
+
+onMounted(async () => {
+  console.log("mounted")
+  preloadFallbackImage()
+
+  try {
+    // Start network test and media determination in parallel
+    const [networkSpeed] = await Promise.all([
+      testNetworkSpeedViaDownload(),
+      preloadFallbackImage()
+    ])
+
+    await determineBackgroundMedia(networkSpeed.speed)
+  } catch (error) {
+    console.error('Network test failed:', error)
+    goodNetwork.value = false
+    videoReady.value = true
+  } finally {
+    // Ensure loading screen is hidden after max 3 seconds
+    console.log("Promise finally")
+    Promise.race([
+      new Promise(resolve => setTimeout(resolve, 3000)),
+      new Promise(resolve => {
+        if(videoReady.value || fallbackLoaded.value) resolve()
+      })
+    ]).finally(() => {
+      globalStore.showLoadingScreen = false
+    })
+  }
+})
+</script>
+
 <template>
   <div class="home-container">
-    <div v-if="goodNetwork" class="video-container">
+    <div v-if="goodNetwork && videoReady" class="video-container">
       <video
-        v-if="videoReady"
         class="background-video"
         :class="isMobile ? 'mobile' : ''"
         poster="@/assets/pages/home/landing-fallback.png"
@@ -13,12 +95,15 @@
         playsinline
         disableremoteplayback
       >
-        <source :src="videoSource" type="video/mp4" />
+        <source :src="videoSource" type="video/mp4">
       </video>
-      <p v-else>Loading video...</p>
     </div>
     <div v-else class="image-container">
-      <img src="@/assets/pages/home/landing-fallback.png" class="background-image"/>
+      <img 
+        src="@/assets/pages/home/landing-fallback.png" 
+        class="background-image"
+        v-if="fallbackLoaded"
+      >
     </div>
 
 
@@ -36,94 +121,6 @@
   </div>
 </template>
 
-<script>
-import { ref, inject, onMounted, onBeforeMount } from "vue";
-import { getNetworkSpeed } from "@/helpers/checkNetworkSpeed.js";
-import { useGlobalStore } from "@/store/global.js";
-
-
-export default {
-  name: "Home",
-  setup() {
-    const { isMobile } = inject("screenSize");
-
-    const globalStore = useGlobalStore();
-
-    let showVideo = ref(true);
-    let videoReady = ref(false);
-    let videoSource = ref(null);
-
-    function switchBackground() {
-      showVideo.value = !showVideo.value;
-    }
-
-    // use .default to access the default export of the module = src
-    let goodNetwork =  ref(false)
-    async function determineBackgroundMedia(networkSpeed){
-      globalStore.showLoadingScreen = true;
-      globalStore.loadingProgress = 0;
-      if(networkSpeed >= 5){
-        if(isMobile.value){
-          videoSource.value = (
-            await import("@/assets/pages/home/mobile_1mbps.mp4")
-          ).default;
-        } else {
-          
-          videoSource.value = (
-            await import("@/assets/pages/home/desktop_2mbps.mp4")
-          ).default;
-        }
-        goodNetwork.value = true
-        videoReady.value = true;
-      } else {
-        goodNetwork.value = false
-      }
-      globalStore.showLoadingScreen = false;
-    }
-
-    async function loadVideo(speed) {
-      globalStore.showLoadingScreen = true;
-      globalStore.loadingProgress = 0;
-      if (isMobile.value) {
-        console.log("Will load mobile vid");
-        videoSource.value = (
-          await import("@/assets/pages/home/mobile_1mbps.mp4")
-        ).default;
-      } else {
-        let vid = await import("@/assets/pages/home/landing-compressed.webm");
-        console.log("VID:", vid.default)
-        videoSource.value = vid.default
-      }
-      console.log("SOURCE:", videoSource.value);
-      videoReady.value = true;
-      globalStore.showLoadingScreen = false;
-    }
-
-    onBeforeMount(() => {
-      globalStore.showLoadingScreen = true;
-    });
-    onMounted(async () => {
-      const networkSpeed = getNetworkSpeed();
-      console.log("NETWORKSPEED", networkSpeed);
-      if (networkSpeed !== null) {
-        await determineBackgroundMedia(networkSpeed);
-        console.log("Current value = ", videoSource.value);
-      } else {
-        goodNetwork.value = false
-        // videoSource.value = await import("@/assets/pages/home/desktop_1mbps.mp4").default;
-      }
-    });
-    return {
-      showVideo,
-      switchBackground,
-      isMobile,
-      videoSource,
-      videoReady,
-      goodNetwork
-    };
-  },
-};
-</script>
 <style lang="scss">
 .home-container {
   display: flex;
@@ -148,7 +145,7 @@ export default {
   .background-image{
     width: 100%;
     height: 100%;
-    object-fit: contain;
+    object-fit: cover;
     overflow: hidden !important;
   }
 }

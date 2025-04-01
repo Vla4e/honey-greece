@@ -117,7 +117,7 @@ async function subscribeToNewsletter() {
       captchaToken
     };
 
-    const response = await fetch('http://localhost:3000/subscribe', {
+    const response = await fetch('https://api.premiumhoney.gr/subscribe', {
       method: 'POST',
       headers: {
         "Content-Type": "application/json",

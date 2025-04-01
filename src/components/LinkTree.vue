@@ -93,19 +93,19 @@ export default {
       route.params,
       route.path
     ], ([name, params, path]) => {
-      console.log(`=== Route Change Detected ${props.brand.name}===`);
-      console.log(`Path: ${path}`);
-      console.log(`Route Name: ${name}`, !!name);
-      console.log(`Route Params:`, params, !!params);
+      // console.log(`=== Route Change Detected ${props.brand.name}===`);
+      // console.log(`Path: ${path}`);
+      // console.log(`Route Name: ${name}`, !!name);
+      // console.log(`Route Params:`, params, !!params);
       
-      console.log(`Has Name & Params: ${Boolean(name && params)}`);
+      // console.log(`Has Name & Params: ${Boolean(name && params)}`);
       
       if (params?.selectedBrand !== undefined) {
         // console.log(`Selected Brand in Params: ${params.selectedBrand}`);
         // console.log(`Current Brand URL Slug: ${props.brand.urlSlug}`);
         // console.log(`Is Current Brand Page: ${props.brand.urlSlug === params.selectedBrand}`);
         if(props.brand.urlSlug === 'Okto' && route.params.selectedBrand === 'Okto'){
-          console.log("BOLDING")
+          // console.log("BOLDING")
           boldOkto.value = true;
         }
       }
