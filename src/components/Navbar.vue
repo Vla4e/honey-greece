@@ -173,7 +173,7 @@ export default {
   flex-direction: column;
   width: 100vw;
   min-height: 10%;
-  @media(max-width: 767px){
+  @media(max-width: 1024px){
     height: 80px;
   }
   background: transparent;
@@ -263,7 +263,7 @@ export default {
     @media(max-width: 1366px){
       width: 10%;
     }
-    @media(max-width: 767px){
+    @media(max-width: 1024px){
       // justify-content: center;
       .burger-icon{
         width: 30px;

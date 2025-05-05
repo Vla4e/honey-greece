@@ -91,7 +91,7 @@ export default {
   background-clip: text;
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
-  @media(max-width: 767px){
+  @media(max-width: 1024px){
     font-size: 50px;
   }
 }

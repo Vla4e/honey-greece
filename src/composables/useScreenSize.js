@@ -8,7 +8,7 @@ export function useScreenSize() {
 
   const checkScreenSize = () => {
     const width = window.innerWidth
-    isMobile.value = width < 768
+    isMobile.value = width < 1024
     isTablet.value = width >= 768 && width < 1024
     isDesktop.value = width >= 1024
   }

@@ -1,6 +1,6 @@
 import { debounce } from '@/helpers/globalFunctions.js'
 import { Vector3, Quaternion, AxesHelper } from 'three';
-
+import { initCameraParallax, updateCameraParallax, updateParallaxMouse, setParallaxActive, setParallaxIntensity } from './Parallax.js'
 import emitter from '@/helpers/emitter.js'; 
 
 const rotationFactorX = 0.005;
@@ -13,7 +13,7 @@ let jarSizeLocal = '300g'
 let listenersActive = false;
 
 let autoRotationActive = false;
-let autoRotationSpeed = 0.01;
+let autoRotationSpeed = 0.005;
 
 let initialRotations = [];
 
@@ -27,7 +27,7 @@ async function initiateObjectRotation(target, container, currentSize){
   jarSizeLocal = currentSize
   target.traverse((obj) => {
     if(obj.isMesh){
-      console.log("Obj:", obj)
+      // console.log("Obj:", obj)
       // console.log("OBJ NAME", obj.name, currentSize, jarSizeLocal, obj.name === currentSize, obj.name.includes(currentSize))
       if(obj.name.includes(removedGramsSizeString)){ // enable 450 by removing 2nd condition
         rotationGroup.push(obj)
@@ -56,18 +56,21 @@ let lastTouchY = 0;
 function handleMouseDown() {
   // console.log("MouseDown")
   mouseDown = true;
+  stopAutoRotation();
   emitter.emit('rotatingJar', true)
 }
 
 function handleMouseUp() {
   // console.log("MouseUp")
   mouseDown = false;
+  startAutoRotation();
   emitter.emit('rotatingJar', false)
 }
 
 function handleTouchStart(event) {
   // console.log("TouchStart")
   mouseDown = true;
+  stopAutoRotation();
   const touch = event.touches[0];
   lastTouchX = touch.clientX;
   lastTouchY = touch.clientY;
@@ -93,6 +96,9 @@ function debouncedMouseMove(event, target){
     // debounce(() => rotateObject(event, target), debounceInterval)
     rotateObject(event, target)
   }
+
+  updateParallaxMouse(event);
+
 }
 
 function rotateObject(event, target){
@@ -133,6 +139,7 @@ function animateAutoRotation() {
   }
 }
 
+// UNUSED AND NOT NEEDED
 function resetRotation() {
   const duration = 1000; // Duration of the animation in milliseconds
   const startTime = performance.now();

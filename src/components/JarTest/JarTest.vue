@@ -78,6 +78,22 @@ defineOptions({
   name: 'JarTest'
 })
 
+
+import {
+  moveSceneToGridPosition,
+  revertScenePosition,
+} from "@/helpers/JarScene/MoveSceneByOffset.js";
+//ShaderMaterial imports
+//Honey
+import {
+  oldHoneyMaterial,
+  playfulMaterial2,
+  playfulMaterial3,
+  playfulMaterial4,
+  playfulMaterial5
+} from "@/helpers/JarScene/HoneyMaterials.js";
+
+
 import {
   initializeGLTFLoader,
   loadGlb,
@@ -94,9 +110,11 @@ const loader = initializeGLTFLoader(true, true, true);
 const canvasContainer = ref(null)
 const canvas = ref(null)
 let globalScene, globalCamera, globalRenderer, controls
+let globalTextureLoader = new TextureLoader();
 let animationId = null;
 let meshA, meshB
 
+let jarSizes = ["450g", "300g"];
 
 /**
  * Track which mesh user wants to apply the texture to
@@ -125,6 +143,7 @@ async function setLightingEXR(renderer) {
 }
 
 let honeyMeshes = {}
+let honeyMesh1, honeyMesh2;
 async function initThreeScene() {
   
   let axesHelper = new AxesHelper(5);
@@ -159,6 +178,8 @@ async function initThreeScene() {
       }
     });
   }
+  honeyMesh1 = sceneParts.meshesCategorized["300g"];
+  honeyMesh2 = sceneParts.meshesCategorized["450g"];
   globalCamera = new PerspectiveCamera(
     5,
     (canvasContainer.value.offsetWidth) / (canvasContainer.value.offsetHeight),
@@ -214,8 +235,71 @@ async function initThreeScene() {
     }
   })
   await setLightingEXR(globalRenderer)
+  await renderMatcap()
 }
 
+
+async function renderMatcap() {
+  await changeHoneyShader();
+  return;
+}
+async function changeHoneyShader(type = "cotton", id, color) {
+  await revertScenePosition(globalScene, globalCamera);
+  console.log("1. Will move to pos");
+  await moveSceneToGridPosition(globalScene, globalCamera, honeyMesh1.position, type);
+  console.log("2. Moved to POS");
+  const honeyMaterials = {
+    [jarSizes[0]]: await playfulMaterial5(
+      globalTextureLoader,
+      globalScene.environment,
+      type,
+      jarSizes[0],
+      honeyMeshes,
+      'okto',
+      globalCamera
+    ),
+    [jarSizes[1]]: await playfulMaterial5(
+      globalTextureLoader,
+      globalScene.environment,
+      type,
+      jarSizes[1],
+      honeyMeshes,
+      'okto',
+      globalCamera
+    ),
+  };
+
+  console.log("Materials:", honeyMaterials);
+  console.log("HONEYMESHES:::::", honeyMeshes);
+  Object.values(honeyMeshes).forEach((mesh) => {
+    mesh.material = honeyMaterials[mesh.size];
+    mesh.material.needsUpdate = true;
+  });
+  isLoading.value = false;
+  return true;
+}
+let honeyTypesArr = [
+  "cotton",
+  "fir",
+  "master",
+  "forest",
+  "mediterranean",
+  "afficionado",
+  "natural",
+  "oak",
+  "pine",
+  "thyme",
+  "chestnut",
+];
+let honeyId = 0;
+let currentHType = ref("cotton");
+async function cycleColors() {
+  if (honeyId == 10) {
+    honeyId = 0;
+  } else honeyId++;
+  currentHType.value = honeyTypesArr[honeyId];
+  await changeHoneyShader(honeyTypesArr[honeyId]);
+}
 /**
  * Simple render loop
  */

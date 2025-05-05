@@ -16,18 +16,18 @@
             <div class="form-groups-row">
               <div class="form-group">
                 <label for="firstName">First Name</label>
-                <input type="text" id="firstName" v-model="form.firstName" required>
+                <input type="text" id="firstName" v-model="form.firstName">
                 <span v-if="validationResult.firstName.invalid" class="validation">{{ validationResult.firstName.message }}</span>
               </div>
               <div class="form-group">
                 <label for="lastName">Last Name</label>
-                <input type="text" id="lastName" v-model="form.lastName" required>
+                <input type="text" id="lastName" v-model="form.lastName">
                 <span v-if="validationResult.lastName.invalid" class="validation">{{ validationResult.lastName.message }}</span>
               </div>
             </div>
             <div class="form-group">
               <label for="email">Email</label>
-              <input type="email" id="email" v-model="form.email" required>
+              <input type="text" id="email" v-model="form.email">
               <span v-if="validationResult.email.invalid" class="validation">{{ validationResult.email.message }}</span>
             </div>
             <div class="form-group radio-group form-group-small">
@@ -60,44 +60,50 @@
             
             <Transition name="expand">
               <div v-show="form.customerType === 'business'" class="business-form">
+                <div class="form-groups-row">
+                  <div class="form-group form-group-small">
+                    <label for="phoneNumber">Phone Number</label>
+                    <input 
+                      type="tel" 
+                      id="phoneNumber" 
+                      minlength="8"
+                      maxlength="20"
+                      v-model="form.phoneNumber"
+                    >
+                    <span v-if="validationResult.phoneNumber.invalid" class="validation">{{ validationResult.phoneNumber.message }}</span>
+                  </div>
+                                    
+                  <div class="form-group form-group-small">
+                    <CountrySelect v-model="form.location"/>
+                  </div>
+                </div>
+                
                 <div class="form-group form-group-small">
                   <label for="company">Company Name</label>
                   <input type="text" autocomplete="off" id="company" v-model="form.companyName">
                   <span v-if="validationResult.companyName.invalid" class="validation">{{ validationResult.companyName.message }}</span>
                 </div>
-                
-                <div class="form-group form-group-small">
-                  <label for="phoneNumber">Phone Number</label>
-                  <input 
-                    type="tel" 
-                    id="phoneNumber" 
-                    minlength="8"
-                    maxlength="20"
-                    v-model="form.phoneNumber"
-                  >
-                  <span v-if="validationResult.phoneNumber.invalid" class="validation">{{ validationResult.phoneNumber.message }}</span>
-                </div>
-                                  
-                <div class="form-group form-group-small">
-                    <CountrySelect v-model="form.location"/>
-                  </div>
 
               </div>
             </Transition>
 
             <div class="form-group">
               <label for="subject">Subject</label>
-              <input type="subject" id="subject" v-model="form.subject" required>
+              <input type="subject" id="subject" v-model="form.subject">
+              <span v-if="validationResult.subject.invalid" class="validation">{{ validationResult.subject.message }}</span>
             </div>
             <div class="form-group">
               <label for="message">Message</label>
-              <textarea id="message" v-model="form.message" required></textarea>
+              <textarea id="message" v-model="form.message"></textarea>
+              <span v-if="validationResult.message.invalid" class="validation">{{ validationResult.message.message }}</span>
             </div>
             
             <div class="form-group newsletter">
               <input id="newsletter" type="checkbox" v-model="form.newsletter"/>
               <label for="newsletter">Also subscribe to our newsletter.</label>
             </div>
+
+            <ErrorMessage v-if="showError" :error="responseError"/>
 
             <div class="button-recaptcha">
               <button class="submit-button" :class="isSubmitting ? 'disabled': ''" :disabled="isSubmitting" type="submit">Submit</button>
@@ -175,9 +181,22 @@ let validationResult = reactive({
   },
   phoneNumber: {
     invalid: false,
-    message: ''
+    message: '',
+    required: true
+  },
+  subject: {
+    invalid: false,
+    message: '',
+    required: true
+  },
+  message: {
+    invalid: false,
+    message: '',
+    required: true
   }
 })
+let responseError = ref(null)
+let showError = ref(false)
 watch(() => form.newsletter, (val) => {
   console.log("Val:", val)
 })
@@ -188,12 +207,14 @@ async function validateInputs(){
     validationResult[key].message = '';
   });
 
-  const { isValid, errors } = validateForm(form);
-
+  const { isValid, errors } = validateForm(form, 'contact');
+  console.log("ERRORS:", errors)
   if (!isValid) {
     Object.entries(errors).forEach(([field, message]) => {
-      console.log("f,m", field,message)
+      // console.log("f,m", field,message)
+      // console.log("VALRES", validationResult)
       if (message && validationResult[field]) {
+        // console.log("FIELD", field)
         validationResult[field].invalid = true;
         validationResult[field].message = message;
       }
@@ -205,16 +226,23 @@ async function validateInputs(){
 
 let isSubmitting = ref(false)
 async function handleSubmit() {
-  console.log("Attempting submission")
-  isSubmitting.value = true;
-  
-  const validity = await validateInputs()
-  if(!validity) return
-  
-  let captchaToken = await getCaptchaToken();
-  await submitForm(captchaToken);
-  console.log("Will return value to false/allow submission")
-  isSubmitting.value = false;
+  try{
+    console.log("Attempting submission")
+    isSubmitting.value = true;
+    
+    const validity = await validateInputs()
+    console.log("Validity:", validity)
+    if(!validity) return
+    
+    let captchaToken = await getCaptchaToken();
+    await submitForm(captchaToken);
+    console.log("Will return value to false/allow submission")
+    isSubmitting.value = false;
+  } catch ( error) {
+    console.error("Error while submitting form:", error)
+  } finally {
+    isSubmitting.value = false
+  }
 }
 
 async function submitForm(captchaToken) {
@@ -226,6 +254,7 @@ async function submitForm(captchaToken) {
   // http://localhost:3000/send-email
   // https://api.premiumhoney.gr/send-email
   try {
+    // throw new Error('TEST ERROR')
     const response = await fetch('https://api.premiumhoney.gr/send-email', {
       method: 'POST',
       headers: {
@@ -241,12 +270,21 @@ async function submitForm(captchaToken) {
       }, 1500);
       return
     } else {
-      alert('Failed to send email. Please try again.');
+      
+      emitter.emit('showErrorPopup', true)
+      emitter.emit('mountErrorObject', {
+        message: 'Oops, there was a problem sending the email.\nPlease try again or contact us at info@premiumhoney.com'
+      })
       return
     }
   } catch (error) {
     console.error('Error sending email:', error);
-    alert('Error sending email');
+    // alert('Error sending email');
+    emitter.emit('showErrorPopup', true)
+    emitter.emit('mountErrorObject', {
+      message: 'Oops, there was a problem sending the email.\nPlease try again or contact us at info@premiumhoney.com'
+    })
+      
     return
   }
 }
@@ -342,7 +380,8 @@ function toggleContactForm(){
       .contact-card{
         // height: 70%;
         box-shadow: 5px 5px 10px 3px #00000026;
-        padding: 5%;
+        padding: 2% 5%;
+        overflow-y: auto;
         .contact-form{
           display: flex;
           flex-direction: column;
@@ -365,7 +404,7 @@ function toggleContactForm(){
               min-height: 25px;
             }
             textarea{
-              min-height: 130px;
+              min-height: 60px;
               resize: none;
             }
             input, textarea{
@@ -492,7 +531,7 @@ function toggleContactForm(){
     }
   }
 }
-@media(max-width: 768px){
+@media(max-width: 1024px){
   .contact-container{
     &-bordered{
       width: 100%;
@@ -548,7 +587,7 @@ function toggleContactForm(){
       }
     }
   }
-  @media(max-width:768px){
+  @media(max-width: 1024px){
     flex-direction: column;
     .recaptcha-disclaimer{
       .disclaimer-text{

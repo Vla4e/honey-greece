@@ -6,7 +6,14 @@
     <Transition name="fade">
       <ModalCustom :showModal="showModal"/>
     </Transition>
+
+    <!-- Uses emitter 'showErrorPopup' for v-if flag within ErrorPopup component -->
+    <Transition name="fade">
+      <ErrorPopup />
+    </Transition>
+
     <LoadingScreen></LoadingScreen>
+
     <NavbarComponent v-show="showNavbarComputed" id="nav"/>
 
     <Transition name="sidebar">
@@ -73,7 +80,7 @@ export default {
     let navbarStore = useNavbarStore()
     let { showNavbar } = storeToRefs(navbarStore)
     let showNavbarComputed = computed(() => {
-      if(isMobile.value){
+      if(isMobile.value && !isTablet.value){
         return true
       } else return showNavbar.value
     })
@@ -144,7 +151,7 @@ export default {
   @media(min-width: 1024px){
     height: 100vh;
   }
-  @media(max-width: 768px){
+  @media(max-width: 1024px){
     
     &-Tabs{
       height: 100vh;
@@ -167,7 +174,7 @@ export default {
   margin: auto;
   flex-grow: 1;
   z-index: 3;
-  @media(max-width: 767px){
+  @media(max-width: 768px){
     max-width: 100%;
     margin: 0;
   }

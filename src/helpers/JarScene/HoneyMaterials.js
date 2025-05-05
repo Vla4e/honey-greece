@@ -3,6 +3,8 @@ import {
   Color,
   Vector3,
   ShaderMaterial,
+  Box3,
+  Box3Helper,
   Matrix4,
   Matrix3,
   BufferAttribute
@@ -831,7 +833,7 @@ async function playfulMaterial4(textureLoader, environment, honeyType, jarSize, 
     `
   });
 }
-async function playfulMaterial5(textureLoader, environment, honeyType, jarSize, honeyMeshes, brand, camera){
+async function playfulMaterial5(textureLoader, environment, honeyType, jarSize, honeyMeshes, brand, camera, scene){
   console.log("Creating pm2, with jarSize", jarSize, brand)
   const meshStore = useMeshStore();
   const boundingBoxes = toRaw(meshStore.boundingBoxes);
@@ -840,6 +842,9 @@ async function playfulMaterial5(textureLoader, environment, honeyType, jarSize, 
   let currentHoneyMesh = honeyMeshes[jarSize]
   const currentBoundingBox = boundingBoxes[jarSize].boundingBox
   
+  const box = new Box3().setFromObject(currentHoneyMesh);
+  const boxHelper = new Box3Helper(box, '#FF0000');
+  // scene.add(boxHelper)
   // Store initial position at shader creation time
   const initialJarPosition = new Vector3()
   initialJarPosition.copy(currentHoneyMesh.position)
@@ -885,9 +890,9 @@ async function playfulMaterial5(textureLoader, environment, honeyType, jarSize, 
   const mediumJarVisualCenter = mediumJarBoxProperties.jarCenter;
   const mediumJarVisualHeight = mediumJarBoxProperties.height;
   const hardCodedMediumJarRatio = 0.9; // The perfect ratio for medium jar
-  let saturationValue = jarSize === '300g' ? 1.0 : 0.75;
-  let brightnessValue = jarSize === '300g' ? 1.0 : 1.2;
-  return new ShaderMaterial({
+  let saturationValue = jarSize === '300g' ? 1.0 : honeyParameters.saturation;
+  let brightnessValue = jarSize === '300g' ? 1.0 : honeyParameters.brightness;
+  let shaderMaterial = new ShaderMaterial({
     uniforms: {
       matcap: { value: matcapTexture },
       colorAdjust: { value: honeyColor},
@@ -1039,12 +1044,15 @@ async function playfulMaterial5(textureLoader, environment, honeyType, jarSize, 
         finalColor = mix(finalColor, reflColor, transparency * 0.2);
         float luminance = dot(finalColor, vec3(0.299, 0.587, 0.114));
         vec3 grayscale = vec3(luminance);
-        finalColor = mix(grayscale, finalColor, saturation);
-        finalColor *= brightness;
+        finalColor = mix(grayscale, finalColor, 1.00);
+        finalColor *= 1.00;
         gl_FragColor = vec4(finalColor, 1.0);
       }
     `
   });
+  shaderMaterial.honeyType = honeyType
+  shaderMaterial.jarSize = jarSize
+  return shaderMaterial
 }
 
 import { toRaw } from 'vue';

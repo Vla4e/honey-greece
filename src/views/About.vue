@@ -307,7 +307,7 @@ onUnmounted(() => {
       }
     }
   }
-  @media(max-width: 767px){
+  @media(max-width: 1024px){
     width: 85%;
     margin: auto;
     display: flex;

@@ -1,5 +1,5 @@
 <template>
-  <div v-if="isMobile" class="mobile-header">
+  <div v-if="isMobile && !isTablet" class="mobile-header">
     HELLENIC <br/> PREMIUM HONEY
     <!-- {{ tabDimensions }} -->
   </div>
@@ -43,7 +43,8 @@ import brandConfigs from "@/assets/brand-information/index.js"
 export default {
   components: { Tab },
   setup(){
-    const { isMobile } = inject('screenSize')
+    const { isMobile, isTablet } = inject('screenSize')
+    console.log("ISTABLET", isTablet.value)
     let HAAConfig = brandConfigs['HAA']
     let oktoConfig = brandConfigs['Okto']
 
@@ -134,6 +135,7 @@ export default {
       tab3Series, 
       currentClickedTab,
       isMobile,
+      isTablet,
       tabDimensions,
     }
   }
@@ -152,9 +154,12 @@ export default {
     height: 100%;
     // grid-template-columns: 1fr 1fr 1fr;
     transition: all ease-in 0.3s;
+    @media(max-width: 1024px) and (min-width: 768px){
+      height: 100vh;
+    }
 
     // Mobile
-    @media (max-width: 767px) {
+    @media (max-width: 768px) {
       // grid-template-columns: 1fr;
       // grid-template-rows: 1fr 1fr 1fr;
       flex-direction: column;

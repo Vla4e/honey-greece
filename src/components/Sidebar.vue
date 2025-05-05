@@ -23,6 +23,7 @@
           @mouseenter="melculumHovered = true"
           @mouseleave="melculumHovered = false"
           @click.stop
+          @touchstart.prevent="toggleHoverWithTimeout"
           class="sidebar-link"
           to="/"
         >
@@ -103,7 +104,14 @@ const { isMobile } = inject('screenSize')
 const emitter = inject('emitter')
 
 let melculumHovered = ref(false)
-
+function toggleHoverWithTimeout(){
+  if(!melculumHovered.value){
+    melculumHovered.value = !melculumHovered.value;
+    setTimeout(() => {
+      melculumHovered.value = false;
+    }, 1000);
+  } else return
+}
 let toggledContact = ref(false)
 function toggleContactAccordion(){
   if(isMobile.value){
@@ -146,6 +154,9 @@ function toggleNewsletterModal(){
     height: 100vh;
     background: rgba(255, 255, 255, 0.60);
     z-index: 11;
+    @media(max-width: 480px){
+      width: 101vw !important;
+    }
   }
   .left-side, .right-side{
     max-height: 60%;
@@ -251,7 +262,7 @@ function toggleNewsletterModal(){
     }
   }
   
-  @media(max-width:767px){ // Mobile
+  @media(max-width:1024px){ // Mobile
     flex-direction: column;
     justify-content: center;
     .background-cover{
@@ -348,7 +359,7 @@ function toggleNewsletterModal(){
       color: black;
     }
   }
-  @media(max-width:768px){
+  @media(max-width:1024px){
     .disclaimer-text{
       color: white;
       font-size: 11px;

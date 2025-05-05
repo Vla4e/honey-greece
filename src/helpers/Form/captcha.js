@@ -9,7 +9,7 @@ export async function getCaptchaToken() {
     return token;
   } catch (error) {
     console.error('reCAPTCHA execution failed:', error);
-    alert('reCAPTCHA verification failed. Please try again.');
+    alert('We had trouble verifying you’re not a bot. Please try again or contact us at info@premiumhoney.gr if the problem persists.');
     // Throw so the caller knows it failed and stops any further logic
     throw error;
   }

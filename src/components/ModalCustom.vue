@@ -5,7 +5,7 @@
   }
 </script>
 <script setup>
-import { ref, reactive, watch, onMounted, onUnmounted, inject } from 'vue';
+import { ref, reactive, watch, onMounted, inject, onBeforeMount } from 'vue';
 
 import { validateForm } from '../helpers/Form/validations';
 import { getCaptchaToken } from '../helpers/Form/captcha';
@@ -27,7 +27,8 @@ let showModal = ref(props.showModal)
 
 function closeModal(){
   console.log("TogglingModal", showModal.value)
-  showModal.value = false
+  showModal.value = false;
+  isSubscribed.value = false;
   newsletterManager.dismissModal()
 }
 
@@ -70,6 +71,10 @@ let validationResult = reactive({
     message: ''
   }
 })
+
+let errorResponse = ref(null)
+let showError = ref(false)
+
 async function validateInputs(){
   Object.keys(validationResult).forEach(key => {
     validationResult[key].invalid = false;
@@ -107,7 +112,8 @@ async function subscribeToNewsletter() {
   try {
     const validity = await validateInputs();
     if (!validity) {
-      throw new Error('Invalid inputs');
+      // throw new Error('Invalid inputs');
+      return
     }
 
     const captchaToken = await getCaptchaToken();
@@ -129,18 +135,30 @@ async function subscribeToNewsletter() {
       isSubscribed.value = true;
       newsletterManager.markAsSubscribed();
     } else {
-      throw new Error('Subscription request was not successful');
+      throw new Error("We've encountered a problem while subscribing, please try again or reach out to us at \n info@premiumhoney.gr");
     }
 
   } catch (error) {
+    console.count("CATCH TRIGGERED")
     console.error('Subscription failed:', error);
-    alert(error.message || 'Subscription failed, please try again.');
+    errorResponse.value = {
+      error: error,
+      message: error.message || 'Subscription unsuccessful, please try again or contact us at indo@premiumhoney.gr'
+    }
+    showError.value = true
+    emitter.emit('showErrorPopup', true)
+    emitter.emit('mountErrorObject', errorResponse.value)
+    // alert(error.message || 'Subscription failed, please try again.');
+    isSubscribed.value = false;
   } finally {
     isSubmitting.value = false;
   }
 }
 
-
+onBeforeMount(() => {
+  
+  isSubscribed.value = false
+})
 onMounted(()=>{
   console.log("SHOWMODALVAL local onMOunted", showModal.value)
   emitter.on('toggleNewsletterModal', ()=>{
@@ -165,7 +183,7 @@ onMounted(()=>{
               Newsletter
             </span>
             <span class="text">
-              stay in the buzz, get the sweetest updates.
+              Stay in the buzz, get the sweetest updates.
             </span>
           </div>
 
@@ -174,7 +192,7 @@ onMounted(()=>{
 
               <div class="form-group form-group-small">
                 <label for="email">Email</label>
-                <input type="email" id="email" v-model="form.email">
+                <input type="text" id="email" v-model="form.email">
                 <span v-if="validationResult.email.invalid" class="validation">{{ validationResult.email.message }}</span>
               </div>
 
@@ -223,38 +241,41 @@ onMounted(()=>{
                     </div>
                   </div>
                   
-                  <div class="form-group form-group-small">
-                    <CountrySelect v-model="form.location"/>
-                  </div>
+                  <div class="form-groups-row">
+                    <div class="form-group form-group-small">
+                      <label for="phoneNumber">Phone Number</label>
+                      <input 
+                        type="tel" 
+                        id="phoneNumber" 
+                        minlength="8"
+                        maxlength="20"
+                        v-model="form.phoneNumber"
+                      >
+                      <span v-if="validationResult.phoneNumber.invalid" class="validation">{{ validationResult.phoneNumber.message }}</span>
+                    </div>
 
-                  <div class="form-group form-group-small">
-                    <label for="company">Company Name</label>
-                    <input type="text" autocomplete="off" id="company" v-model="form.companyName">
-                    <span v-if="validationResult.companyName.invalid" class="validation">{{ validationResult.companyName.message }}</span>
+                    <div class="form-group form-group-small">
+                      <CountrySelect v-model="form.location"/>
+                    </div>
                   </div>
-                  
-                  <div class="form-group form-group-small">
-                    <label for="phoneNumber">Phone Number</label>
-                    <input 
-                      type="tel" 
-                      id="phoneNumber" 
-                      minlength="8"
-                      maxlength="20"
-                      v-model="form.phoneNumber"
-                    >
-                    <span v-if="validationResult.phoneNumber.invalid" class="validation">{{ validationResult.phoneNumber.message }}</span>
-                  </div>
-                  
-                  <div class="form-group form-group-small">
-                    <label for="website">Website</label>
-                    <input type="text" autocomplete="off" id="website" v-model="form.website">
+                    
+                  <div class="form-groups-row">
+                    <div class="form-group form-group-small">
+                      <label for="company">Company Name</label>
+                      <input type="text" autocomplete="off" id="company" v-model="form.companyName">
+                      <span v-if="validationResult.companyName.invalid" class="validation">{{ validationResult.companyName.message }}</span>
+                    </div>
+                    
+                    <div class="form-group form-group-small">
+                      <label for="website">Website</label>
+                      <input type="text" autocomplete="off" id="website" v-model="form.website">
+                    </div>
                   </div>
                 </div>
               </Transition>
 
               <div class="button-recaptcha">
                 <button 
-                  @click="subscribeToNewsletter" 
                   :disabled="isSubmitting" 
                   :class="isSubmitting ? 'disabled' : ''"
                   class="submit-button submit-button-small" 
@@ -262,6 +283,7 @@ onMounted(()=>{
                 >
                 Subscribe
                 </button>
+                <!-- <ErrorMessage v-if="showError" :error="errorResponse"/> -->
                 <div class="recaptcha-disclaimer" style="text-align: center; margin-top: 10px;">
                 <span class="disclaimer-text">
                   This site is protected by reCAPTCHA and the Google
@@ -321,7 +343,13 @@ onMounted(()=>{
   width: 25%;
   z-index: 11;
   overflow:hidden;
-  @media(max-width: 450px){
+  
+  @media(min-width: 481px) and (max-width: 1024px){
+    width: 50%;
+    max-width: 50%;
+    min-height:300px;
+  }
+  @media(max-width: 480px){
     width: 80%;
     max-width: 80%;
     min-height:300px;
@@ -376,6 +404,12 @@ onMounted(()=>{
       min-width: 90%;
       padding: 20px;
       border: none !important;
+      @media(max-width: 1460px){
+        padding: 0px;
+      }
+      @media(max-width: 1024){
+        padding: 5px;
+      }
       .business-form{
         display: flex;
         flex-direction: column;
@@ -411,6 +445,7 @@ onMounted(()=>{
           border: none !important;
           .button-recaptcha{
             flex-direction: column;
+            margin-top: 10px;
             .submit-button{
               font-size: 14px;
               margin-bottom: 0px;
@@ -423,12 +458,12 @@ onMounted(()=>{
           .form-group{
             display: flex;
             flex-direction: column;
-            width: 85%;
+            width: 90%;
             margin-bottom: 5px;
             margin-top: 5px;
             margin-right: auto;
             margin-left: auto;
-            @media(max-width: 450px){
+            @media(max-width: 480px){
               width: 100%;
             }
           }
@@ -436,10 +471,10 @@ onMounted(()=>{
             display: flex;
             flex-direction: row;
             justify-content: space-between;
-            width: 85%;
+            width: 90%;
             margin-right: auto;
             margin-left: auto;
-            @media(max-width: 450px){
+            @media(max-width: 480px){
               width: 100%;
             }
             .form-group{

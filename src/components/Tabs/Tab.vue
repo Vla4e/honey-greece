@@ -155,7 +155,7 @@ export default {
   background-repeat: no-repeat;
   cursor: pointer;
   transition: width 0.3s ease-in;
-  @media(max-width: 767px){
+  @media(max-width: 1024px){
     transition: height 0.3s ease-in;
   }
 
@@ -187,7 +187,7 @@ export default {
       justify-content: center;
       transform: translate(-50%, -50%);
       opacity: 0.6;
-      @media(max-width: 767px){
+      @media(max-width: 1024px){
         // display: none !important;
         .tab-title{
           margin-bottom: 0px !important;
@@ -226,7 +226,7 @@ export default {
     @media(max-width: 1366px) { 
       font-size: 14px; 
     }
-    @media(max-width: 768px) {
+    @media(max-width: 1024px) {
       display: flex;
       justify-content: flex-start;
       font-size: 12px;
@@ -277,7 +277,7 @@ export default {
   .tab-texts { 
     max-width: 60%;
     
-    @media(max-width: 768px){
+    @media(max-width: 1024px){
       max-width: 90%;
     }
 
@@ -303,7 +303,7 @@ export default {
     margin-left: auto;
     margin-right: auto;
     transition: all ease-in-out 0.3s;
-    @media(max-width: 767px){
+    @media(max-width: 1024px){
       width: 40%;
       top: 25%;
     }
@@ -329,7 +329,7 @@ export default {
     display: flex !important;
     flex-direction: column;
     max-width: 60%;
-    @media(max-width: 768px){
+    @media(max-width: 1024px){
       max-width: 90%;
     }
     position: absolute;
@@ -362,7 +362,7 @@ export default {
     left: 50%;
     transform: translate(-50%, -50%);
     transition: all 0.3s ease-in-out;
-    @media(max-width: 767px){
+    @media(max-width: 1024px){
       width: 50%;
       opacity: 1;
     }
@@ -374,7 +374,7 @@ export default {
   .tab-texts {
     max-width: 60%;
     
-    @media(max-width: 768px){
+    @media(max-width: 1024px){
       max-width: 90%;
     }
     position: absolute;
@@ -388,7 +388,7 @@ export default {
   }
 }
 
-@media (max-width: 767px) {
+@media (max-width: 1024px) {
   .tab {
     .inactive-tab, .clicked-tab, .hovered-tab {
       background: none !important; // Ensure no background color is applied on mobile
@@ -399,7 +399,7 @@ export default {
   }
 }
 
-@media (max-width: 767px) and (min-height: 840px) {
+@media (max-width: 1024px) and (min-height: 840px) {
   .clicked-tab{
     .tab-texts{
       // position: static;

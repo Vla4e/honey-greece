@@ -13,8 +13,11 @@ import LoadingScreen from './LoadingScreen.vue'
 import ModalCustom from './ModalCustom.vue'
 import ProductImage from './ProductPage/ProductImage.vue'
 import CountrySelection from './ContactForm/CountrySelection.vue'
-
+import ErrorMessage from './ErrorMessage.vue'
+import ErrorPopup from './ErrorPopup/ErrorPopup.vue'
 import PositionSliders from './PositionSliders.vue'
+import UniformEditor from './UniformEditor.vue'
+
 export default [
     NavbarComponent,
     Sidebar,
@@ -31,5 +34,8 @@ export default [
     LoadingScreen,
     ModalCustom,
     ProductImage,
-    CountrySelection
+    CountrySelection,
+    ErrorMessage,
+    ErrorPopup,
+    UniformEditor
 ]

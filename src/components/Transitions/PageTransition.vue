@@ -151,7 +151,7 @@ export default {
   font-weight: 600;
   color: white;
   // z-index: 10050;
-  @media(max-width: 767px){
+  @media(max-width: 1024px){
     font-size: 50px;
     // white-space: nowrap;
   }

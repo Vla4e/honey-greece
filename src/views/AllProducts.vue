@@ -178,7 +178,7 @@ function findFlavourData(brandSlug, lineSlug, flavourSlug) {
   } else return null
 }
 
-const { isMobile } = inject('screenSize')
+const { isMobile, isTablet } = inject('screenSize')
 let currentlySelectedBrand = ref('haa')
 function computeVisibility(brandName) {
   // console.log("COMPUTING VISIBILITY", brandName, toRaw(currentlySelectedBrand.value), toRaw(isMobile.value))
@@ -268,7 +268,7 @@ onMounted(async () => {
       }
     }
     
-    @media(min-width: 768px){
+    @media(min-width: 1023px){
       display: none;
     }
   }
@@ -276,7 +276,7 @@ onMounted(async () => {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    @media(min-width: 768px){
+    @media(min-width: 1023px){
       height: 50%;
     }
     .brand-info-container{
@@ -291,6 +291,9 @@ onMounted(async () => {
         width: 100%;
         color: black;
         margin-bottom: 5px;
+        @media(max-width: 1024px){
+          font-size: 18px;
+        }
       }
       
 
@@ -302,6 +305,9 @@ onMounted(async () => {
           text-align: left;
           width: 100%;
           color: black !important;
+          @media(max-width: 1024px){
+            font-size: 18px !important;
+          }
         }
         .omega{
           font-family: "DMSans";
@@ -311,6 +317,9 @@ onMounted(async () => {
           width: 100%;
           font-size: calc(24px*1.22) !important;
           color: black !important;
+          @media(max-width: 1024px){
+            font-size: 18px !important;
+          }
         }
         margin-bottom: 5px;
       }
@@ -322,6 +331,9 @@ onMounted(async () => {
         width: 100%;
         color: black;
         margin-bottom: 10px;
+        @media(max-width: 1024px){
+          font-size: 16px;
+        }
       }
       .description{
         font-family: "DMSans";
@@ -331,6 +343,9 @@ onMounted(async () => {
         width: 100%;
         color: black;
         margin-bottom: 20px;
+        @media(max-width: 1024px){
+          font-size: 12px;
+        }
       }
     }
     .carousel{
@@ -344,7 +359,7 @@ onMounted(async () => {
     align-items: center;
     // justify-content: space-between;
     width: 100%;
-    @media(max-width: 767px){
+    @media(max-width: 1024px){
       align-self: center;
       margin-top: 40px;
       margin-bottom: 25px;
@@ -367,7 +382,7 @@ onMounted(async () => {
     }
   }
     
-  @media(max-width: 767px){
+  @media(max-width: 1023px){
     justify-content: flex-start;
     .brand{
       flex-direction: column;

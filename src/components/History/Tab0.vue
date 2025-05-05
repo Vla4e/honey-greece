@@ -145,7 +145,7 @@ watch(
     }
   }
 
-  @media (max-width: 767px) {
+  @media (max-width: 1024px) {
     background-image: none !important;
     min-height: 100vh !important;
     justify-content: center;

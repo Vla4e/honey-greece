@@ -3,7 +3,7 @@ import { ref, inject, onMounted, onBeforeMount } from 'vue'
 import { useGlobalStore } from '@/store/global.js'
 import { testNetworkSpeedViaDownload } from '@/helpers/checkNetworkSpeed.js'
 
-const { isMobile } = inject('screenSize')
+const { isMobile, isTablet } = inject('screenSize')
 const globalStore = useGlobalStore()
 
 const videoReady = ref(false)
@@ -26,7 +26,7 @@ async function determineBackgroundMedia (speed) {
   try {
     console.log("Try speed:", speed)
     if (speed >= 5) {
-      if(isMobile.value){
+      if(isMobile.value && !isTablet.value){
         videoSource.value = (
           await import("@/assets/pages/home/mobile_1mbps.mp4")
         ).default;

@@ -108,6 +108,10 @@ onMounted(async () => {
   flex-direction: column;
   justify-content: center;
   align-items: center;
+  @media(max-width: 1024px){
+    min-height: 300px;
+    // height: 400px;
+  }
   .product-image-container{
     width: 100%;
     height: 100%;
@@ -115,8 +119,18 @@ onMounted(async () => {
     mask-image: linear-gradient(to right, rgba(0, 0, 0, 0), black 15%, black 85%, rgba(0, 0, 0, 0));
     -webkit-mask-image: linear-gradient(to right, rgba(0, 0, 0, 0), black 15%, black 85%, rgba(0, 0, 0, 0));
     img{
-      height: 100%;
-      width: auto;
+      @media(min-width: 769px){
+        height: 100%;
+        width: auto;
+      }
+      @media(max-width: 1024px){
+        max-width: 100%;
+        max-height: 450px !important;
+        object-fit: cover;
+      }
+      @media(min-width: 1300px) and (max-height: 800px){
+        height: 110% !important;
+      }
     }
   }
   .size-selection{
@@ -125,6 +139,9 @@ onMounted(async () => {
     width: 100%;
     // margin-top: -40px;
     z-index: 11;
+    // position: absolute;
+    // bottom: 0%;
+    // margin-top: -20px;
     .size-selection-button{
       color: #000;
       font-family: 'DMSans';

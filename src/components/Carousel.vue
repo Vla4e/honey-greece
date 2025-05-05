@@ -65,7 +65,7 @@ const props = defineProps({
   }
 });
 
-const { isMobile } = inject('screenSize')
+const { isMobile, isTablet } = inject('screenSize')
 
 // Assign currentBrand values from props to fetch imageurls and texts
 let currentBrand = ref(null)
@@ -297,7 +297,7 @@ function preventDefaultSelection(event) {
     @media(min-width: 1440px){
       // width: 80%;
     }
-    @media(max-width: 450px){
+    @media(max-width: 480px){
       // min-height: 200px;
       max-width: 100%;
     }
@@ -325,7 +325,7 @@ function preventDefaultSelection(event) {
 
 .fade-overflow{
   &-right, &-left{
-    @media(max-width: 767px){
+    @media(max-width: 1024px){
       display: none;
     }
   }

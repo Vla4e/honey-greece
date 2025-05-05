@@ -14,7 +14,7 @@
       >
         450g
       </button>
-      <button @click="cycleColors()">CYCLE HONEY TYPE: {{ currentHType }}</button>
+      <!-- <button @click="changeHoneyShader()">CYCLE HONEY TYPE: {{ currentHType }}</button> -->
       <button
         @click="selectJarSize('300g')"
         :class="currentJarSize === '300g' ? 'selected' : ''"
@@ -22,6 +22,7 @@
       >
         300g
       </button>
+      <button @click="addBox()">ADD BOX</button>
       <button
         v-if="currentBrand !== 'okto'"
         @click="selectJarSize('150g')"
@@ -33,7 +34,8 @@
       <!-- <button @click="startWipe = !startWipe" style="position:absolute; top: 80%; left: 50%;">TEXTURE</button> -->
     </div>
 
-    <div style="position: absolute; top: 0%; left: -50%; display: flex; width: 55%">
+    <div class="searchtarget" style="position: absolute; top: 0%; left: -50%; display: flex; width: 55%">
+      <!-- <UniformEditor :honeyMeshes="tempHoneyMeshes" /> -->
       <!-- <PositionSliders  class="target" :jarSmall="jarSmall" :jarMedium="jarMedium"/> -->
       <!-- <div class="sliders">
         <label for="xSlider">X Position:</label>
@@ -96,6 +98,7 @@ import {
   ColorManagement,
 } from "three";
 ColorManagement.enabled = true;
+
 // Postprocessing
 import { addPostProcessing, addNativePostProcessing }  from "@/helpers/JarScene/PostProcessing.js";
 
@@ -109,13 +112,10 @@ import {
   nextTick,
   inject,
   toRaw,
+  reactive
 } from "vue";
-import { get, objectEntries, useWindowSize } from "@vueuse/core";
 import { useProductStore } from "@/store/product.js";
 import { useGlobalStore } from "@/store/global.js";
-import { storeToRefs } from "pinia";
-
-import { OrbitControls } from "three/addons/controls/OrbitControls.js";
 
 import brandConfigs from "@/assets/brand-information/index.js";
 // let brandSizes = {}
@@ -132,13 +132,17 @@ import { EXRLoader } from "three/addons/loaders/EXRLoader.js";
 
 //Animation imports
 import { initializeMixer, setupAnimations } from "@/helpers/AnimationControls.js";
-import { initiateObjectRotation } from "@/helpers/3DObjectPan.js";
-
+import { initiateObjectRotation, startAutoRotation } from "@/helpers/3DObjectPan.js";
+import { initCameraParallax, updateCameraParallax } from '@/helpers/Parallax.js';
+import { getDistanceToRightEdge } from "../helpers/JarScene/ObjectToCanvasEdgeDistance.js";
 import { debounce, parabolicPathCoordinate } from "@/helpers/globalFunctions.js";
 
-import Stats from "stats.js";
+import { updateCrossFades, crossFadeMesh } from "../helpers/JarScene/CrossFadeMaterials.js";
+import { crossFadeTasks } from "../helpers/JarScene/CrossFadeTasks.js";
+
 import PositionSliders from "./PositionSliders.vue";
 import LoadingIndicator from "./LoadingIndicator.vue";
+import { performanceMonitor, memoryMonitor } from "../helpers/WebGLCapabilities/performanceMonitor.js";
 
 //ShaderMaterial imports
 //Honey
@@ -149,6 +153,11 @@ import {
   playfulMaterial4,
   playfulMaterial5
 } from "../helpers/JarScene/HoneyMaterials.js";
+
+import { createLabelMaterial } from "../helpers/JarScene/LabelMaterials.js";
+import { createWipeMaterial } from "../helpers/JarScene/LabelMaterials2.js";
+
+// import UniformEditor from "./UniformEditor.vue";
 
 //Label
 
@@ -190,11 +199,6 @@ export default {
     let jarSmall = ref([]);
 
     let isLoading = ref(false);
-    //--------------------------------------------------------- DELETE ABOVE
-    let stats = new Stats();
-    //ref to canvas, window size
-    stats.showPanel(0);
-    // document.body.appendChild(stats.dom)
     let emitter = inject("emitter");
 
     let globalOrbitControls;
@@ -326,11 +330,8 @@ export default {
 
     let alreadyLoadedProductLines = [];
     async function loadAllTextures() {
-      console.log(
-        alreadyLoadedProductLines.length
-      );
       if (alreadyLoadedProductLines.length) {
-        console.log("HUH");
+        // console.log("HUH");
       }
       let wtf = alreadyLoadedProductLines.find((line) => {
         return line === textureUrlSlugs.productLine;
@@ -389,7 +390,7 @@ export default {
       // textureLoad.flipY = false;
       // let textureLoad2 = await loadTexture('/assets/label-textures-3/haa/monoflorals/300g/pine_limited.png')
       // textureLoad2.flipY = false;
-      // // // console.log("BRAND CONFIGS", brandConfigs[textureUrlSlugs.brand.toUpperCase()].brandProductLines['Monoflorals'].flavours)
+      // // // // console.log("BRAND CONFIGS", brandConfigs[textureUrlSlugs.brand.toUpperCase()].brandProductLines['Monoflorals'].flavours)
       let tempFlavors =
         brandConfigs[textureUrlSlugs.brand.toUpperCase()].brandProductLines["Monoflorals"]
           .flavours;
@@ -402,7 +403,10 @@ export default {
     let matcapType = ref(true);
 
     async function renderMatcap() {
-      await changeHoneyShader();
+      console.log("RENDERING MATCAP", textureUrlSlugs.flavour)
+      await changeHoneyShader(textureUrlSlugs.flavour);
+      honeyShaderInitialized = true
+      console.log("222222222222222222", honeyShaderInitialized)
       return;
     }
 
@@ -419,68 +423,17 @@ export default {
       "thyme",
       "chestnut",
     ];
-    let honeyId = 0;
-    let currentHType = ref("cotton");
-    async function cycleColors() {
-      if (honeyId == 10) {
-        honeyId = 0;
-      } else honeyId++;
-      currentHType.value = honeyTypesArr[honeyId];
-      await changeHoneyShader(honeyTypesArr[honeyId]);
-    }
-    // Replace changeMatcapFinal with a new function that uses createComplexMaterialOptions
-    async function changeHoneyShader(type = "cotton", id, color) {
-      // const material2 = await honeyMaterialPositionInput(
-      //   honeyMeshes,
-      //   globalTextureLoader,
-      //   globalScene.environment,
-      //   type
-      // )
 
-      // const material2 = await honeyMaterial(
-      //   honeyMeshes,
-      //   globalTextureLoader,
-      //   globalScene.environment,
-      //   type
-      // )
+    // Replace changeMatcapFinal with a new function that uses createComplexMaterialOptions
+
+    let tempHoneyMeshes = ref({})
+    let honeyShaderInitialized = false;
+    async function changeHoneyShader(type = "cotton_honey", id, color) {
+      console.log("About to revert POS", globalScene)
       await revertScenePosition(globalScene, globalCamera);
-      console.log("1. Will move to pos");
-      await moveSceneToGridPosition(globalScene, globalCamera, honeyMesh1.position, type);
-      console.log("2. Moved to POS");
-      // const material2 = await oldHoneyMaterial(
-      //   globalTextureLoader,
-      //   globalScene.environment,
-      //   type,
-      //   '300g',
-      //   honeyMeshes
-      // )
-      // const material3 = await oldHoneyMaterial(
-      //   globalTextureLoader,
-      //   globalScene.environment,
-      //   type,
-      //   '450g',
-      //   honeyMeshes
-      // )
-      // const honeyMaterials = {
-      //   [jarSizes[0]]:  await playfulMaterial2(
-      //     globalTextureLoader,
-      //     globalScene.environment,
-      //     type,
-      //     jarSizes[0],
-      //     honeyMeshes,
-      //     currentBrand.value,
-      //     globalCamera
-      //   ),
-      //   [jarSizes[1]]: await playfulMaterial2(
-      //     globalTextureLoader,
-      //     globalScene.environment,
-      //     type,
-      //     jarSizes[1],
-      //     honeyMeshes,
-      //     currentBrand.value,
-      //     globalCamera
-      //   )
-      // }
+      // console.log("1. Will move to pos");
+      const offset = await moveSceneToGridPosition(globalScene, globalCamera, honeyMesh1.position, type);
+      // console.log("2. Moved to POS");
       const honeyMaterials = {
         [jarSizes[0]]: await playfulMaterial5(
           globalTextureLoader,
@@ -489,7 +442,8 @@ export default {
           jarSizes[0],
           honeyMeshes,
           currentBrand.value,
-          globalCamera
+          globalCamera,
+          globalScene
         ),
         [jarSizes[1]]: await playfulMaterial5(
           globalTextureLoader,
@@ -498,26 +452,21 @@ export default {
           jarSizes[1],
           honeyMeshes,
           currentBrand.value,
-          globalCamera
+          globalCamera,
+          globalScene
         ),
       };
 
-      console.log("Materials:", honeyMaterials);
+      // console.log("Materials:", honeyMaterials);
       console.log("HONEYMESHES:::::", honeyMeshes);
       Object.values(honeyMeshes).forEach((mesh) => {
         mesh.material = honeyMaterials[mesh.size];
         mesh.material.needsUpdate = true;
+        console.log("Attempting to crossfade: ", mesh.name)
+        console.log("using material: ", honeyMaterials[mesh.size])
+        // crossFadeMesh(mesh, honeyMaterials[mesh.size], globalScene, 0.5);
       });
-      // Object.values(honeyMeshes).forEach((mesh) => {
-      //   console.log("HONEY MESH : : : : : : : : :", mesh.name)
-      //   if(mesh.name.includes('300')){
-      //     mesh.material = material2;
-      //     mesh.material.needsUpdate = true;
-      //   } else if (mesh.name.includes('450')){
-      //     mesh.material = material3;
-      //     mesh.material.needsUpdate = true;
-      //   }
-      // })
+      tempHoneyMeshes.value = honeyMeshes
 
       isLoading.value = false;
       return true;
@@ -570,7 +519,7 @@ export default {
     let globalGlass150g;
     let globalGlass300g;
     let globalGlass450g;
-
+    let updateParallax;
     const setCanvas = async () => {
       globalStore.toggleLoadingCircle(true);
       let tempSize = frontJarSize.value || "300g"; //values used are in grams
@@ -588,13 +537,16 @@ export default {
 
       let sceneUrl =
         currentBrand.value === "okto"
-          ? "/assets/glb/300-450.glb"
+          ? "/assets/glb/300-450-v3.glb"
           : // '/assets/glb/newJars/uvfixed4.glb':
             // '/assets/glb/newJars/450-300-animation-choppy-v2.glb':
             // '/assets/glb/newJars/uvfixed4.glb':
-            "/assets/glb/150-300.glb";
+            // "/assets/glb/300-150-v2.glb";
+            "/assets/glb/300-150-v3.glb";
+            // "/assets/glb/150-300-2.glb";
       let sceneParts = await loadGlbReturnParts(loader, sceneUrl);
-      console.log("SceneParts:", sceneParts)
+      // console.log("SceneParts:", sceneParts)
+      
       // reference to mesh within loaded Scene - changes affect scene directly
       labelMeshes = sceneParts.labelMeshes;
       glassMeshes = sceneParts.glassMeshes;
@@ -602,6 +554,7 @@ export default {
       honeyMeshes = sceneParts.honeyMeshes;
       honeyMesh1 = honeyMeshes["300g"];
       honeyMesh2 = honeyMeshes["450g"];
+      // // console.log("MESHBOX", meshBox)
       if (honeyMeshes["150g"]) {
         honeyMesh3 = honeyMeshes["150g"];
       }
@@ -610,7 +563,6 @@ export default {
       mixer = initializeMixer(sceneParts.scene);
       // sceneParts.scene.position.set(0.25, -0.15, 0.1)
       globalScene.add(sceneParts.scene);
-
       // TEST remove label glass jar
       globalScene.traverse((obj) => {
         if (obj.isMesh) {
@@ -625,8 +577,8 @@ export default {
           } else if (obj.name === "honey_object_150g") {
             // globalObj150g = obj;
           } else if (obj.name.includes("jar")) {
-            // obj.material.roughness = 0.3;
-            // obj.material.transparent = true;
+            obj.material.roughness = 0.01;
+            obj.material.transparent = true;
             // obj.material.opacity = 0;
             if (obj.name === "jar_object_150g") {
               // globalGlass150g = obj
@@ -676,32 +628,20 @@ export default {
         targetMesh.position.z + 0.5
       );
 
-      // Camera
-      // globalCamera = new PerspectiveCamera(25, aspectRatio.value, 0.001, 5);
-      // if( isMobile.value ){
-      //   // // // // console.log("ISMOBILE")
-      //   globalCamera = new PerspectiveCamera(30, aspectRatio.value, 0.001, 3);
-      //   // globalCamera.initialZoom = 1.4;
-      //   globalCamera.position.set(cameraConfigsMobile.x, cameraConfigsMobile.y, cameraConfigsMobile.z)
-      //   // globalCamera.position.set(cameraConfigs.x, cameraConfigs.y, cameraConfigs.z);
-      //   // globalCamera.lookAt(0, 1, 0)
-      // } else {
-      //   globalCamera.position.set(cameraConfigs.x, cameraConfigs.y, cameraConfigs.z); // Position the camera in front of the mesh
-      // }
-      // globalCamera.lookAt(0, cameraConfigs.y , 0)
-      // globalCamera.zoomFactor = 10;
-      // targetMesh.add(axesHelper2)
-      // globalCamera.add(globalPointLight); //add pointlight to camera
-      globalCamera = new PerspectiveCamera(25, aspectRatio.value, 0.001, 10);
-      // globalCamera.zoomFactor = 10;
+
+      globalCamera = new PerspectiveCamera(25, aspectRatio.value, 0.001, 1);
       let axesHelper2 = new AxesHelper(5);
       axesHelper2.setColors("blue", "green", "red");
       // targetMesh.add(axesHelper2)
       globalCamera.position.set(0.35, 0.06, 0); // Position the camera in front of the mesh
       globalCamera.lookAt(0, 0.06, 0);
-      // globalCamera.add(globalPointLight); //add pointlight to camera
       globalScene.add(globalCamera);
 
+      // updateParallax = initCameraParallax(globalCamera, new Vector3(0, 0.06, 0), {
+      //   intensity: 0.005,
+      //   damping: 0.008,
+      //   bounds: 0.03
+      // });
       // development axes helpers
       axesHelper = new AxesHelper(5);
       axesHelper.setColors("red", "blue", "green");
@@ -718,6 +658,7 @@ export default {
         stencil: true, //used for postprocessing
         depth: true, //used for postprocessing
         alpha: true,
+        // maxSamples: 8
         // preserveDrawingBuffer: false
       });
       globalRenderer.setSize(containerWidth.value, containerHeight.value);
@@ -735,7 +676,7 @@ export default {
       // globalRenderer.useLegacyLights = false;
       // globalRenderer.render(globalScene, globalCamera);
 
-      // updateTexture()
+      updateTexture()
 
       await setLightingEXR(globalRenderer);
       // await setLighting(globalRenderer)
@@ -748,299 +689,116 @@ export default {
     // let currentTexture = { textures: [], name: "" };
     // let upcomingTexture = { textures: [], name: "" };
     async function computeTexture() {
-      console.log("Computing texture");
+      // console.log("Computing texture");
       isFirstLoad = false;
       const baseTextureUrl = "/assets/label-textures-3";
 
       // load if not
       let jarTexturesLocal = [];
       for (const size of jarSizes) {
-        console.log("Loading tex for size.");
+        // console.log("Loading tex for size.");
         let textureUrl = `${baseTextureUrl}/${textureUrlSlugs.brand}/${textureUrlSlugs.productLine}/${size}/${textureUrlSlugs.flavour}_resized.png`;
-        // console.log("url - > ", textureUrl)
+        // // console.log("url - > ", textureUrl)
         let texture = await loadTexture(textureUrl);
         texture.name = textureUrlSlugs.flavour;
         texture.flipY = false;
         texture.generateMipMaps = true;
         texture.needsUpdate = true;
+        texture.colorSpace = SRGBColorSpace;
+        // console.log("TEXTURE:", texture)
         jarTexturesLocal.push({ texture, size, name: textureUrlSlugs.flavour });
       }
 
       return jarTexturesLocal;
     }
 
-    // CLAUDE PROVIDED
-    async function createTextureShader(previousTexture, nextTexture, clonedProperties) {
-      // Copy glb mesh properties into shader
-      previousTexture[0].texture.encoding = SRGBColorSpace;
-      nextTexture[0].texture.encoding = SRGBColorSpace;
-
-      // previousTexture[0].texture.colorSpace = SRGBColorSpace;
-      // nextTexture[0].texture.colorSpace = SRGBColorSpace;
-      let tempEnv = globalScene.environment;
-      let originalMaterial = clonedProperties;
-      let baseColor = originalMaterial.color;
-      let roughness = originalMaterial.roughness;
-      let metalness = originalMaterial.metalness;
-      let material = new ShaderMaterial({
-        uniforms: {
-          currentTexture: { value: previousTexture[0].texture },
-          nextTexture: { value: nextTexture[0].texture },
-          transitionProgress: { value: 0 },
-          envMap: { value: globalScene.environment },
-          roughness: { value: roughness },
-          metalness: { value: metalness },
-          baseColor: { value: baseColor },
-          envMapIntensity: { value: 1 },
-          side: DoubleSide,
-        },
-        vertexShader: `
-          varying vec2 vUv;
-          varying vec3 vNormal;
-          varying vec3 vViewPosition;
-          varying vec3 vWorldPosition;
-          varying float vSide;
-
-          void main() {
-              vUv = uv;
-              vec4 worldPosition = modelMatrix * vec4(position, 1.0);
-              vWorldPosition = worldPosition.xyz;
-              
-              vec3 transformedNormal = normalMatrix * normal;
-              vNormal = normalize(transformedNormal);
-              
-              vec4 mvPosition = modelViewMatrix * vec4(position, 1.0);
-              vViewPosition = -mvPosition.xyz;
-              gl_Position = projectionMatrix * mvPosition;
-              
-              vSide = dot(transformedNormal, vViewPosition) > 0.0 ? -1.0 : 1.0;
-          }
-        `,
-        fragmentShader: `
-          #define PI 3.14159265359
-
-          uniform float transitionProgress;
-          uniform sampler2D currentTexture;
-          uniform sampler2D nextTexture;
-          uniform samplerCube envMap;
-          uniform float roughness;
-          uniform float metalness;
-          uniform vec3 baseColor;
-          uniform float envMapIntensity;
-
-          varying vec2 vUv;
-          varying vec3 vNormal;
-          varying vec3 vViewPosition;
-          varying float vSide;
-
-          void main() {
-              // Basic texture blending for the wipe effect
-              float alpha = step(vUv.x, transitionProgress);
-              vec4 texColorCurrent = texture2D(currentTexture, vUv);
-              vec4 texColorNext = texture2D(nextTexture, vUv);
-              vec4 texColor = mix(texColorCurrent, texColorNext, alpha);
-              
-              // Get base color with texture
-              vec3 color = texColor.rgb;  // Removed baseColor multiplication for now
-              
-              // Basic lighting setup
-              vec3 N = normalize(vNormal) * vSide;
-              vec3 V = normalize(vViewPosition);
-              vec3 R = reflect(-V, N);
-              
-              // Sample environment map
-              vec3 envSample = textureCube(envMap, R).rgb;
-              
-              // Simplified lighting calculation
-              float fresnel = pow(1.0 - max(dot(N, V), 0.0), 5.0);
-              vec3 specularColor = mix(vec3(0.04), color, metalness);
-              
-              // Mix diffuse and specular
-              vec3 diffuse = color * (1.0 - metalness);
-              vec3 specular = envSample * mix(specularColor, vec3(1.0), fresnel);
-              
-              // Combine everything
-              vec3 finalColor = (diffuse + specular * (1.0 - roughness)) * envMapIntensity;
-              
-              // Ensure we have some minimal lighting
-              finalColor = max(finalColor, color * 0.2);  // Add ambient term
-              
-              gl_FragColor = vec4(finalColor, texColor.a);
-          }
-        `,
-
-        transparent: true,
-        alphaTest: 0.05,
-        // Adjust this value as needed
-      });
-
-      let material2 = new ShaderMaterial({
-        uniforms: {
-          currentTexture: { value: previousTexture[1].texture }, // Start with the first texture
-          nextTexture: { value: nextTexture[1].texture }, // Initially set to the second texture
-          transitionProgress: { value: 0 }, // Transition not started
-          envMap: { value: globalScene.environment },
-          roughness: { value: roughness },
-          metalness: { value: metalness },
-          baseColor: { value: baseColor },
-          envMapIntensity: { value: 1 },
-          // exposure: {value: 0.2},
-          side: DoubleSide,
-        },
-        vertexShader: `
-          varying vec2 vUv;
-          varying vec3 vNormal;
-          varying vec3 vViewPosition;
-          varying vec3 vWorldPosition;
-          varying float vSide;
-
-          void main() {
-              vUv = uv;
-              vec4 worldPosition = modelMatrix * vec4(position, 1.0);
-              vWorldPosition = worldPosition.xyz;
-              
-              vec3 transformedNormal = normalMatrix * normal;
-              vNormal = normalize(transformedNormal);
-              
-              vec4 mvPosition = modelViewMatrix * vec4(position, 1.0);
-              vViewPosition = -mvPosition.xyz;
-              gl_Position = projectionMatrix * mvPosition;
-              
-              vSide = dot(transformedNormal, vViewPosition) > 0.0 ? -1.0 : 1.0;
-          }
-        `,
-        fragmentShader: `#define PI 3.14159265359
-
-      uniform float transitionProgress;
-      uniform sampler2D currentTexture;
-      uniform sampler2D nextTexture;
-      uniform samplerCube envMap;
-      uniform float roughness;
-      uniform float metalness;
-      uniform vec3 baseColor;
-      uniform float envMapIntensity;
-
-      varying vec2 vUv;
-      varying vec3 vNormal;
-      varying vec3 vViewPosition;
-      varying float vSide;
-
-      void main() {
-          // Basic texture blending for the wipe effect
-          float alpha = step(vUv.x, transitionProgress);
-          vec4 texColorCurrent = texture2D(currentTexture, vUv);
-          vec4 texColorNext = texture2D(nextTexture, vUv);
-          vec4 texColor = mix(texColorCurrent, texColorNext, alpha);
-          
-          // Get base color with texture
-          vec3 color = texColor.rgb;  // Removed baseColor multiplication for now
-          
-          // Basic lighting setup
-          vec3 N = normalize(vNormal) * vSide;
-          vec3 V = normalize(vViewPosition);
-          vec3 R = reflect(-V, N);
-          
-          // Sample environment map
-          vec3 envSample = textureCube(envMap, R).rgb;
-          
-          // Simplified lighting calculation
-          float fresnel = pow(1.0 - max(dot(N, V), 0.0), 5.0);
-          vec3 specularColor = mix(vec3(0.04), color, metalness);
-          
-          // Mix diffuse and specular
-          vec3 diffuse = color * (1.0 - metalness);
-          vec3 specular = envSample * mix(specularColor, vec3(1.0), fresnel);
-          
-          // Combine everything
-          vec3 finalColor = (diffuse + specular * (1.0 - roughness)) * envMapIntensity;
-          
-          // Ensure we have some minimal lighting
-          finalColor = max(finalColor, color * 0.2);  // Add ambient term
-          
-          gl_FragColor = vec4(finalColor, texColor.a);
-      }`,
-        transparent: true,
-        alphaTest: 0.05, // Adjust this value as needed
-      });
-      return [
-        { material: material, size: previousTexture[0].size },
-        { material: material2, size: previousTexture[1].size },
-      ];
+    async function addBox() {
+      if(isMobile.value) return
+      // console.log("ADDING BOX +=++++++++++++++++++++++++++++++++++++++++++++++++++++",labelMeshes['450g'])
+      let distance = await getDistanceToRightEdge(labelMeshes['450g'], globalCamera, globalRenderer)
+      // console.log("DISTANCE", globalScene.children[0].children[0])
+      // let newBoxHelper = new BoxHelper(globalScene.children[0].children[0])
+      // newBoxHelper.update();
+      // globalScene.add(newBoxHelper)
+      // globalScene.add(distanceObj.boxHelper)
+      emitter.emit("meshEdges", { leftEdge: 0, rightEdge: distance})
     }
-    
+
     let firstTextureLoad = true;
     async function updateTexture() {
       globalStore.toggleLoadingCircle(true);
       isLoadingTexture = true;
 
-      // console.log("URL SLUGS:", textureUrlSlugs.flavour)
-      // console.log("URL SLUGS:", textureUrlSlugs.brand)
-      // console.log("URL SLUGS:", textureUrlSlugs.productLine)
-      // console.log("URL SLUGS:", textureUrlSlugs.size)
       if (!currentJarScene) {
-        // console.log("EXITING")
         isLoadingTexture = false;
         return;
       }
 
       let clonedProperties = null;
       Object.values(labelMeshesClones).forEach((clone) => {
+        // console.log("Clone MAT:", clone.geometry.attributes.uv)
         clonedProperties = clone.material;
       });
       Object.values(labelMeshes).forEach((mesh) => {
         if (mesh.material && mesh.material.map) {
-          // Dispose of the current texture to free up memory
           mesh.material.map.dispose();
         }
       });
 
       let textures = await computeTexture();
       let shaderTextures = null;
-      // console.log("IF FOR CREATING SHADER", currentTexture, textureUrlSlugs.flavour)
+      // // console.log("CLONED PROPS____________", clonedProperties)
       if (!currentTexture) {
         currentTexture = { textures, name: textureUrlSlugs.flavour };
-        shaderTextures = await createTextureShader(
-          currentTexture.textures,
-          currentTexture.textures,
-          clonedProperties
+        // Pass environment map from globalScene
+        shaderTextures = await createWipeMaterial(
+            currentTexture.textures,
+            currentTexture.textures,
+            globalScene.environment,
+            clonedProperties,
         );
+        // shaderTextures = await createTextureShader(
+        //   currentTexture.textures,
+        //   currentTexture.textures,
+        //   clonedProperties
+        // );
       } else {
-        // console.log("COMPARISON", currentTexture.name === textureUrlSlugs.flavour )
         if (!(currentTexture.name === textureUrlSlugs.flavour)) {
-          // console.log("CREATING NEW SHADER TEXS", textures)
           upcomingTexture = { textures, name: textureUrlSlugs.flavour };
-          shaderTextures = await createTextureShader(
+          // shaderTextures = await createTextureShader(
+          //   currentTexture.textures,
+          //   upcomingTexture.textures,
+          //   clonedProperties
+          // );
+          // Pass environment map from globalScene
+          shaderTextures = await createWipeMaterial(
             currentTexture.textures,
             upcomingTexture.textures,
-            clonedProperties
+            globalScene.environment,
+            clonedProperties,
           );
           currentTexture = { textures, name: textureUrlSlugs.flavour };
         }
       }
-      // // // console.log("TEXTURES", shaderTextures, currentTexture, upcomingTexture)
-      // console.log("LABEL MESHES", !!labelMeshes)
-      // console.log("SHADER MATS", shaderTextures)
-      if (labelMeshes) {
-        let mesh1 = labelMeshes[shaderTextures[0].size];
-        mesh1.material = shaderTextures[0].material;
-        mesh1.material.side = DoubleSide;
-        mesh1.material.needsUpdate = true;
 
-        let mesh2 = labelMeshes[shaderTextures[1].size];
-        mesh2.material = shaderTextures[1].material;
-        mesh2.material.side = DoubleSide;
-        mesh2.material.needsUpdate = true;
+      if (labelMeshes && shaderTextures) {
+        // Apply materials to each mesh based on size
+        shaderTextures.forEach(({ size, material }) => {
+          if (labelMeshes[size]) {
+            const mesh = labelMeshes[size];
+            mesh.material = material;
+            mesh.material.needsUpdate = true;
+          }
+        });
 
         globalStore.toggleLoadingCircle(false);
       }
-      // labelMesh.material.map = texture;
-      // labelMesh.material.needsUpdate = true;
+      
       setTimeout(() => {
         isLoadingTexture = false;
       }, 250);
-      // console.log("Before if for StartWipe", firstTextureLoad, startWipe.value)
+      
       if (!firstTextureLoad) {
-        // console.log("initiating startWipe", labelMeshes[jarSizes[0]].material.uniforms.transitionProgress.value)
         startWipe.value = true;
       } else {
         firstTextureLoad = false;
@@ -1049,7 +807,7 @@ export default {
 
     /* Jar size*/
     const selectJarSize = async (size) => {
-      console.log("Attempting selectJarSize");
+      // console.log("Attempting selectJarSize");
       previousJarSize.value = currentJarSize.value;
       if (size === currentJarSize.value) {
         return;
@@ -1065,19 +823,19 @@ export default {
           action.play();
           currentJarSize.value = size;
         });
-        console.log("initiated obj ROTATION", currentJarSize.value);
+        // console.log("initiated obj ROTATION", currentJarSize.value);
         initiateObjectRotation(globalScene, webGl.value, currentJarSize.value);
-        console.log("CJS", currentJarSize.value);
+        // console.log("CJS", currentJarSize.value);
         if (isMobile.value) {
           if (size === "450g") {
-            console.log("Zooming out");
+            // console.log("Zooming out");
             animatingCamera = true;
             zoomOut(globalCamera, 1000, 1.1, cameraConfigsMobile);
             setTimeout(() => {
               animatingCamera = false;
             }, 1100);
           } else if (previousJarSize.value === "450g" && previousJarSize.value !== size) {
-            console.log("Zooming in");
+            // console.log("Zooming in");
             animatingCamera = true;
             zoomIn(globalCamera, 1000, 1.1, cameraConfigsMobile);
             setTimeout(() => {
@@ -1103,7 +861,7 @@ export default {
       if (containerWidth.value && containerHeight.value) {
         updateCamera(containerWidth.value, containerHeight.value);
         updateRenderer(containerWidth.value, containerHeight.value);
-        getDistanceFromCanvas(globalScene.children[0].children[0]);
+        // getDistanceFromCanvas(globalScene.children[0].children[0]);
       }
     }, 600);
 
@@ -1134,18 +892,18 @@ export default {
       let exrTexture = await new EXRLoader().loadAsync(
         "/assets/exr/brown_photostudio_02_1k.exr"
       );
-      console.log("EXRTEX", exrTexture);
+      // console.log("EXRTEX", exrTexture);
       let envMap = pmremGenerator.fromEquirectangular(exrTexture).texture;
-      console.log(envMap.type);
-      console.log(envMap.mapping);
-      console.log("envMap", envMap);
+      // console.log(envMap.type);
+      // console.log(envMap.mapping);
+      // console.log("envMap", envMap);
       // envMap.intensity = 0.2;
       // pmremGenerator.compileEquirectangularShader();
       globalScene.background = null;
       globalScene.environment = envMap;
-      globalScene.environmentIntensity = 1.0;
+      globalScene.environmentIntensity = 0.85;
       globalScene.toneMappingExposure = 1.0;
-      // // console.log("FINISHED SETTING LIGHTING ===========>")
+      // // // console.log("FINISHED SETTING LIGHTING ===========>")
       pmremGenerator.dispose();
       exrTexture.dispose();
     }
@@ -1157,64 +915,42 @@ export default {
     let isAnimating = false;
     let animateTextureChange = false;
     let startWipe = ref(false);
-    let wipeStep = 0.01;
+    let wipeStep = 0.05;
     let count = 0;
-    const animate = () => {
+  
+    const animate = (time) => {
       if (!isAnimating) return;
-      stats.begin();
-      // if(labelTest){
-      //   if(loadedText){ //Honey loadedTexture, apply oscillations based on time through shader.
-      //     const elapsedTime = clockTexture.getElapsedTime();
-      //     const linePosition = (Math.sin(elapsedTime) + 1) / 2; // Oscillate between 0 and 1
-      //     labelTest.material.uniforms.linePosition.value = linePosition;
-      //   }
-      // }
-
-      // let elapsedTimeHoney = clockTexture.getElapsedTime();
-      // honeyMesh1.material.uniforms.time.value = elapsedTimeHoney;
-
+      
+      const performanceOK = performanceMonitor.update(time);
+      const memoryOK = memoryMonitor.check(time);
+      // console.log("performanceOK", performanceOK)
+      // console.log("memoryOK", memoryOK)
       if (animatingCamera) {
         TWEEN.update();
       }
 
       if (startWipe.value) {
-        // console.log("WIPING")
-        // Assuming you start the transitionProgress at 0
         let label1 = labelMeshes[jarSizes[0]];
         let label2 = labelMeshes[jarSizes[1]];
-        // // // console.log("WIPING", label1.material.uniforms.transitionProgress.value)
-        label1.material.uniforms.transitionProgress.value += wipeStep;
-        label2.material.uniforms.transitionProgress.value += wipeStep; // Adjust this rate as needed
-
-        // Clamp the transition progress at 1 to stop the transition
-        if (label1.material.uniforms.transitionProgress.value > 1) {
-          // console.log("Progress done.")
-          label1.material.uniforms.transitionProgress.value = 1;
-          label2.material.uniforms.transitionProgress.value = 1;
+        label1.material.userData.transitionProgress.value += wipeStep;
+        label2.material.userData.transitionProgress.value += wipeStep;
+        if (label1.material.userData.transitionProgress.value > 1) {
+          label1.material.userData.transitionProgress.value = 1;
+          label2.material.userData.transitionProgress.value = 1;
           startWipe.value = false; // Stop the wipe effect
         }
       }
 
       renderScene();
-      // if(count%200 == 0){
-      //   console.log("ENCODING:", composer.outputColorSpace, composer.outputEncoding, 
-      //   composer.inputBuffer.texture, 
-      //   composer.outputBuffer.texture,
-      //   composer
-      // )
-      //   count++
-      // }
-      // console.log("Encoding", isLoading.value, composer.outputEncoding)
       let delta = clock.getDelta();
       if (!animationState.get(clipActions[0]).isFinished) {
         mixer.update(delta);
       }
-      if (LOGTIMER === 0 && animationDONE) {
-        LOGTIMER++;
-      }
 
-      stats.end();
-      // globalOrbitControls.update();
+      // const now = performance.now();
+      // updateCrossFades(now);
+
+      // updateParallax(globalCamera, new Vector3(0, 0.06, 0));
       requestAnimationFrame(animate);
     };
 
@@ -1229,44 +965,6 @@ export default {
 
       // Flag to start the transition in the animation loop
       animateTextureChange = true;
-    }
-
-    function getDistanceFromCanvas(target) {
-      const distanceToOrigin = globalCamera.position.distanceTo(target.position);
-      // Ensure the camera and target are updated (important if anything has changed)
-      globalCamera.updateMatrixWorld();
-      globalCamera.updateProjectionMatrix();
-      target.updateMatrixWorld();
-
-      // Bounding box in world coordinates
-      const box = new Box3().setFromObject(target);
-      const size = new Vector3();
-      const center = new Vector3();
-      box.getSize(size);
-      box.getCenter(center);
-
-      // Project the center to NDC
-      center.project(globalCamera);
-
-      // Calculate screen coordinates of the center
-      const widthHalf = 0.5 * globalRenderer.domElement.width;
-      const centerScreenX = center.x * widthHalf + widthHalf;
-
-      // Calculate the mesh width in screen space (approximate)
-      const frustumHeight =
-        2.0 * distanceToOrigin * Math.tan((globalCamera.fov * 0.5 * Math.PI) / 180);
-      const frustumWidth = frustumHeight * globalCamera.aspect;
-      const meshWidthScreen = (size.x / frustumWidth) * globalRenderer.domElement.width;
-
-      // Calculate the left edge of the mesh in screen coordinates
-      const leftEdgeScreenX = centerScreenX - meshWidthScreen / 2;
-
-      // Ensure the distance is non-negative.
-      const edgeDistance = Math.max(
-        0,
-        Math.min(leftEdgeScreenX, globalRenderer.domElement.width)
-      );
-      emitter.emit("meshEdges", { leftEdge: edgeDistance, rightEdge: edgeDistance });
     }
 
     onMounted(async () => {
@@ -1285,9 +983,15 @@ export default {
 
       //If composer fails or is commented out, revert to regular renderer
       let frontJarPosition = new Vector3();
-      console.log("HoneyMeshes", honeyMeshes)
-      honeyMeshes['300g'].getWorldPosition(frontJarPosition)
-      // composer = await addPostProcessing(globalRenderer, globalScene, globalCamera, frontJarPosition)
+      let backJarPos = new Vector3();
+      
+      if(productStore.getBrandSlug === 'haa'){
+        honeyMeshes['150g'].getWorldPosition(frontJarPosition)
+      } else{
+        honeyMeshes['450g'].getWorldPosition(frontJarPosition)
+      } 
+      honeyMeshes['300g'].getWorldPosition(backJarPos)
+      composer = await addPostProcessing(globalRenderer, globalScene, globalCamera, frontJarPosition, backJarPos)
       // composer = await addNativePostProcessing(globalRenderer, globalScene, globalCamera, frontJarPosition)
       if (composer) {
         renderScene = () => composer.render();
@@ -1295,11 +999,14 @@ export default {
         renderScene = () => globalRenderer.render(globalScene, globalCamera);
       }
       // initializeEdges(globalScene.children[0]);
+      console.log("Current Jar size: ", currentJarSize.value)
       await initiateObjectRotation(globalScene, webGl.value, currentJarSize.value);
+      startAutoRotation();
       await nextTick();
       // getDistanceFromCanvas(globalScene.children[0].children[0])
       // initSliderInteraction();
       isAnimating = true;
+      console.log("Gonna CALL RENDER MATCAP", globalScene)
       await renderMatcap()
       await nextTick();
       animate();
@@ -1309,6 +1016,7 @@ export default {
       // stop animating, effectively stop requestAnimationFrame
       isAnimating = false;
     });
+
     onUnmounted(() => {
       window.removeEventListener("resize", debouncedUpdateSize);
 
@@ -1319,10 +1027,6 @@ export default {
         mixer = null;
       }
 
-      // dispose of stats.js
-      if (stats && stats.dom && stats.dom.parentNode) {
-        stats.dom.parentNode.removeChild(stats.dom);
-      }
 
       // dispose all scene nodes/materials
       function disposeNode(node) {
@@ -1405,11 +1109,7 @@ export default {
         size: currentJarSize.value,
       }),
       async (newValues) => {
-        console.log(
-          "Triggered hny params WATCHER:",
-          JSON.parse(JSON.stringify(newValues))
-        );
-        // console.log("-------- old values", JSON.parse(JSON.stringify(textureUrlSlugs)))
+        // // console.log("-------- old values", JSON.parse(JSON.stringify(textureUrlSlugs)))
 
         /* Logs for debugging */
 
@@ -1427,21 +1127,23 @@ export default {
         let gramSize = newValues.size;
         currentJarSize.value = newValues.size;
         currentJarSizeGrams.value = gramSize;
-
+        console.log("WATCHERJARSIZEEEEEEEE", newValues.size, currentJarSize.value)
         if (newValues.brand !== currentBrand.value) {
-          console.log("Brand !== currentBrand");
+          // console.log("Brand !== currentBrand");
           if (newValues.brand === "okto") {
             jarSizes = ["450g", "300g"];
             currentLoadedJars = ["450g", "300g"];
             frontJarSize = currentLoadedJars[1]; //300g is forefront on okto
             backJarSize = currentLoadedJars[0]; //450g is back on okto
             currentBrand.value = newValues.brand;
+            currentJarSize.value = '450g'
           } else {
             jarSizes = ["300g", "150g"];
             currentLoadedJars = ["300g", "150g"];
             frontJarSize = currentLoadedJars[0]; //300g is forefront on haa
             backJarSize = currentLoadedJars[1]; //150g is back on haa
             currentBrand.value = newValues.brand;
+            currentJarSize.value = '150g'
           }
         }
 
@@ -1464,7 +1166,7 @@ export default {
             productLine: newValues.productLine,
           };
           // firstTextureLoad = true
-          // console.log("FTL", firstTextureLoad)
+          // // console.log("FTL", firstTextureLoad)
 
           // allCurrentTextures[newValues.productLine] = await loadAllTextures(newValues.productLine);
         }
@@ -1474,7 +1176,13 @@ export default {
             ...textureUrlSlugs,
             flavour: newValues.flavour,
           };
-          // updateTexture();
+          updateTexture();
+          if(honeyShaderInitialized){
+            await changeHoneyShader(newValues.flavour);
+            setTimeout( async () => {
+              await addBox()
+            }, 1500)
+          }
           // allCurrentTextures = await loadAllTextures()
         }
       },
@@ -1500,8 +1208,8 @@ export default {
       isLoading,
       triggerTextureTransition,
       startWipe,
-      cycleColors,
-      currentHType,
+      tempHoneyMeshes,
+      addBox
     };
   },
 };
@@ -1512,7 +1220,7 @@ export default {
   position: relative;
   width: 100%;
   height: 80%;
-  @media (max-width: 767px) {
+  @media (max-width: 768px) {
     height: 100% !important;
     min-height: 300px !important;
     display: flex;
@@ -1537,9 +1245,12 @@ export default {
   display: flex;
   width: 100%;
   justify-content: center;
-  position: absolute;
   z-index: 2000000;
+  position: absolute;
   bottom: 0%;
+  @media(max-width: 1024px) and (min-width: 768px){
+    bottom: -10%;
+  }
   button:not(:last-child) {
     margin-right: 15px;
   }
@@ -1569,7 +1280,7 @@ export default {
 .webGl {
   width: 100%;
   height: 100%;
-  @media (max-width: 767px) {
+  @media (max-width: 1024px) {
     // min-height: 350px;
     margin-bottom: 30px;
   }
@@ -1577,7 +1288,7 @@ export default {
 .loading-indicator-container {
   width: 100%;
   height: 100%;
-  @media (max-width: 767px) {
+  @media (max-width: 768px) {
     // min-height: 350px;
     margin-bottom: 30px;
     flex-grow: 1;

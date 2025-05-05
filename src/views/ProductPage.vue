@@ -10,17 +10,25 @@
         :key="currentFlavour?.name"
       >
         {{ currentFlavour?.name }}
-        <span v-if="selectedBrandConfig.brand === 'HAA'" class="brand-line">
-          {{ selectedBrandConfig.fullBrandName }} - {{  currentProductLine.name  }}
-        </span>
-        <span class="brand-line" v-else>
-          <OktoText :fontSize="30"/> - {{  currentProductLine.name  }}
-        </span>
+        <template v-if="!isMobile">
+          <span v-if="selectedBrandConfig.brand === 'HAA'" class="brand-line">
+            {{ selectedBrandConfig.fullBrandName }} - {{  currentProductLine.name  }}
+          </span>
+          <span class="brand-line" v-else>
+            <OktoText :fontSize="30"/> - {{  currentProductLine.name  }}
+          </span>
+        </template>
       </span>
     </Transition>
 
     <span v-if="isMobile" class="mobile-series">
-      {{ currentProductLine?.name }}
+      <template v-if="selectedBrandConfig.brand === 'HAA'">
+        {{ selectedBrandConfig.fullBrandName }} 
+        <br/>{{  currentProductLine.name  }}
+      </template>
+      <template v-else>
+        <OktoText :fontSize="30"/> {{ currentProductLine?.name }}
+      </template>
     </span>
 
     <div class="series-selection">
@@ -69,8 +77,12 @@
           >
             {{ selectedBrandConfig.jarSizes[1] }}
           </span>
+          
+          <a download v-if="isMobile" :href="computedDownloadLink">
+            <img :src="downloadIcon" @click="downloadSheet" class="download-sheet" />
+          </a>
         </div>
-        <a download :href="computedDownloadLink">
+        <a download v-if="!isMobile" class="computed-link-mobile" :href="computedDownloadLink">
           <img :src="downloadIcon" @click="downloadSheet" class="download-sheet" />
         </a>
       </div>
@@ -78,7 +90,6 @@
 
     <!-- Product Viewer -->
     <div class="product-viewer" ref="productViewer">
-      <!-- <ProductScene /> -->
       <ProductSceneFinal v-if="isCapable" />
       <ProductImage 
         v-else 
@@ -93,11 +104,12 @@
     <!-- Flavour (blend) selection -->
     <div v-if="(isMobile && circleToggled) || !isMobile" class="blend-selection">
       <img src="../assets/images/x-icon.svg" @click="toggleCircle()" v-if="isMobile" />
-      <div v-if="!isMobile" style="height: 30%;" class="pushdown"/>
+      <div v-if="!isMobile" :style="`height: ${selectedBrandConfig.urlSlug === 'Okto' ? '30%':'40%'};`" class="pushdown"/>
       <span
         v-for="(flavour, idx) in productLineFlavours"
         :key="idx"
         :id="`flavour_${flavour.urlSlug}`"
+        :ref="`flavour_${flavour.urlSlug}`"
         class="blend"
         :class="{ selected: flavour.name === currentFlavour?.name }"
         @click="selectFlavour(flavour)"
@@ -160,10 +172,11 @@ import downloadIcon from "@/assets/pages/product-page/download-icon.png";
 import pointerLine from "@/assets/pages/product-page/pointer-line.svg";
 import pointerCircle from "@/assets/pages/product-page/pointer-circle.svg";
 import chevronRight from "@/assets/images/arrow.svg";
+import oktoLogo from '@/assets/pages/tabs/tab1-larger.png'
+import mainLogo from '@/assets/pages/tabs/tab2-larger.png'
 
 // Components
 import ProductSceneFinal from "../components/ProductSceneFinal.vue";
-import ProductScene from "../components/ProductScene.vue";
 
 // Configs
 import brandConfigs from "@/assets/brand-information/index.js";
@@ -175,7 +188,7 @@ const productStore = useProductStore();
 // let isStoreReady = ref(false)
 
 // Provide/inject
-const { width: windowWidth } = useWindowSize();
+const { width: windowWidth, height: windowHeight } = useWindowSize();
 const { isMobile } = inject("screenSize");
 
 // Check webgl capabilities
@@ -200,7 +213,10 @@ let selectedJarSize = ref(null)
 
 let computedDownloadLink = ref(null)
 watch(() => selectedJarSize.value, (val)=>{
-  calculateLineWidthImage(val)
+  isSet.value = false;
+  if(!isCapable.value){
+    calculateLineWidthImage(val)
+  }
 })
 
 watch(() => selectedBrand.value, (value) => {
@@ -278,12 +294,22 @@ watch(currentProductLine, (newVal) => {
     });
   }
 }, { immediate: true });
+
+
+// For "Also discover..."
+const suggestedBrandLogoUrl = ref(null);
+const suggestedBrandRoute = ref(null);
 watch(selectedBrandConfig, (newVal) => {
   if (newVal) {
     productStore.setBrand({
       name: newVal.brand,
       urlSlug: newVal.urlSlug,
     });
+    console.log("BRANDDDCONFIGGGGGGG", newVal)
+    let suggestedSlug = newVal.brand === 'Okto' ? 'HAA' : 'Okto';
+    suggestedBrandRoute.value = suggestedSlug
+    suggestedBrandLogoUrl.value = newVal.brand === 'Okto' ? 
+    mainLogo : oktoLogo
   }
 }, { immediate: true });
 
@@ -296,7 +322,10 @@ function selectFlavour(flavour) {
   // close circle menu in mobile
   if (isMobile.value) circleToggled.value = false;
   
-  calculateLineWidthImage()
+  if(!isCapable.value){
+    calculateLineWidthImage()
+  }
+  isSet.value = false;
 }
 
 function selectProductLine(line) {
@@ -325,50 +354,27 @@ function computeDownloadLink(){
   console.log("COMPUTING", computedDownloadLink.value)
 } 
 
-if (emitter) {
-  emitter.on("meshEdges", (meshEdges) => {
-    calculateLineWidths(meshEdges);
-  });
-  onUnmounted(() => {
-    emitter.off("meshEdges");
-  });
-}
 
+
+let isSet = ref(false)
 function calculateLineWidths(edgeCoordinates) {
-  console.log("Got EdgeDistance", edgeCoordinates.leftEdge, edgeCoordinates.rightEdge)
+  let flavourSpan = document.getElementById(`flavour_${currentFlavour.value.urlSlug}`)
   if (productViewer.value) {
     const circleDetraction = 45; // Account for circle width, and imprecision in calculation
-    const productViewerWidth = productViewer.value.offsetWidth;
     const productViewerPositionalData = productViewer.value.getBoundingClientRect();
-    //Distances
-    let leftElementToCanvas =
-      productViewerPositionalData.left -
-      seriesItem.value[0].getBoundingClientRect().right;
     let rightElementToCanvas =
-      blendItem.value[0].getBoundingClientRect().left - productViewerPositionalData.right;
-    let leftLineDistance =
-      leftElementToCanvas + edgeCoordinates.leftEdge - circleDetraction;
+    flavourSpan.getBoundingClientRect().left - productViewerPositionalData.right;
     let rightLineDistance =
       rightElementToCanvas + edgeCoordinates.rightEdge - circleDetraction;
-    // console.log("DISTANCE LEFT", leftLineDistance)
-    // console.log("DISTANCE RIGHT", rightLineDistance)
-    //Set variable value to calculated distance
-    document.documentElement.style.setProperty(
-      "--pointer-line-width",
-      `${leftLineDistance}px`
-    );
     document.documentElement.style.setProperty(
       "--pointer-line-right-width",
       `${rightLineDistance}px`
     );
+    isSet.value = true;
     return;
   }
 }
 
-//413, 328, 1.259, 0.2058, 0.794
-// 908, 821
-
-let isSet = ref(false)
 function calculateLineWidthImage() {
   isSet.value = false;
   setTimeout(() => {
@@ -384,28 +390,6 @@ function calculateLineWidthImage() {
     let cylinderRightEdge = imageBounding.left + (imageWidth * 0.794);
     let distanceBetweenElements = flavourRefBounding.left - cylinderRightEdge - fixedCircleWidth
   
-    // // Right cylinder edge visual indicator
-    // const line = document.createElement('div');
-    // line.style.position = 'absolute';
-    // line.style.top = imageBounding.top + 'px';
-    // line.style.left = cylinderRightEdge + 'px';
-    // line.style.width = '2px';
-    // line.style.height = '10px';
-    // line.style.backgroundColor = 'red';
-    // line.style.zIndex = '1000';
-    // document.body.appendChild(line);
-    
-    // // Left flavour edge visual indicator
-    // const line2 = document.createElement('div');
-    // line2.style.position = 'absolute';
-    // line2.style.top =  flavourRefBounding.top + 'px';
-    // line2.style.left = flavourRefBounding.left + 'px';
-    // line2.style.width = '2px';
-    // line2.style.height = '10px';
-    // line2.style.backgroundColor = 'red';
-    // line2.style.zIndex = '1000';
-    // document.body.appendChild(line2);
-  
     console.log("Distance Between el", distanceBetweenElements)
     document.documentElement.style.setProperty(
       "--pointer-line-right-width",
@@ -415,6 +399,12 @@ function calculateLineWidthImage() {
   }, 1000)
 }
 
+// function decideLineWidthMethod(){
+//   isSet.value = false;
+//   if(!isCapable.value){
+//     calculateLineWidthImage
+//   }
+// }
 const computedTextLength = computed(() => {
   if (!currentFlavour.value) {
     return { fontSize: 100, lineHeight: 130 };
@@ -452,6 +442,9 @@ const computedTextLength = computed(() => {
   if (windowWidth.value <= 1440 && !isMobile.value) {
     fontSize -= 20;
   }
+  if(windowWidth.value > 1440 && windowHeight.value <=900){
+    fontSize -= 20;
+  }
   // Adjust for mobile
   if (isMobile.value) {
     fontSize -= 65;
@@ -464,15 +457,23 @@ const computedTextLength = computed(() => {
   return { fontSize, lineHeight };
 });
 
-// For "Also discover..."
-const suggestedBrandLogoUrl = ref(null);
-const suggestedBrandRoute = ref(null);
 
 
 onMounted(async () => {
-  //  isCapable.value = await checkCapabilities();
-  isCapable.value = false;
-  calculateLineWidthImage();
+   isCapable.value = await checkCapabilities();
+  // isCapable.value = false;
+  if(!isCapable.value){
+    calculateLineWidthImage();
+  }
+  
+  emitter.on("meshEdges", (meshEdges) => {
+    console.log("GOT MESH EDGES")
+    calculateLineWidths(meshEdges);
+  });
+});
+
+onUnmounted(() => {
+  emitter.off("meshEdges");
 });
 </script>
 
@@ -611,6 +612,14 @@ onMounted(async () => {
         }
       }
     }
+    @media (min-width: 1300px) and (max-height: 800px) {
+      .blend{
+        margin-bottom: 5px !important;
+        .blend-text{
+          font-size: 12px !important;
+        }
+      }
+    }
   }
 
   .series-selection {
@@ -700,6 +709,26 @@ onMounted(async () => {
       text-transform: capitalize;
       margin-top: 15px;
       justify-self: flex-end !important;
+      @media(max-width: 1024px) and (min-width: 769px){
+        justify-content: center;
+      }
+      @media(max-width: 768px){
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        margin-top: 0px;
+        .download-sheet{
+            margin-left: 10px !important;
+        }
+        .sheet-size{
+          margin-top: 15px;
+          margin-bottom: 15px;
+          .size-button{
+            margin-left: 10px !important;
+            margin-right: 10px !important;
+          }
+        }
+      }
       .download-sheet {
         width: 20px;
         height: 20px;
@@ -712,6 +741,7 @@ onMounted(async () => {
         }
       }
       .sheet-size{
+        cursor: pointer;
         .size-button{
           font-size: 15px;
           margin: 0 5px 0 5px;
@@ -756,11 +786,13 @@ onMounted(async () => {
     height: 100%;
     z-index: 10;
     .product-image {
-      max-height: 70vh;
+      @media(min-width: 1024px){
+        max-height: 70vh;
+      }
     }
   }
 
-  @media (max-width: 767px) {
+  @media (max-width: 1023px) {
     display: flex;
     flex-direction: column;
     width: 100% !important;
@@ -787,6 +819,15 @@ onMounted(async () => {
       text-align: center;
       margin-top: 50px;
       border-top: 0.5px solid #8080803b; // margin-top: -20px;
+      display: flex;
+      flex-direction: column;
+      line-height: 40px;
+      .okt{
+        font-weight: 700 !important;
+      }
+      .omega{
+        font-weight: 700 !important;
+      }
     }
     .product-viewer {
       order: 1;
@@ -955,7 +996,8 @@ onMounted(async () => {
   }
 }
 .suggested-brand-section {
-  margin-top: 50px;
+  margin-top: 10px;
+  // max-height: 200px;s
   .flavor-text {
     font-family: "Didact Gothic";
     font-size: 14px;

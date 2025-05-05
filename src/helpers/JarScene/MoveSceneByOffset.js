@@ -41,13 +41,14 @@ async function moveSceneToGridPosition(scene, camera, singleJarPos, type) {
   // 4) Now the jar should appear at the same world coords it had in the grid.
   //    You can render now or let your normal animation loop handle it:
   // renderer.render(scene, camera);  // (example call)
-  return
+  return offset
 }
 
 /**
  * Restores the scene (and camera) back to their original positions before the offset was applied.
  */
 async function revertScenePosition(scene, camera) {
+  console.log("Reverting pos scene:", scene)
   // 1) Reset scene position to original
   scene.position.copy(originalScenePosition);
 
