@@ -19,7 +19,7 @@
     "stats.js": "^0.17.0",
     "three": "^0.172.0",
     "vue": "^3.3.4",
-    "vue-router": "^4.2.4"
+    "vue-router": "^4.2.5"
   },
   "devDependencies": {
     "@vitejs/plugin-vue": "^4.2.3",
