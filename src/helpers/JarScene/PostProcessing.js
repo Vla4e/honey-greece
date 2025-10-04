@@ -24,11 +24,28 @@ async function addPostProcessing(renderer, scene, camera, frontPosition, backJar
   }
 
   const distToFront = camera.position.distanceTo(frontPosition);
-  const near = camera.near;  // 0.001
-  const far = camera.far;    // 1.0
-  // clamp to [0..1]
-  const focusDistNormalized = MathUtils.clamp((distToFront - near) / (far - near), 0, 1)
-  const biasedFocusDistance = Math.max(0, focusDistNormalized - 0.015); // More bias = focus closer = back jar more blurred
+  const distToBack = camera.position.distanceTo(backJarPos);
+  const near = camera.near;
+  const far = camera.far;
+
+  // Normalize both distances to [0..1]
+  const frontFocusNormalized = MathUtils.clamp((distToFront - near) / (far - near), 0, 1);
+  const backFocusNormalized = MathUtils.clamp((distToBack - near) / (far - near), 0, 1);
+  const depthDiff = backFocusNormalized - frontFocusNormalized;
+
+  // TEST MODE: Set to true to focus on BACK jar (proof of true DOF!)
+  const TEST_FOCUS_ON_BACK_JAR = false;
+  const focusDistance = TEST_FOCUS_ON_BACK_JAR ? backFocusNormalized : frontFocusNormalized;
+
+  console.log('🎯 TRUE DOF PROOF:', {
+    distToFront: distToFront.toFixed(3),
+    distToBack: distToBack.toFixed(3),
+    frontFocusNormalized: frontFocusNormalized.toFixed(3),
+    backFocusNormalized: backFocusNormalized.toFixed(3),
+    depthDifference: depthDiff.toFixed(3),
+    focusingOn: TEST_FOCUS_ON_BACK_JAR ? 'BACK JAR (test mode)' : 'FRONT JAR (normal)',
+    note: 'If true DOF: changing focusingOn flips which jar is sharp/blurred'
+  });
 
   let maxSamples = renderer.capabilities.maxSamples
   let minSamples = 4;
@@ -41,31 +58,31 @@ async function addPostProcessing(renderer, scene, camera, frontPosition, backJar
     composer.outputColorSpace = renderer.outputColorSpace;
 
     const renderPass = new RenderPassPPC(scene, camera);
-    renderPass.clear = true; // Ensure proper clearing
+    renderPass.clear = true;
     composer.addPass(renderPass);
 
-    //DOF PASS - Front jar will be overwritten sharp, so blur it here is fine
+    // TRUE DEPTH-BASED DOF - EXTREME PROOF SETTINGS
     const depthOfFieldEffect = new DepthOfFieldEffect(camera, {
-      focusDistance: biasedFocusDistance, // Focus on front jar
-      focusRange: 0.1, // Narrow band - back jar outside = blurred
-      focalLength: 0.2, // Moderate blur on back jar
-      bokehScale: 3, // Blur circle size
-      height: 640, // Resolution
-      resolutionScale: 1.0, // Full resolution
+      focusDistance: focusDistance, // Use calculated focus (0.351 for front jar, 0.735 for back)
+      focusRange: 0.001, // EXTREMELY narrow - back jar WAY outside sharp zone
+      focalLength: 0.0001, // VERY low = INSANE blur strength
+      bokehScale: 4, // HUGE bokeh circles
+      height: 640, // High quality
+      resolutionScale: 1.0,
     });
 
     const dofPass = new EffectPass(camera, depthOfFieldEffect);
     composer.addPass(dofPass);
 
     if (renderer.capabilities.isWebGL2) {
-      // SMAA for WebGL2 (better quality)
+      // SMAA for WebGL2 (better quality) - ENABLED to smooth DOF edges
       const smaaEffect = new SMAAEffect({
         preset: SMAAPreset.ULTRA, // Options: LOW, MEDIUM, HIGH, ULTRA
         edgeDetectionMode: EdgeDetectionMode.COLOR, // Better edge detection
       });
       const smaaPass = new EffectPass(camera, smaaEffect);
       smaaPass.encodeOutput = true; // Important: encode output on final pass
-      // composer.addPass(smaaPass);
+      composer.addPass(smaaPass);
     } else {
       // FXAA for fallback (faster, works on all devices)
       const fxaaEffect = new FXAAEffect({
@@ -76,7 +93,7 @@ async function addPostProcessing(renderer, scene, camera, frontPosition, backJar
       });
       const fxaaPass = new EffectPass(camera, fxaaEffect);
       fxaaPass.encodeOutput = true; // Important: encode output on final pass
-      // composer.addPass(fxaaPass);
+      composer.addPass(fxaaPass);
     }
     
     return composer;

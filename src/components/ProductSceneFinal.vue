@@ -219,8 +219,10 @@ export default {
     let glassMeshes;
     let honeyMeshes;
 
-    const BACKGROUND_LAYER = 0;  // Back jar honey/labels (blurred)
-    const FOREGROUND_LAYER = 1;  // Front jar honey/labels + ALL glass (sharp)
+    const BACKGROUND_LAYER = 0;  // Back jar (blurred)
+    const FOREGROUND_LAYER = 1;  // Front jar all parts (sharp, glass renders last via renderOrder)
+
+    let frontGlassMesh = null; // Track front jar glass for visibility toggling
 
     let jarLayersDirty = true;
     const jarsBySize = new Map(); // Track all jar parts by size
@@ -258,30 +260,22 @@ export default {
 
       const closestSize = jarDistances[0].size;
 
-      // Back jar (all parts) → BACKGROUND (blurred)
-      // Front jar (all parts) → FOREGROUND (sharp)
+      // TWO-LAYER STRATEGY + FRONT GLASS HIDING:
+      // Back jar (all parts) → BACKGROUND_LAYER (blurred via DOF)
+      // Front jar (all parts) → FOREGROUND_LAYER
+      // Front glass will be hidden during DOF pass, rendered after
       jarDistances.forEach(({ size }) => {
         const isClosest = size === closestSize;
         const targetLayer = isClosest ? FOREGROUND_LAYER : BACKGROUND_LAYER;
 
         const parts = jarsBySize.get(size) || [];
         parts.forEach(mesh => {
-          // if (mesh.type === 'glass') {
-          //   mesh.traverse(child => {
-          //     child.layers.set(targetLayer);
-          //     if (child.material) {
-          //       // Only override opacity for BACK jar (blurred needs higher opacity)
-          //       if (!isClosest) {
-          //         child.material.opacity = 0.75; // Back jar when blurred
-          //         child.material.needsUpdate = true;
-          //       }
-          //       // Front jar keeps original 0.3 opacity from initial setup
-          //     }
-          //   });
-          // } else {
-          //   mesh.traverse(child => child.layers.set(targetLayer));
-          // }
           mesh.traverse(child => child.layers.set(targetLayer));
+
+          // Track front jar glass for visibility toggling
+          if (isClosest && mesh.type === 'glass') {
+            frontGlassMesh = mesh;
+          }
         });
       });
 
@@ -697,12 +691,16 @@ export default {
             obj.material.roughness = 0.01;
             obj.material.metalness = 0.1; // Some reflections for visibility
             obj.material.transparent = true;
-            obj.material.depthWrite = false; // Don't write depth - fixes cap visibility!
+            obj.material.depthWrite = true; // Try WITH depth write to see if it fixes edges
+            obj.material.depthTest = true;
             obj.material.opacity = 0.3; // Default - front jar uses this, back jar gets 0.75
             obj.material.blending = NormalBlending;
             obj.material.envMapIntensity = 1.5; // Reflections make glass visible
             obj.material.needsUpdate = true;
             obj.material.renderOrder = 1000; // Render glass AFTER caps/labels
+            obj.material.polygonOffset = true; // Prevent z-fighting
+            obj.material.polygonOffsetFactor = 1;
+            obj.material.polygonOffsetUnits = 1;
 
             if (obj.name === "jar_object_150g") {
               // globalGlass150g = obj
@@ -1230,15 +1228,55 @@ export default {
             updateJarLayers();
           }
 
-          // Pass 1: Render background with uniform blur (not depth-based DOF)
-          globalCamera.layers.set(BACKGROUND_LAYER);
-          composer.render();
+          // TRUE DOF: Back jar gets depth-based blur, front jar overwritten sharp
 
-          // Pass 2: Render sharp foreground on top
-          globalCamera.layers.set(FOREGROUND_LAYER);
+          const frontParts = frontGlassMesh ? (jarsBySize.get(Object.keys(glassMeshes).find(size =>
+            glassMeshes[size] === frontGlassMesh
+          )) || []) : [];
+
+          // Pass 1: Hide ONLY front glass from DOF (prevents glass darkening)
+          // Front honey/lid/label still visible for DOF depth calculation
+          if (frontGlassMesh) {
+            frontGlassMesh.visible = false;
+          }
+
+          globalCamera.layers.enableAll(); // Both layers = true DOF depth calculation
+          composer.render(); // DOF sees: front honey/lid/label + back jar
+
+          // Pass 2: Show glass, add glow to honey, render ENTIRE front jar sharp
+          if (frontGlassMesh) {
+            frontGlassMesh.visible = true;
+          }
+
+          // Find front honey mesh and add glow to cover bokeh edge halos
+          let frontHoneyMesh = null;
+          const frontSize = Object.keys(glassMeshes).find(size => glassMeshes[size] === frontGlassMesh);
+          if (frontSize && honeyMeshes && honeyMeshes[frontSize]) {
+            frontHoneyMesh = honeyMeshes[frontSize];
+          }
+
+          // Temporarily add emissive glow to front honey to expand edges
+          const originalEmissive = frontHoneyMesh?.material?.emissive?.clone();
+          const originalEmissiveIntensity = frontHoneyMesh?.material?.emissiveIntensity;
+
+          if (frontHoneyMesh?.material?.emissive) {
+            frontHoneyMesh.material.emissive.setScalar(0.08); // Slight glow to expand edges
+            frontHoneyMesh.material.emissiveIntensity = 1.5;
+            frontHoneyMesh.material.needsUpdate = true;
+          }
+
+          // DON'T clear depth - depth test prevents honey double-rendering at edges
           globalRenderer.autoClear = false;
-          globalRenderer.render(globalScene, globalCamera);
+          globalCamera.layers.set(FOREGROUND_LAYER);
+          globalRenderer.render(globalScene, globalCamera); // Honey (with glow), glass, lid, label
           globalRenderer.autoClear = true;
+
+          // Restore honey material
+          if (frontHoneyMesh?.material?.emissive && originalEmissive) {
+            frontHoneyMesh.material.emissive.copy(originalEmissive);
+            frontHoneyMesh.material.emissiveIntensity = originalEmissiveIntensity;
+            frontHoneyMesh.material.needsUpdate = true;
+          }
 
           // Restore layer state
           globalCamera.layers.enable(BACKGROUND_LAYER);
@@ -1246,7 +1284,10 @@ export default {
           globalCamera.layers.set(BACKGROUND_LAYER);
         };
       } else {
-        renderScene = () => globalRenderer.render(globalScene, globalCamera);
+        renderScene = () => {
+          if (globalCamera) globalCamera.layers.enableAll();
+          globalRenderer.render(globalScene, globalCamera);
+        }
       }
       // initializeEdges(globalScene.children[0]);
       await initiateObjectRotation(globalScene, webGl.value, currentJarSize.value);
