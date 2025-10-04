@@ -18,9 +18,6 @@ import { AfterimagePass } from 'three/examples/jsm/postprocessing/AfterimagePass
 import { HalfFloatType, Vector3, SRGBColorSpace, MathUtils } from 'three';
 
 async function addPostProcessing(renderer, scene, camera, frontPosition, backJarPos) {
-  console.log("Adding postprocessing.", renderer.capabilities);
-  console.log("FrontJar:", frontPosition)
-  console.log("backJar:", backJarPos)
   if (!renderer || !scene || !camera) {
     console.error('Required components not initialized');
     return;
@@ -31,7 +28,7 @@ async function addPostProcessing(renderer, scene, camera, frontPosition, backJar
   const far = camera.far;    // 1.0
   // clamp to [0..1]
   const focusDistNormalized = MathUtils.clamp((distToFront - near) / (far - near), 0, 1)
-  // console.log("Focus DIst Norm", focusDistNormalized)
+  const biasedFocusDistance = Math.max(0, focusDistNormalized - 0.015); // More bias = focus closer = back jar more blurred
 
   let maxSamples = renderer.capabilities.maxSamples
   let minSamples = 4;
@@ -41,23 +38,23 @@ async function addPostProcessing(renderer, scene, camera, frontPosition, backJar
       frameBufferType: HalfFloatType,
       multisampling: renderer.capabilities.isWebGL2 ? maxSamples : 0,
     });
-    composer.outputEncoding = renderer.outputColorSpace;
+    composer.outputColorSpace = renderer.outputColorSpace;
 
-    const renderPass = new RenderPassPPC(scene, camera)
-    // renderPass.needsSwap = true;
+    const renderPass = new RenderPassPPC(scene, camera);
+    renderPass.clear = true; // Ensure proper clearing
     composer.addPass(renderPass);
 
-    //DOF PASS
+    //DOF PASS - Front jar will be overwritten sharp, so blur it here is fine
     const depthOfFieldEffect = new DepthOfFieldEffect(camera, {
-      focusDistance: focusDistNormalized,
-      focalLength: 0.1,
-      bokehScale: 1.5,
-      height: 600
+      focusDistance: biasedFocusDistance, // Focus on front jar
+      focusRange: 0.1, // Narrow band - back jar outside = blurred
+      focalLength: 0.2, // Moderate blur on back jar
+      bokehScale: 3, // Blur circle size
+      height: 640, // Resolution
+      resolutionScale: 1.0, // Full resolution
     });
 
     const dofPass = new EffectPass(camera, depthOfFieldEffect);
-    console.log("DofPass:", dofPass)
-    // dofPass.encodeOutput = true;
     composer.addPass(dofPass);
 
     if (renderer.capabilities.isWebGL2) {

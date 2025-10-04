@@ -95,9 +95,16 @@ import {
   CanvasTexture,
   EquirectangularReflectionMapping,
   DoubleSide,
+  MeshDepthMaterial,
+  RGBADepthPacking,
   ColorManagement,
+  HalfFloatType,
+  LinearFilter,
+  RGBAFormat,
 } from "three";
 ColorManagement.enabled = true;
+
+import { FullScreenQuad } from "three/examples/jsm/postprocessing/Pass.js";
 
 // Postprocessing
 import { addPostProcessing, addNativePostProcessing }  from "@/helpers/JarScene/PostProcessing.js";
@@ -192,11 +199,100 @@ Cache.enabled = true;
 
 export default {
   setup() {
+    // ========== DOF TOGGLE ==========
+    const ENABLE_DOF = true; // Set to false to disable DOF blur
+    // ================================
+
     let composer = null; // addPostprocessing, animate
     let renderScene;
+    let backgroundRenderTarget = null; // For blurred background
+    let foregroundRenderTarget = null; // For sharp foreground
+    let depthRenderTarget = null; // For depth mask
+    let compositeQuad = null; // Fullscreen quad for compositing layers
+    let compositeMaterial = null; // Shader merges DOF background and sharp foreground
 
     let jarMedium = ref([]);
     let jarSmall = ref([]);
+
+    let labelMeshes;
+    let labelMeshesClones;
+    let glassMeshes;
+    let honeyMeshes;
+
+    const BACKGROUND_LAYER = 0;  // Back jar honey/labels (blurred)
+    const FOREGROUND_LAYER = 1;  // Front jar honey/labels + ALL glass (sharp)
+
+    let jarLayersDirty = true;
+    const jarsBySize = new Map(); // Track all jar parts by size
+
+    function registerJarPart(mesh, size) {
+      if (!mesh || !size) return;
+      if (!jarsBySize.has(size)) {
+        jarsBySize.set(size, []);
+      }
+      jarsBySize.get(size).push(mesh);
+    }
+
+    function markLayersDirty() {
+      jarLayersDirty = true;
+    }
+
+    function updateJarLayers() {
+      if (!glassMeshes || Object.keys(glassMeshes).length === 0) {
+        return;
+      }
+
+      // Sort jars by distance from camera
+      const jarDistances = Object.entries(glassMeshes)
+        .map(([size, mesh]) => {
+          const worldPos = new Vector3();
+          mesh.getWorldPosition(worldPos);
+          return {
+            size,
+            distance: worldPos.distanceTo(globalCamera.position)
+          };
+        })
+        .sort((a, b) => a.distance - b.distance);
+
+      if (jarDistances.length === 0) return;
+
+      const closestSize = jarDistances[0].size;
+
+      // Back jar (all parts) → BACKGROUND (blurred)
+      // Front jar (all parts) → FOREGROUND (sharp)
+      jarDistances.forEach(({ size }) => {
+        const isClosest = size === closestSize;
+        const targetLayer = isClosest ? FOREGROUND_LAYER : BACKGROUND_LAYER;
+
+        const parts = jarsBySize.get(size) || [];
+        parts.forEach(mesh => {
+          // if (mesh.type === 'glass') {
+          //   mesh.traverse(child => {
+          //     child.layers.set(targetLayer);
+          //     if (child.material) {
+          //       // Only override opacity for BACK jar (blurred needs higher opacity)
+          //       if (!isClosest) {
+          //         child.material.opacity = 0.75; // Back jar when blurred
+          //         child.material.needsUpdate = true;
+          //       }
+          //       // Front jar keeps original 0.3 opacity from initial setup
+          //     }
+          //   });
+          // } else {
+          //   mesh.traverse(child => child.layers.set(targetLayer));
+          // }
+          mesh.traverse(child => child.layers.set(targetLayer));
+        });
+      });
+
+      if (globalCamera) {
+        globalCamera.layers.enable(BACKGROUND_LAYER);
+        globalCamera.layers.enable(FOREGROUND_LAYER);
+        globalCamera.layers.set(BACKGROUND_LAYER);
+      }
+
+      jarLayersDirty = false;
+    }
 
     let isLoading = ref(false);
     let emitter = inject("emitter");
@@ -403,10 +499,8 @@ export default {
     let matcapType = ref(true);
 
     async function renderMatcap() {
-      console.log("RENDERING MATCAP", textureUrlSlugs.flavour)
       await changeHoneyShader(textureUrlSlugs.flavour);
-      honeyShaderInitialized = true
-      console.log("222222222222222222", honeyShaderInitialized)
+      honeyShaderInitialized = true;
       return;
     }
 
@@ -429,7 +523,6 @@ export default {
     let tempHoneyMeshes = ref({})
     let honeyShaderInitialized = false;
     async function changeHoneyShader(type = "cotton_honey", id, color) {
-      console.log("About to revert POS", globalScene)
       await revertScenePosition(globalScene, globalCamera);
       // console.log("1. Will move to pos");
       const offset = await moveSceneToGridPosition(globalScene, globalCamera, honeyMesh1.position, type);
@@ -457,14 +550,9 @@ export default {
         ),
       };
 
-      // console.log("Materials:", honeyMaterials);
-      console.log("HONEYMESHES:::::", honeyMeshes);
       Object.values(honeyMeshes).forEach((mesh) => {
         mesh.material = honeyMaterials[mesh.size];
         mesh.material.needsUpdate = true;
-        console.log("Attempting to crossfade: ", mesh.name)
-        console.log("using material: ", honeyMaterials[mesh.size])
-        // crossFadeMesh(mesh, honeyMaterials[mesh.size], globalScene, 0.5);
       });
       tempHoneyMeshes.value = honeyMeshes
 
@@ -504,10 +592,7 @@ export default {
       backJarLabelClone = labelMeshes[backJarSize];
       backJarGlass = glassMeshes[backJarSize];
     }
-    let labelMeshes;
-    let labelMeshesClones;
-    let glassMeshes;
-    let honeyMeshes;
+
     let honeyMesh1;
     let honeyMesh2;
     let honeyMesh3;
@@ -552,12 +637,44 @@ export default {
       glassMeshes = sceneParts.glassMeshes;
       labelMeshesClones = sceneParts.labelMeshesClones;
       honeyMeshes = sceneParts.honeyMeshes;
+
+      // Register all jar parts for layer management
+      Object.entries(glassMeshes).forEach(([size, mesh]) => {
+        registerJarPart(mesh, size);
+        mesh.type = 'glass'; // Tag glass meshes
+        // Clone material so each jar has independent opacity control
+        // mesh.traverse(child => {
+        //   if (child.material) {
+        //     child.material = child.material.clone();
+        //   }
+        // });
+      });
+      Object.entries(labelMeshes).forEach(([size, mesh]) => registerJarPart(mesh, size));
+      Object.entries(labelMeshesClones).forEach(([size, mesh]) => registerJarPart(mesh, size));
+      Object.entries(honeyMeshes).forEach(([size, mesh]) => registerJarPart(mesh, size));
+
+      // CRITICAL: Find and register lids (caps)!
+      sceneParts.scene.traverse((obj) => {
+        if (obj.isMesh && obj.name && obj.name.toLowerCase().includes('lid')) {
+          // lid300 → 300g, lid450 → 450g, lid150 → 150g
+          let size;
+          if (obj.name.includes('150')) size = '150g';
+          else if (obj.name.includes('300')) size = '300g';
+          else if (obj.name.includes('450')) size = '450g';
+
+          if (size) {
+            registerJarPart(obj, size);
+          }
+        }
+      });
+
       honeyMesh1 = honeyMeshes["300g"];
       honeyMesh2 = honeyMeshes["450g"];
-      // // console.log("MESHBOX", meshBox)
       if (honeyMeshes["150g"]) {
         honeyMesh3 = honeyMeshes["150g"];
       }
+
+      markLayersDirty();
       setTrackingVariables(1);
 
       mixer = initializeMixer(sceneParts.scene);
@@ -578,15 +695,20 @@ export default {
             // globalObj150g = obj;
           } else if (obj.name.includes("jar")) {
             obj.material.roughness = 0.01;
+            obj.material.metalness = 0.1; // Some reflections for visibility
             obj.material.transparent = true;
-            // obj.material.opacity = 0;
+            obj.material.depthWrite = false; // Don't write depth - fixes cap visibility!
+            obj.material.opacity = 0.3; // Default - front jar uses this, back jar gets 0.75
+            obj.material.blending = NormalBlending;
+            obj.material.envMapIntensity = 1.5; // Reflections make glass visible
+            obj.material.needsUpdate = true;
+            obj.material.renderOrder = 1000; // Render glass AFTER caps/labels
+
             if (obj.name === "jar_object_150g") {
               // globalGlass150g = obj
             } else {
               // globalGlass300g = obj
             }
-            // obj.material.transparent = true;
-            // obj.material.opacity = 0;
           }
           if (obj.name.includes("150g")) {
             // used for targeting of position sliders
@@ -658,6 +780,7 @@ export default {
         stencil: true, //used for postprocessing
         depth: true, //used for postprocessing
         alpha: true,
+        premultipliedAlpha: false, // Back to original for correct glass blending
         // maxSamples: 8
         // preserveDrawingBuffer: false
       });
@@ -675,6 +798,93 @@ export default {
       // globalRenderer.toneMappingExposure = 1.0;
       // globalRenderer.useLegacyLights = false;
       // globalRenderer.render(globalScene, globalCamera);
+
+      const rtOptions = {
+        minFilter: LinearFilter,
+        magFilter: LinearFilter,
+        format: RGBAFormat,
+        type: HalfFloatType,
+        depthBuffer: true,
+        stencilBuffer: false,
+      };
+
+      // Background RT - will receive blurred output from composer
+      backgroundRenderTarget = new WebGLRenderTarget(
+        containerWidth.value || 1,
+        containerHeight.value || 1,
+        rtOptions
+      );
+      backgroundRenderTarget.texture.colorSpace = globalRenderer.outputColorSpace;
+
+      // Foreground RT - for sharp foreground
+      foregroundRenderTarget = new WebGLRenderTarget(
+        containerWidth.value || 1,
+        containerHeight.value || 1,
+        rtOptions
+      );
+      foregroundRenderTarget.texture.colorSpace = globalRenderer.outputColorSpace;
+
+      // Depth RT - for masking
+      depthRenderTarget = new WebGLRenderTarget(
+        containerWidth.value || 1,
+        containerHeight.value || 1,
+        {
+          minFilter: LinearFilter,
+          magFilter: LinearFilter,
+          format: RGBAFormat,
+          type: HalfFloatType,
+        }
+      );
+
+      compositeMaterial = new ShaderMaterial({
+        uniforms: {
+          tBackground: { value: null },
+          tForeground: { value: null },
+          tDepth: { value: null },
+          cameraNear: { value: globalCamera.near },
+          cameraFar: { value: globalCamera.far },
+        },
+        vertexShader: `
+          varying vec2 vUv;
+          void main() {
+            vUv = uv;
+            gl_Position = vec4(position.xy, 0.0, 1.0);
+          }
+        `,
+        fragmentShader: `
+          uniform sampler2D tBackground;
+          uniform sampler2D tForeground;
+          uniform sampler2D tDepth;
+          uniform float cameraNear;
+          uniform float cameraFar;
+          varying vec2 vUv;
+
+          float readDepth(sampler2D depthSampler, vec2 coord) {
+            float fragCoordZ = texture2D(depthSampler, coord).x;
+            float viewZ = (cameraNear * cameraFar) / ((cameraFar - cameraNear) * fragCoordZ - cameraFar);
+            return viewZ;
+          }
+
+          void main() {
+            vec4 bg = texture2D(tBackground, vUv);
+            vec4 fg = texture2D(tForeground, vUv);
+
+            // Use foreground alpha as mask - if foreground rendered something, use it
+            float mask = fg.a;
+
+            // Blend: use foreground where mask=1, background where mask=0
+            vec3 color = mix(bg.rgb, fg.rgb, mask);
+            float alpha = max(bg.a, fg.a);
+
+            gl_FragColor = vec4(color, alpha);
+          }
+        `,
+        depthTest: false,
+        depthWrite: false,
+        transparent: true,
+      });
+
+      compositeQuad = new FullScreenQuad(compositeMaterial);
 
       updateTexture()
 
@@ -825,6 +1035,7 @@ export default {
         });
         // console.log("initiated obj ROTATION", currentJarSize.value);
         initiateObjectRotation(globalScene, webGl.value, currentJarSize.value);
+        markLayersDirty(); // Update layers as jars move
         // console.log("CJS", currentJarSize.value);
         if (isMobile.value) {
           if (size === "450g") {
@@ -853,7 +1064,24 @@ export default {
 
     const updateRenderer = (newWidth, newHeight) => {
       globalRenderer.setSize(newWidth, newHeight);
-      globalRenderer.render(globalScene, globalCamera);
+      if (composer) {
+        composer.setSize(newWidth, newHeight);
+      }
+      if (backgroundRenderTarget) {
+        backgroundRenderTarget.setSize(newWidth, newHeight);
+      }
+      if (foregroundRenderTarget) {
+        foregroundRenderTarget.setSize(newWidth, newHeight);
+      }
+      if (depthRenderTarget) {
+        depthRenderTarget.setSize(newWidth, newHeight);
+      }
+
+      if (renderScene) {
+        renderScene();
+      } else {
+        globalRenderer.render(globalScene, globalCamera);
+      }
     };
     const debouncedUpdateSize = debounce(function () {
       if (isMobile) return;
@@ -989,24 +1217,48 @@ export default {
         honeyMeshes['150g'].getWorldPosition(frontJarPosition)
       } else{
         honeyMeshes['450g'].getWorldPosition(frontJarPosition)
-      } 
+      }
       honeyMeshes['300g'].getWorldPosition(backJarPos)
-      composer = await addPostProcessing(globalRenderer, globalScene, globalCamera, frontJarPosition, backJarPos)
-      // composer = await addNativePostProcessing(globalRenderer, globalScene, globalCamera, frontJarPosition)
-      if (composer) {
-        renderScene = () => composer.render();
+
+      composer = ENABLE_DOF ? await addPostProcessing(globalRenderer, globalScene, globalCamera, frontJarPosition, backJarPos) : null;
+
+      if (composer && ENABLE_DOF) {
+        renderScene = () => {
+          if (!globalRenderer || !globalScene || !globalCamera) return;
+
+          if (jarLayersDirty) {
+            updateJarLayers();
+          }
+
+          // Pass 1: Render background with uniform blur (not depth-based DOF)
+          globalCamera.layers.set(BACKGROUND_LAYER);
+          composer.render();
+
+          // Pass 2: Render sharp foreground on top
+          globalCamera.layers.set(FOREGROUND_LAYER);
+          globalRenderer.autoClear = false;
+          globalRenderer.render(globalScene, globalCamera);
+          globalRenderer.autoClear = true;
+
+          // Restore layer state
+          globalCamera.layers.enable(BACKGROUND_LAYER);
+          globalCamera.layers.enable(FOREGROUND_LAYER);
+          globalCamera.layers.set(BACKGROUND_LAYER);
+        };
       } else {
         renderScene = () => globalRenderer.render(globalScene, globalCamera);
       }
       // initializeEdges(globalScene.children[0]);
-      console.log("Current Jar size: ", currentJarSize.value)
       await initiateObjectRotation(globalScene, webGl.value, currentJarSize.value);
       startAutoRotation();
       await nextTick();
+
+      // Force initial layer update
+      updateJarLayers();
+
       // getDistanceFromCanvas(globalScene.children[0].children[0])
       // initSliderInteraction();
       isAnimating = true;
-      console.log("Gonna CALL RENDER MATCAP", globalScene)
       await renderMatcap()
       await nextTick();
       animate();
@@ -1072,6 +1324,36 @@ export default {
         globalCamera = null;
       }
 
+      if (composer) {
+        composer.dispose();
+        composer = null;
+      }
+
+      if (backgroundRenderTarget) {
+        backgroundRenderTarget.dispose();
+        backgroundRenderTarget = null;
+      }
+
+      if (foregroundRenderTarget) {
+        foregroundRenderTarget.dispose();
+        foregroundRenderTarget = null;
+      }
+
+      if (depthRenderTarget) {
+        depthRenderTarget.dispose();
+        depthRenderTarget = null;
+      }
+
+      if (compositeQuad) {
+        compositeQuad.dispose();
+        compositeQuad = null;
+      }
+
+      if (compositeMaterial) {
+        compositeMaterial.dispose();
+        compositeMaterial = null;
+      }
+
       // threejs given cache clear method
       Cache.clear();
 
@@ -1127,7 +1409,6 @@ export default {
         let gramSize = newValues.size;
         currentJarSize.value = newValues.size;
         currentJarSizeGrams.value = gramSize;
-        console.log("WATCHERJARSIZEEEEEEEE", newValues.size, currentJarSize.value)
         if (newValues.brand !== currentBrand.value) {
           // console.log("Brand !== currentBrand");
           if (newValues.brand === "okto") {
