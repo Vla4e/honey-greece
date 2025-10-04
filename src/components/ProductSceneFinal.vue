@@ -204,6 +204,7 @@ export default {
     // ================================
 
     let composer = null; // addPostprocessing, animate
+    let depthOfFieldEffect = null; // DOF effect to update focus distance dynamically
     let renderScene;
     let backgroundRenderTarget = null; // For blurred background
     let foregroundRenderTarget = null; // For sharp foreground
@@ -244,7 +245,8 @@ export default {
         return;
       }
 
-      // Sort jars by distance from camera
+      // Calculate which jar is actually closest based on current position
+      // This updates continuously during animation for smooth transitions
       const jarDistances = Object.entries(glassMeshes)
         .map(([size, mesh]) => {
           const worldPos = new Vector3();
@@ -1033,7 +1035,6 @@ export default {
         });
         // console.log("initiated obj ROTATION", currentJarSize.value);
         initiateObjectRotation(globalScene, webGl.value, currentJarSize.value);
-        markLayersDirty(); // Update layers as jars move
         // console.log("CJS", currentJarSize.value);
         if (isMobile.value) {
           if (size === "450g") {
@@ -1167,6 +1168,53 @@ export default {
         }
       }
 
+      // Update DOF focus distance based on closest jar position
+      if (depthOfFieldEffect && glassMeshes && globalCamera) {
+        const jarDistances = Object.entries(glassMeshes)
+          .map(([size, mesh]) => {
+            const worldPos = new Vector3();
+            mesh.getWorldPosition(worldPos);
+            return {
+              size,
+              distance: worldPos.distanceTo(globalCamera.position)
+            };
+          })
+          .sort((a, b) => a.distance - b.distance);
+
+        if (jarDistances.length > 0) {
+          const closestDistance = jarDistances[0].distance;
+          const closestSize = jarDistances[0].size;
+
+          // PRECISE CALCULATION: Get exact jar depth from bounding box
+          const frontJarParts = jarsBySize.get(closestSize) || [];
+          const bbox = new Box3();
+
+          // Calculate bounding box of ALL front jar parts (glass + honey + lid + label)
+          frontJarParts.forEach(part => {
+            const partBox = new Box3().setFromObject(part);
+            bbox.union(partBox);
+          });
+
+          // Get jar depth along camera view direction (precise, not heuristic!)
+          const cameraDirection = new Vector3();
+          globalCamera.getWorldDirection(cameraDirection);
+          const jarSize = bbox.max.clone().sub(bbox.min);
+          const jarDepthAlongView = Math.abs(jarSize.dot(cameraDirection));
+
+          // Update DOF focus - PRECISE settings based on actual geometry
+          if (depthOfFieldEffect.circleOfConfusionMaterial?.uniforms) {
+            const uniforms = depthOfFieldEffect.circleOfConfusionMaterial.uniforms;
+            uniforms.focusDistance.value = closestDistance; // Center of jar
+            uniforms.focusRange.value = jarDepthAlongView * 1.2; // Exact jar depth + 20% safety margin
+          }
+
+          // Also update bokeh blur intensity
+          if (depthOfFieldEffect.bokehMaterial?.uniforms?.scale) {
+            depthOfFieldEffect.bokehMaterial.uniforms.scale.value = 2.0; // Moderate bokeh, not 5.0!
+          }
+        }
+      }
+
       renderScene();
       let delta = clock.getDelta();
       if (!animationState.get(clipActions[0]).isFinished) {
@@ -1218,70 +1266,20 @@ export default {
       }
       honeyMeshes['300g'].getWorldPosition(backJarPos)
 
-      composer = ENABLE_DOF ? await addPostProcessing(globalRenderer, globalScene, globalCamera, frontJarPosition, backJarPos) : null;
+      const postProcessingResult = ENABLE_DOF ? await addPostProcessing(globalRenderer, globalScene, globalCamera, frontJarPosition, backJarPos) : null;
+
+      if (postProcessingResult) {
+        composer = postProcessingResult.composer;
+        depthOfFieldEffect = postProcessingResult.depthOfFieldEffect;
+      }
 
       if (composer && ENABLE_DOF) {
         renderScene = () => {
           if (!globalRenderer || !globalScene || !globalCamera) return;
 
-          if (jarLayersDirty) {
-            updateJarLayers();
-          }
-
-          // TRUE DOF: Back jar gets depth-based blur, front jar overwritten sharp
-
-          const frontParts = frontGlassMesh ? (jarsBySize.get(Object.keys(glassMeshes).find(size =>
-            glassMeshes[size] === frontGlassMesh
-          )) || []) : [];
-
-          // Pass 1: Hide ONLY front glass from DOF (prevents glass darkening)
-          // Front honey/lid/label still visible for DOF depth calculation
-          if (frontGlassMesh) {
-            frontGlassMesh.visible = false;
-          }
-
-          globalCamera.layers.enableAll(); // Both layers = true DOF depth calculation
-          composer.render(); // DOF sees: front honey/lid/label + back jar
-
-          // Pass 2: Show glass, add glow to honey, render ENTIRE front jar sharp
-          if (frontGlassMesh) {
-            frontGlassMesh.visible = true;
-          }
-
-          // Find front honey mesh and add glow to cover bokeh edge halos
-          let frontHoneyMesh = null;
-          const frontSize = Object.keys(glassMeshes).find(size => glassMeshes[size] === frontGlassMesh);
-          if (frontSize && honeyMeshes && honeyMeshes[frontSize]) {
-            frontHoneyMesh = honeyMeshes[frontSize];
-          }
-
-          // Temporarily add emissive glow to front honey to expand edges
-          const originalEmissive = frontHoneyMesh?.material?.emissive?.clone();
-          const originalEmissiveIntensity = frontHoneyMesh?.material?.emissiveIntensity;
-
-          if (frontHoneyMesh?.material?.emissive) {
-            frontHoneyMesh.material.emissive.setScalar(0.08); // Slight glow to expand edges
-            frontHoneyMesh.material.emissiveIntensity = 1.5;
-            frontHoneyMesh.material.needsUpdate = true;
-          }
-
-          // DON'T clear depth - depth test prevents honey double-rendering at edges
-          globalRenderer.autoClear = false;
-          globalCamera.layers.set(FOREGROUND_LAYER);
-          globalRenderer.render(globalScene, globalCamera); // Honey (with glow), glass, lid, label
-          globalRenderer.autoClear = true;
-
-          // Restore honey material
-          if (frontHoneyMesh?.material?.emissive && originalEmissive) {
-            frontHoneyMesh.material.emissive.copy(originalEmissive);
-            frontHoneyMesh.material.emissiveIntensity = originalEmissiveIntensity;
-            frontHoneyMesh.material.needsUpdate = true;
-          }
-
-          // Restore layer state
-          globalCamera.layers.enable(BACKGROUND_LAYER);
-          globalCamera.layers.enable(FOREGROUND_LAYER);
-          globalCamera.layers.set(BACKGROUND_LAYER);
+          // True depth-based DOF - composer handles everything based on actual distance
+          globalCamera.layers.enableAll();
+          composer.render();
         };
       } else {
         renderScene = () => {

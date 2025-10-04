@@ -25,27 +25,7 @@ async function addPostProcessing(renderer, scene, camera, frontPosition, backJar
 
   const distToFront = camera.position.distanceTo(frontPosition);
   const distToBack = camera.position.distanceTo(backJarPos);
-  const near = camera.near;
-  const far = camera.far;
-
-  // Normalize both distances to [0..1]
-  const frontFocusNormalized = MathUtils.clamp((distToFront - near) / (far - near), 0, 1);
-  const backFocusNormalized = MathUtils.clamp((distToBack - near) / (far - near), 0, 1);
-  const depthDiff = backFocusNormalized - frontFocusNormalized;
-
-  // TEST MODE: Set to true to focus on BACK jar (proof of true DOF!)
-  const TEST_FOCUS_ON_BACK_JAR = false;
-  const focusDistance = TEST_FOCUS_ON_BACK_JAR ? backFocusNormalized : frontFocusNormalized;
-
-  console.log('🎯 TRUE DOF PROOF:', {
-    distToFront: distToFront.toFixed(3),
-    distToBack: distToBack.toFixed(3),
-    frontFocusNormalized: frontFocusNormalized.toFixed(3),
-    backFocusNormalized: backFocusNormalized.toFixed(3),
-    depthDifference: depthDiff.toFixed(3),
-    focusingOn: TEST_FOCUS_ON_BACK_JAR ? 'BACK JAR (test mode)' : 'FRONT JAR (normal)',
-    note: 'If true DOF: changing focusingOn flips which jar is sharp/blurred'
-  });
+  const focusDistance = distToFront; // Use actual distance, not normalized!
 
   let maxSamples = renderer.capabilities.maxSamples
   let minSamples = 4;
@@ -61,13 +41,13 @@ async function addPostProcessing(renderer, scene, camera, frontPosition, backJar
     renderPass.clear = true;
     composer.addPass(renderPass);
 
-    // TRUE DEPTH-BASED DOF - EXTREME PROOF SETTINGS
+    // TRUE DEPTH-BASED DOF - Smooth gradual blur
     const depthOfFieldEffect = new DepthOfFieldEffect(camera, {
-      focusDistance: focusDistance, // Use calculated focus (0.351 for front jar, 0.735 for back)
-      focusRange: 0.001, // EXTREMELY narrow - back jar WAY outside sharp zone
-      focalLength: 0.0001, // VERY low = INSANE blur strength
-      bokehScale: 4, // HUGE bokeh circles
-      height: 640, // High quality
+      focusDistance: focusDistance, // Updated dynamically to track closest jar (actual world distance)
+      focusRange: 0.4, // Wide enough for all honey types/camera positions
+      focalLength: 0.015, // Moderate blur strength
+      bokehScale: 5.0, // Moderate bokeh size
+      height: 480, // Good quality
       resolutionScale: 1.0,
     });
 
@@ -95,8 +75,9 @@ async function addPostProcessing(renderer, scene, camera, frontPosition, backJar
       fxaaPass.encodeOutput = true; // Important: encode output on final pass
       composer.addPass(fxaaPass);
     }
-    
-    return composer;
+
+    // Return both composer and DOF effect so focus can be updated dynamically
+    return { composer, depthOfFieldEffect };
   } catch (error) {
     console.error('Error setting up post-processing:', error);
     return null;
