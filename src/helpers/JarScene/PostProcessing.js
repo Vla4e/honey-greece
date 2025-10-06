@@ -131,76 +131,225 @@ async function addNativePostProcessing(renderer, scene, camera, frontPosition){
     // Create BokehPass
     const distanceToFrontObject = camera.position.distanceTo(frontPosition);
     const bokehParams = {
-      focus: distanceToFrontObject,
-      aperture: 0.002,
-      maxblur: 0.02,
-      width: renderer.domElement.width,
-      height: renderer.domElement.height
+      focus: distanceToFrontObject,  // Focus on the front jar
+      aperture: 0.4,  // Reasonable blur intensity
+      maxblur: 0.01   // Reasonable blur radius
     };
     const bokehPass = new BokehPass(scene, camera, bokehParams);
+    // Focus is already set in bokehParams, no need to set it again
 
-    // Fix BokehPass shader for proper alpha handling
+    // Custom shader - but simplified to match original behavior
     let bokehShader = bokehPass.materialBokeh.fragmentShader;
-    // Don't disable ANYTHING - let Three.js handle it properly!
-    bokehShader = bokehShader
-      // .replace('#include <tonemapping_fragment>', '// tonemapping disabled')
-      // .replace('#include <colorspace_fragment>', '// colorspace conversion disabled');
-      // DON'T disable colorspace conversion - we need it for final output!
+    const originalMain = bokehShader.match(/void main\(\) \{[\s\S]*\}/)[0];
 
-    // Fix alpha: Just remove the hardcoded 1.0
-    bokehShader = bokehShader.replace(
-      'gl_FragColor.a = 1.0;',
-      '// gl_FragColor.a = 1.0;  // Don\'t override alpha!'
-    );
+    const newMain = `void main() {
+      vec2 aspectcorrect = vec2( 1.0, aspect );
+      float viewZ = getViewZ( getDepth( vUv ) );
+      float factor = ( focus + viewZ );
 
-    // Fix for environment map colorspace when rendering to sRGB RT
-    // The render pass writes sRGB-encoded colors but env maps are Linear
-    // We need to ensure proper color handling
-    // bokehShader = bokehShader.replace(
-    //   'vec4 texel = texture2D( tColor, vUv );',
-    //   `vec4 texel = texture2D( tColor, vUv );
-    //   // Input is already in correct space from render pass`
-    // );
+      // Get center pixel
+      vec4 centerCol = texture2D( tColor, vUv.xy );
+      float centerAlpha = centerCol.a;
 
-    // Proper DOF blur calculation
-    bokehShader = bokehShader.replace(
-      'vec2 dofblur = vec2 ( clamp( factor * aperture, -maxblur, maxblur ) );',
-      `
-      // Proper DOF calculation based on distance
-      float blurAmount = factor * aperture;
-      if (abs(factor) < 0.2) {
-        blurAmount = 0.0; // Front jar sharp
+      // For opaque pixels: use direct depth check
+      // For transparent pixels (halo): check if ANY nearby pixel at front depth is opaque
+      bool isFrontJar = false;
+
+      if (centerAlpha > 0.3) {
+        // Opaque pixel - just check its own depth
+        isFrontJar = (viewZ >= -0.6);
+      } else {
+        // Transparent pixel (halo) - check neighborhood
+        vec2 texelSize = vec2(1.0 / 1920.0, 1.0 / 1080.0);
+        for(float dy = -1.0; dy <= 1.0; dy += 1.0) {
+          for(float dx = -1.0; dx <= 1.0; dx += 1.0) {
+            vec2 offset = vec2(dx, dy) * texelSize;
+            float neighborDepth = texture2D( tDepth, vUv + offset ).x;
+            float neighborViewZ = getViewZ( neighborDepth );
+            float neighborAlpha = texture2D( tColor, vUv + offset ).a;
+
+            // If neighbor is opaque AND at front depth, this halo belongs to front jar
+            if (neighborAlpha > 0.3 && neighborViewZ >= -0.6) {
+              isFrontJar = true;
+              break;
+            }
+          }
+          if (isFrontJar) break;
+        }
       }
-      else if (factor < -0.2) {
-        blurAmount = abs(blurAmount) * 25.0; // Back jar blurred
+
+      // Safe zone for front jar only - TIGHTER to eliminate halo
+      float safeFactor = factor;
+      if (isFrontJar && abs(factor) < 0.5) {
+        safeFactor = 0.0; // No blur on front jar
+      }
+      vec2 dofblur = vec2 ( clamp( safeFactor * aperture, -maxblur, maxblur ) );
+
+      vec2 dofblur9 = dofblur * 0.9;
+      vec2 dofblur7 = dofblur * 0.7;
+      vec2 dofblur4 = dofblur * 0.1;
+
+      // centerCol and centerAlpha already sampled above
+      vec4 col = centerCol; // Start with center
+      float totalWeight = 1.0;
+
+      // Only blur if we're supposed to (dofblur > 0) - REMOVED centerAlpha check!
+      if (length(dofblur) > 0.01) {
+        // Front vs back jar get different alpha thresholds
+        vec4 s;
+        if (isFrontJar) { // Front jar - EXTREME strict alpha check
+          // FRONT JAR: ONLY accept samples with IDENTICAL alpha (< 0.01) - ZERO halo!
+          for(int i = 0; i < 16; i++) {
+            vec2 offsets[16];
+            offsets[0] = vec2(  0.0,   0.4  );
+            offsets[1] = vec2(  0.15,  0.37 );
+            offsets[2] = vec2(  0.29,  0.29 );
+            offsets[3] = vec2( -0.37,  0.15 );
+            offsets[4] = vec2(  0.40,  0.0  );
+            offsets[5] = vec2(  0.37, -0.15 );
+            offsets[6] = vec2(  0.29, -0.29 );
+            offsets[7] = vec2( -0.15, -0.37 );
+            offsets[8] = vec2(  0.0,  -0.4  );
+            offsets[9] = vec2( -0.15,  0.37 );
+            offsets[10] = vec2( -0.29,  0.29 );
+            offsets[11] = vec2(  0.37,  0.15 );
+            offsets[12] = vec2( -0.4,   0.0  );
+            offsets[13] = vec2( -0.37, -0.15 );
+            offsets[14] = vec2( -0.29, -0.29 );
+            offsets[15] = vec2(  0.15, -0.37 );
+
+            s = texture2D( tColor, vUv.xy + (offsets[i] * aspectcorrect) * dofblur );
+            if (abs(s.a - centerAlpha) < 0.001) { // ULTRA EXTREME: nearly identical alpha only
+              col += s;
+              totalWeight += 1.0;
+            }
+          }
+        } else {
+          // BACK JAR: ALL 40 samples, NO ALPHA CHECK - pure natural blur!
+          // 16 at full dofblur
+          col += texture2D( tColor, vUv.xy + ( vec2(  0.0,   0.4  ) * aspectcorrect ) * dofblur );
+          totalWeight += 1.0;
+          col += texture2D( tColor, vUv.xy + ( vec2(  0.15,  0.37 ) * aspectcorrect ) * dofblur );
+          totalWeight += 1.0;
+          col += texture2D( tColor, vUv.xy + ( vec2(  0.29,  0.29 ) * aspectcorrect ) * dofblur );
+          totalWeight += 1.0;
+          col += texture2D( tColor, vUv.xy + ( vec2(-0.37,  0.15 ) * aspectcorrect ) * dofblur );
+          totalWeight += 1.0;
+          col += texture2D( tColor, vUv.xy + ( vec2( 0.40,  0.0  ) * aspectcorrect ) * dofblur );
+          totalWeight += 1.0;
+          col += texture2D( tColor, vUv.xy + ( vec2( 0.37, -0.15 ) * aspectcorrect ) * dofblur );
+          totalWeight += 1.0;
+          col += texture2D( tColor, vUv.xy + ( vec2( 0.29, -0.29 ) * aspectcorrect ) * dofblur );
+          totalWeight += 1.0;
+          col += texture2D( tColor, vUv.xy + ( vec2(-0.15, -0.37 ) * aspectcorrect ) * dofblur );
+          totalWeight += 1.0;
+          col += texture2D( tColor, vUv.xy + ( vec2( 0.0,  -0.4  ) * aspectcorrect ) * dofblur );
+          totalWeight += 1.0;
+          col += texture2D( tColor, vUv.xy + ( vec2(-0.15,  0.37 ) * aspectcorrect ) * dofblur );
+          totalWeight += 1.0;
+          col += texture2D( tColor, vUv.xy + ( vec2(-0.29,  0.29 ) * aspectcorrect ) * dofblur );
+          totalWeight += 1.0;
+          col += texture2D( tColor, vUv.xy + ( vec2( 0.37,  0.15 ) * aspectcorrect ) * dofblur );
+          totalWeight += 1.0;
+          col += texture2D( tColor, vUv.xy + ( vec2(-0.4,   0.0  ) * aspectcorrect ) * dofblur );
+          totalWeight += 1.0;
+          col += texture2D( tColor, vUv.xy + ( vec2(-0.37, -0.15 ) * aspectcorrect ) * dofblur );
+          totalWeight += 1.0;
+          col += texture2D( tColor, vUv.xy + ( vec2(-0.29, -0.29 ) * aspectcorrect ) * dofblur );
+          totalWeight += 1.0;
+          col += texture2D( tColor, vUv.xy + ( vec2( 0.15, -0.37 ) * aspectcorrect ) * dofblur );
+          totalWeight += 1.0;
+
+          // 8 at dofblur9
+          col += texture2D( tColor, vUv.xy + ( vec2( 0.15,  0.37 ) * aspectcorrect ) * dofblur9 );
+          totalWeight += 1.0;
+          col += texture2D( tColor, vUv.xy + ( vec2(-0.37,  0.15 ) * aspectcorrect ) * dofblur9 );
+          totalWeight += 1.0;
+          col += texture2D( tColor, vUv.xy + ( vec2( 0.37, -0.15 ) * aspectcorrect ) * dofblur9 );
+          totalWeight += 1.0;
+          col += texture2D( tColor, vUv.xy + ( vec2(-0.15, -0.37 ) * aspectcorrect ) * dofblur9 );
+          totalWeight += 1.0;
+          col += texture2D( tColor, vUv.xy + ( vec2(-0.15,  0.37 ) * aspectcorrect ) * dofblur9 );
+          totalWeight += 1.0;
+          col += texture2D( tColor, vUv.xy + ( vec2( 0.37,  0.15 ) * aspectcorrect ) * dofblur9 );
+          totalWeight += 1.0;
+          col += texture2D( tColor, vUv.xy + ( vec2(-0.37, -0.15 ) * aspectcorrect ) * dofblur9 );
+          totalWeight += 1.0;
+          col += texture2D( tColor, vUv.xy + ( vec2( 0.15, -0.37 ) * aspectcorrect ) * dofblur9 );
+          totalWeight += 1.0;
+
+          // 8 at dofblur7
+          col += texture2D( tColor, vUv.xy + ( vec2( 0.29,  0.29 ) * aspectcorrect ) * dofblur7 );
+          totalWeight += 1.0;
+          col += texture2D( tColor, vUv.xy + ( vec2( 0.40,  0.0  ) * aspectcorrect ) * dofblur7 );
+          totalWeight += 1.0;
+          col += texture2D( tColor, vUv.xy + ( vec2( 0.29, -0.29 ) * aspectcorrect ) * dofblur7 );
+          totalWeight += 1.0;
+          col += texture2D( tColor, vUv.xy + ( vec2( 0.0,  -0.4  ) * aspectcorrect ) * dofblur7 );
+          totalWeight += 1.0;
+          col += texture2D( tColor, vUv.xy + ( vec2(-0.29,  0.29 ) * aspectcorrect ) * dofblur7 );
+          totalWeight += 1.0;
+          col += texture2D( tColor, vUv.xy + ( vec2(-0.4,   0.0  ) * aspectcorrect ) * dofblur7 );
+          totalWeight += 1.0;
+          col += texture2D( tColor, vUv.xy + ( vec2(-0.29, -0.29 ) * aspectcorrect ) * dofblur7 );
+          totalWeight += 1.0;
+          col += texture2D( tColor, vUv.xy + ( vec2( 0.0,   0.4  ) * aspectcorrect ) * dofblur7 );
+          totalWeight += 1.0;
+
+          // 8 at dofblur4
+          col += texture2D( tColor, vUv.xy + ( vec2( 0.29,  0.29 ) * aspectcorrect ) * dofblur4 );
+          totalWeight += 1.0;
+          col += texture2D( tColor, vUv.xy + ( vec2( 0.4,   0.0  ) * aspectcorrect ) * dofblur4 );
+          totalWeight += 1.0;
+          col += texture2D( tColor, vUv.xy + ( vec2( 0.29, -0.29 ) * aspectcorrect ) * dofblur4 );
+          totalWeight += 1.0;
+          col += texture2D( tColor, vUv.xy + ( vec2( 0.0,  -0.4  ) * aspectcorrect ) * dofblur4 );
+          totalWeight += 1.0;
+          col += texture2D( tColor, vUv.xy + ( vec2(-0.29,  0.29 ) * aspectcorrect ) * dofblur4 );
+          totalWeight += 1.0;
+          col += texture2D( tColor, vUv.xy + ( vec2(-0.4,   0.0  ) * aspectcorrect ) * dofblur4 );
+          totalWeight += 1.0;
+          col += texture2D( tColor, vUv.xy + ( vec2(-0.29, -0.29 ) * aspectcorrect ) * dofblur4 );
+          totalWeight += 1.0;
+          col += texture2D( tColor, vUv.xy + ( vec2( 0.0,   0.4  ) * aspectcorrect ) * dofblur4 );
+          totalWeight += 1.0;
+        }
       }
 
-      vec2 dofblur = vec2(clamp(blurAmount, -maxblur, maxblur));
-      `
-    );
+      gl_FragColor = col / totalWeight;
+      // Alpha is handled naturally by the blur - no special treatment needed
 
-    // Remove the broken fix for now
+      // DEBUG: Visualize dofblur strength (white = lots of blur, black = no blur)
+      // float blurStrength = length(dofblur) * 10.0; // Multiply to make visible
+      // gl_FragColor.g = blurStrength; // Green channel shows blur amount
 
+      // DEBUG: Color code to see which path is taken
+      // if (isFrontJar) {
+      //   gl_FragColor.r += 0.3; // Front jar = reddish tint
+      // } else {
+      //   gl_FragColor.b += 0.3; // Back jar = bluish tint
+      // }
+    }`;
+
+    bokehShader = bokehShader.replace(originalMain, newMain);
+
+    console.log("✅ Custom alpha-aware bokeh shader installed!");
     bokehPass.materialBokeh.fragmentShader = bokehShader;
     bokehPass.materialBokeh.needsUpdate = true;
 
+    console.log("✅ Using ORIGINAL unmodified BokehPass to test halo!");
     composer.addPass(bokehPass);
 
-    // CRITICAL FIX: Add OutputPass to handle sRGB conversion properly!
-    // This ensures proper colorspace handling for render targets
+    // Note: SMAA/FXAA breaks the bokeh blur entirely, even at 1% opacity - skip it!
+
+    // FIX 2: Add OutputPass for proper sRGB conversion (fixes red bleed)
     const { OutputPass } = await import('three/examples/jsm/postprocessing/OutputPass.js');
     const outputPass = new OutputPass();
     composer.addPass(outputPass);
 
-    console.log("✅ Using clean DOF with OutputPass for proper sRGB handling!");
+    console.log("✅ Using BokehPass with alpha fix + OutputPass for proper sRGB!");
 
-    // DEBUG: Check render target colorspace
-    console.log("🔍 RT ColorSpace Debug:", {
-      rtColorSpace: renderTarget.texture.colorSpace,
-      rendererOutputColorSpace: renderer.outputColorSpace,
-    });
-
-    return composer;
+    return composer
   } catch(e) {
     console.error("Failed to create postprocessing: ", e)
     return null;

@@ -1292,7 +1292,7 @@ export default {
       }
       honeyMeshes['300g'].getWorldPosition(backJarPos)
 
-      // Try native postprocessing instead
+      // Use native postprocessing with BokehPass
       composer = ENABLE_DOF ? await addNativePostProcessing(globalRenderer, globalScene, globalCamera, frontJarPosition) : null;
 
       if (composer && ENABLE_DOF) {
