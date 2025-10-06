@@ -53,10 +53,10 @@ export async function loadGlbReturnParts(loader, url){
       '450g': []
     };
     let meshes = [];
-    let labelMeshes = [];
-    let labelMeshesClones = [];
-    let glassMeshes = []
-    let honeyMeshes = []
+    let labelMeshes = {};
+    let labelMeshesClones = {};
+    let glassMeshes = {};
+    let honeyMeshes = {};
     let sizeDuringTraversal = '';
     let searchQuery;
     // let jar150 = new Object3D;
@@ -87,7 +87,7 @@ export async function loadGlbReturnParts(loader, url){
           obj.type = 'label'
           labelMeshes[sizeDuringTraversal] = obj
           labelMeshesClones[sizeDuringTraversal] = obj.clone()
-        } else if (obj.name.includes('jar_object')){
+        } else if (obj.name.includes('jar')){
           obj.trackingName = `glass_${sizeDuringTraversal}`
           glassMeshes[sizeDuringTraversal] = obj
           obj.size = sizeDuringTraversal
