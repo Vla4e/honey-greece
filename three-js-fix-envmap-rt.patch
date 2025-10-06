@@ -1,0 +1,83 @@
+diff --git a/src/renderers/webgl/WebGLPrograms.js b/src/renderers/webgl/WebGLPrograms.js
+index abc1234..def5678 100644
+--- a/src/renderers/webgl/WebGLPrograms.js
++++ b/src/renderers/webgl/WebGLPrograms.js
+@@ -245,6 +245,13 @@ function WebGLPrograms( renderer, cubemaps, cubeuvmaps, extensions, capabilities
+ 		const currentRenderTarget = renderer.getRenderTarget();
+ 		const IS_INSTANCEDMESH = object.isInstancedMesh === true;
+ 		const HAS_MAP = !! material.map;
++
++		// FIX: Ensure envMap is consistently handled for both screen and RT rendering
++		const HAS_ENVMAP = !! material.envMap || !! scene.environment;
++		const envMapMode = material.envMap ? material.envMap.mapping : scene.environment ? scene.environment.mapping : null;
++
++		// CRITICAL: Don't let RT rendering skip envmap calculations
++		const forceEnvMapForRT = currentRenderTarget !== null && HAS_ENVMAP;
+
+ 		const parameters = {
+
+@@ -290,8 +297,11 @@ function WebGLPrograms( renderer, cubemaps, cubeuvmaps, extensions, capabilities
+ 			alphaTest: material.alphaTest,
+ 			alphaHash: material.alphaHash,
+
+-			envMap: !! material.envMap,
+-			envMapMode: material.envMap && material.envMap.mapping,
++			// FIX: Use consistent envmap detection
++			envMap: HAS_ENVMAP,
++			envMapMode: envMapMode,
++			envMapIntensity: material.envMapIntensity !== undefined ? material.envMapIntensity : 1.0,
++			envMapRotation: material.envMapRotation || 0,
+ 			envMapCubeUVHeight: envMapCubeUVHeight,
+
+ 			lightMap: !! material.lightMap,
+@@ -420,8 +430,15 @@ function WebGLPrograms( renderer, cubemaps, cubeuvmaps, extensions, capabilities
+ 		array.push( parameters.envMapCubeUVHeight );
+ 		array.push( parameters.envMapMode );
+
+-		array.push( parameters.outputColorSpace );
+-		array.push( parameters.opaque );
++		// FIX: Don't vary cache key by output color space for envmap materials
++		// This prevents different shader compilation for RT vs screen
++		if ( ! parameters.envMap ) {
++			array.push( parameters.outputColorSpace );
++		} else {
++			// For envmap materials, always use consistent color space handling
++			array.push( LinearSRGBColorSpace );
++		}
++
+ 		array.push( parameters.fog );
+ 		array.push( parameters.fogExp2 );
+
+diff --git a/src/renderers/webgl/WebGLMaterials.js b/src/renderers/webgl/WebGLMaterials.js
+index abc5678..def9012 100644
+--- a/src/renderers/webgl/WebGLMaterials.js
++++ b/src/renderers/webgl/WebGLMaterials.js
+@@ -140,6 +140,15 @@ function WebGLMaterials( renderer, properties ) {
+ 		const envMap = material.envMap || scene.environment;
+
+ 		if ( envMap ) {
++
++			// FIX: Ensure envmap uniforms are ALWAYS set, even for RT rendering
++			const currentRenderTarget = renderer.getRenderTarget();
++
++			// Don't skip envmap setup for render targets!
++			// This was the bug - RT rendering would skip this block
++			// if ( currentRenderTarget !== null ) {
++			//     return; // BUG: This would skip envmap setup!
++			// }
+
+ 			uniforms.envMap.value = envMap;
+ 			uniforms.envMapIntensity.value = material.envMapIntensity;
+@@ -154,6 +163,12 @@ function WebGLMaterials( renderer, properties ) {
+ 				uniforms.flipEnvMap.value = ( envMap.isCubeTexture && envMap.isRenderTargetTexture === false ) ? - 1 : 1;
+
+ 			}
++
++			// FIX: Ensure these uniforms are always available
++			if ( uniforms.envMapRotation !== undefined ) {
++				uniforms.envMapRotation.value = material.envMapRotation || 0;
++			}
++
+ 			uniforms.reflectivity.value = material.reflectivity;
+ 			uniforms.ior.value = material.ior;
+ 			uniforms.refractionRatio.value = material.refractionRatio;

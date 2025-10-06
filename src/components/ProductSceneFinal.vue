@@ -200,7 +200,7 @@ Cache.enabled = true;
 export default {
   setup() {
     // ========== DOF TOGGLE ==========
-    const ENABLE_DOF = true; // Set to false to disable DOF blur
+    const ENABLE_DOF = false; // Set to false to disable DOF blur
     // ================================
 
     let composer = null; // addPostprocessing, animate
@@ -660,6 +660,14 @@ export default {
 
           if (size) {
             registerJarPart(obj, size);
+
+            // FIX: Set lid material to preserve reflections during postprocessing!
+            if (obj.material) {
+              obj.material.envMapIntensity = 2.0; // Strong environment reflections
+              obj.material.roughness = 0.2; // Slightly rough for realistic metal
+              obj.material.metalness = 0.8; // Metallic lid
+              obj.material.needsUpdate = true;
+            }
           }
         }
       });
@@ -1130,6 +1138,17 @@ export default {
       globalScene.environment = envMap;
       globalScene.environmentIntensity = 0.85;
       globalScene.toneMappingExposure = 1.0;
+
+      // CRITICAL FIX: Explicitly set environment on lids to preserve reflections!
+      globalScene.traverse((obj) => {
+        if (obj.isMesh && obj.name && obj.name.toLowerCase().includes('lid')) {
+          if (obj.material) {
+            obj.material.envMap = envMap; // Explicitly assign!
+            obj.material.needsUpdate = true;
+          }
+        }
+      });
+
       // // // console.log("FINISHED SETTING LIGHTING ===========>")
       pmremGenerator.dispose();
       exrTexture.dispose();
@@ -1201,16 +1220,17 @@ export default {
           const jarSize = bbox.max.clone().sub(bbox.min);
           const jarDepthAlongView = Math.abs(jarSize.dot(cameraDirection));
 
-          // Update DOF focus - PRECISE settings based on actual geometry
+          // EXTREME SETTINGS - PROOF OF CONCEPT
           if (depthOfFieldEffect.circleOfConfusionMaterial?.uniforms) {
             const uniforms = depthOfFieldEffect.circleOfConfusionMaterial.uniforms;
-            uniforms.focusDistance.value = closestDistance; // Center of jar
-            uniforms.focusRange.value = jarDepthAlongView * 1.2; // Exact jar depth + 20% safety margin
+
+            uniforms.focusDistance.value = closestDistance; // Focus on front jar (0.35)
+            uniforms.focusRange.value = 0.15; // FIXED narrow band (0.35 ± 0.15 = 0.2 to 0.5 sharp, 0.7 BLURRED!)
           }
 
-          // Also update bokeh blur intensity
+          // Keep bokeh LOW to prove focalLength/focusRange do the work
           if (depthOfFieldEffect.bokehMaterial?.uniforms?.scale) {
-            depthOfFieldEffect.bokehMaterial.uniforms.scale.value = 2.0; // Moderate bokeh, not 5.0!
+            depthOfFieldEffect.bokehMaterial.uniforms.scale.value = 1.0;
           }
         }
       }
@@ -1266,18 +1286,14 @@ export default {
       }
       honeyMeshes['300g'].getWorldPosition(backJarPos)
 
-      const postProcessingResult = ENABLE_DOF ? await addPostProcessing(globalRenderer, globalScene, globalCamera, frontJarPosition, backJarPos) : null;
-
-      if (postProcessingResult) {
-        composer = postProcessingResult.composer;
-        depthOfFieldEffect = postProcessingResult.depthOfFieldEffect;
-      }
+      // Try native postprocessing instead
+      composer = ENABLE_DOF ? await addNativePostProcessing(globalRenderer, globalScene, globalCamera, frontJarPosition) : null;
 
       if (composer && ENABLE_DOF) {
         renderScene = () => {
           if (!globalRenderer || !globalScene || !globalCamera) return;
 
-          // True depth-based DOF - composer handles everything based on actual distance
+          // Native bokeh DOF
           globalCamera.layers.enableAll();
           composer.render();
         };

@@ -778,6 +778,7 @@ onUnmounted(() => {
   }
 
   .product-viewer {
+    background: linear-gradient(to right, #fa709a 0%, #fee140 100%);
     position: relative;
     display: flex;
     flex-direction: column;

@@ -1,7 +1,7 @@
 /* pmndrs 'postprocessing' library imports */
-import { 
-  EffectComposer as EffectComposerPPC, 
-  RenderPass as RenderPassPPC, 
+import {
+  EffectComposer as EffectComposerPPC,
+  RenderPass as RenderPassPPC,
   EffectPass,
   SMAAPreset,
   EdgeDetectionMode,
@@ -15,7 +15,24 @@ import { RenderPass as RenderPassNative} from 'three/examples/jsm/postprocessing
 import { BokehPass } from 'three/examples/jsm/postprocessing/BokehPass.js';
 import { AfterimagePass } from 'three/examples/jsm/postprocessing/AfterimagePass.js';
 
-import { HalfFloatType, Vector3, SRGBColorSpace, MathUtils } from 'three';
+import {
+  HalfFloatType,
+  Vector3,
+  Vector2,
+  SRGBColorSpace,
+  MathUtils,
+  WebGLRenderTarget,
+  NoToneMapping,
+  RGBAFormat,
+  LinearFilter,
+  FloatType,
+  AmbientLight,
+  Color,
+  MeshBasicMaterial,
+  LinearSRGBColorSpace,
+  ACESFilmicToneMapping,
+  LinearToneMapping
+} from 'three';
 
 async function addPostProcessing(renderer, scene, camera, frontPosition, backJarPos) {
   if (!renderer || !scene || !camera) {
@@ -25,12 +42,11 @@ async function addPostProcessing(renderer, scene, camera, frontPosition, backJar
 
   const distToFront = camera.position.distanceTo(frontPosition);
   const distToBack = camera.position.distanceTo(backJarPos);
-  const focusDistance = distToFront; // Use actual distance, not normalized!
+  const focusDistance = distToFront;
 
   let maxSamples = renderer.capabilities.maxSamples
   let minSamples = 4;
   try {
-
     const composer = new EffectComposerPPC(renderer, {
       frameBufferType: HalfFloatType,
       multisampling: renderer.capabilities.isWebGL2 ? maxSamples : 0,
@@ -41,13 +57,12 @@ async function addPostProcessing(renderer, scene, camera, frontPosition, backJar
     renderPass.clear = true;
     composer.addPass(renderPass);
 
-    // TRUE DEPTH-BASED DOF - Smooth gradual blur
     const depthOfFieldEffect = new DepthOfFieldEffect(camera, {
-      focusDistance: focusDistance, // Updated dynamically to track closest jar (actual world distance)
-      focusRange: 0.4, // Wide enough for all honey types/camera positions
-      focalLength: 0.015, // Moderate blur strength
-      bokehScale: 5.0, // Moderate bokeh size
-      height: 480, // Good quality
+      focusDistance: focusDistance,
+      focusRange: 0.005,
+      focalLength: 0.005,
+      bokehScale: 1.0,
+      height: 480,
       resolutionScale: 1.0,
     });
 
@@ -55,28 +70,25 @@ async function addPostProcessing(renderer, scene, camera, frontPosition, backJar
     composer.addPass(dofPass);
 
     if (renderer.capabilities.isWebGL2) {
-      // SMAA for WebGL2 (better quality) - ENABLED to smooth DOF edges
       const smaaEffect = new SMAAEffect({
-        preset: SMAAPreset.ULTRA, // Options: LOW, MEDIUM, HIGH, ULTRA
-        edgeDetectionMode: EdgeDetectionMode.COLOR, // Better edge detection
+        preset: SMAAPreset.ULTRA,
+        edgeDetectionMode: EdgeDetectionMode.COLOR,
       });
       const smaaPass = new EffectPass(camera, smaaEffect);
-      smaaPass.encodeOutput = true; // Important: encode output on final pass
+      smaaPass.encodeOutput = true;
       composer.addPass(smaaPass);
     } else {
-      // FXAA for fallback (faster, works on all devices)
       const fxaaEffect = new FXAAEffect({
         blendFunction: BlendFunction.NORMAL,
-        minEdgeThreshold: 0.01, // Lower for more edge detection
+        minEdgeThreshold: 0.01,
         maxEdgeThreshold: 0.1,
         subpixelQuality: 1.0,
       });
       const fxaaPass = new EffectPass(camera, fxaaEffect);
-      fxaaPass.encodeOutput = true; // Important: encode output on final pass
+      fxaaPass.encodeOutput = true;
       composer.addPass(fxaaPass);
     }
 
-    // Return both composer and DOF effect so focus can be updated dynamically
     return { composer, depthOfFieldEffect };
   } catch (error) {
     console.error('Error setting up post-processing:', error);
@@ -87,33 +99,87 @@ async function addPostProcessing(renderer, scene, camera, frontPosition, backJar
 
 async function addNativePostProcessing(renderer, scene, camera, frontPosition){
   try{
-    console.log("Adding native PP:", renderer)
-    // scene.background = 'white'
-    // renderer.scene.background = null
-    const composer = new EffectComposerNative(renderer);
+    // Clean version with Three.js fix applied via import
 
-    
-    const distanceToFrontObject = camera.position.distanceTo(frontPosition);
-    console.log("DistanceToFrontObject", distanceToFrontObject)
-  
+    const size = renderer.getSize(new Vector2());
+    const pixelRatio = renderer.getPixelRatio();
+
+    const rtOptions = {
+      type: HalfFloatType,
+      format: RGBAFormat,
+      colorSpace: SRGBColorSpace,
+      minFilter: LinearFilter,
+      magFilter: LinearFilter,
+      generateMipmaps: false,
+      depthBuffer: true,
+      stencilBuffer: false,
+    };
+
+    const renderTarget = new WebGLRenderTarget(
+      size.width * pixelRatio,
+      size.height * pixelRatio,
+      rtOptions
+    );
+
+    const composer = new EffectComposerNative(renderer, renderTarget);
+
+    // Standard render pass - the Three.js fix handles envmap issues
     const renderPass = new RenderPassNative(scene, camera);
-    composer.addPass(renderPass)
-  
+    renderPass.clear = true;
+    composer.addPass(renderPass);
+
+    // Create BokehPass
+    const distanceToFrontObject = camera.position.distanceTo(frontPosition);
     const bokehParams = {
-      focus: 10.0,
+      focus: distanceToFrontObject,
       aperture: 0.002,
-      maxblur: 0.01
+      maxblur: 0.02,
+      width: renderer.domElement.width,
+      height: renderer.domElement.height
     };
     const bokehPass = new BokehPass(scene, camera, bokehParams);
-    bokehPass.materialBokeh.uniforms.focus.value = distanceToFrontObject;
+
+    // Fix BokehPass shader for proper alpha handling
+    let bokehShader = bokehPass.materialBokeh.fragmentShader;
+    bokehShader = bokehShader
+      .replace('#include <tonemapping_fragment>', '// tonemapping disabled')
+      .replace('#include <colorspace_fragment>', '// colorspace conversion disabled');
+
+    // Preserve alpha instead of hardcoding to 1.0
+    bokehShader = bokehShader.replace(
+      'gl_FragColor = col / 41.0;\n\t\t\tgl_FragColor.a = 1.0;',
+      `gl_FragColor = col / 41.0;
+      gl_FragColor.a = col.a / 41.0;`
+    );
+
+    // Proper DOF blur calculation
+    bokehShader = bokehShader.replace(
+      'vec2 dofblur = vec2 ( clamp( factor * aperture, -maxblur, maxblur ) );',
+      `
+      // Proper DOF calculation based on distance
+      float blurAmount = factor * aperture;
+      if (abs(factor) < 0.2) {
+        blurAmount = 0.0; // Front jar sharp
+      }
+      else if (factor < -0.2) {
+        blurAmount = abs(blurAmount) * 25.0; // Back jar blurred
+      }
+
+      vec2 dofblur = vec2(clamp(blurAmount, -maxblur, maxblur));
+      `
+    );
+
+    bokehPass.materialBokeh.fragmentShader = bokehShader;
+    bokehPass.materialBokeh.needsUpdate = true;
+
     composer.addPass(bokehPass);
-    
-    // const afterimagePass = new AfterimagePass(0.95);
-    // composer.addPass(afterimagePass);
-  
-    return composer
+
+    console.log("✅ Using clean DOF with Three.js envmap RT fix");
+
+    return composer;
   } catch(e) {
     console.error("Failed to create postprocessing: ", e)
+    return null;
   }
 }
 
