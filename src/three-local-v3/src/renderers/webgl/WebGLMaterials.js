@@ -219,9 +219,65 @@ function WebGLMaterials( renderer, properties ) {
 		const envMap = materialProperties.envMap;
 		const envMapRotation = materialProperties.envMapRotation;
 
+		if ( material.name === 'Material.040' ) {
+			const rt = renderer.getRenderTarget();
+			// console.log('🎨 LID UNIFORMS:', {
+			// 	isRT: !!rt,
+			// 	rtType: rt?.constructor?.name,
+			// 	hasEnvMap: !!envMap,
+			// 	envMapType: envMap?.constructor?.name,
+			// 	uniformsHasEnvMap: !!uniforms.envMap,
+			// 	willSetUniform: !!envMap && !!uniforms.envMap
+			// });
+
+			// TEMPORARILY DISABLED TO TEST
+			// if (material.metalness > 0.5 && material.color.r < 0.1) {
+			// 	if (!material._originalEnvMapIntensity) {
+			// 		material._originalEnvMapIntensity = material.envMapIntensity;
+			// 	}
+			// 	const darkness = 1.0 - (material.color.r + material.color.g + material.color.b) / 3;
+			// 	const boost = 1.0 + (darkness * 5.0);
+			// 	material.envMapIntensity = material._originalEnvMapIntensity * boost;
+			// 	console.log('⚡ Boosted black metal intensity:', material.envMapIntensity);
+			// }
+		}
+
 		if ( envMap ) {
 
+			if (material.name === 'Material.040') {
+				const rt = renderer.getRenderTarget();
+				if (rt) {
+					console.trace('🎯 RT RENDER - WHERE IS THIS FROM?');
+				}
+				console.log('🎯 SETTING ENVMAP UNIFORM:', {
+					isRT: !!rt,
+					envMapId: envMap.id,
+					envMapUuid: envMap.uuid,
+					isCubeTexture: envMap.isCubeTexture,
+					isRenderTargetTexture: envMap.isRenderTargetTexture,
+					mapping: envMap.mapping
+				});
+			}
+
 			uniforms.envMap.value = envMap;
+
+			// DEBUG: Check what's actually being sent to shader
+			if ( material.name === 'Material.040' && uniforms.envMapIntensity ) {
+				const rt = renderer.getRenderTarget();
+        if (Math.random() < 0.01) {
+          console.log('📡 SHADER UNIFORMS:', {
+            envMapIntensity: uniforms.envMapIntensity.value,
+            isRT: !!rt,
+            rtName: rt?.texture?.name || 'screen',
+            envMapId: envMap.id,
+            envMapType: envMap.constructor.name,
+            diffuseR: uniforms.diffuse?.value?.r || 'N/A'
+          });
+        }
+
+				// Why alternating RT?
+				// console.trace('Called from:');
+			}
 
 			_e1.copy( envMapRotation );
 

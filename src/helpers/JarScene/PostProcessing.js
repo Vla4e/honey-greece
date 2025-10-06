@@ -107,7 +107,7 @@ async function addNativePostProcessing(renderer, scene, camera, frontPosition){
     const rtOptions = {
       type: HalfFloatType,
       format: RGBAFormat,
-      colorSpace: SRGBColorSpace,
+      colorSpace: LinearSRGBColorSpace,  // Back to sRGB, now that Three.js respects it!
       minFilter: LinearFilter,
       magFilter: LinearFilter,
       generateMipmaps: false,
@@ -141,16 +141,26 @@ async function addNativePostProcessing(renderer, scene, camera, frontPosition){
 
     // Fix BokehPass shader for proper alpha handling
     let bokehShader = bokehPass.materialBokeh.fragmentShader;
+    // Don't disable ANYTHING - let Three.js handle it properly!
     bokehShader = bokehShader
-      .replace('#include <tonemapping_fragment>', '// tonemapping disabled')
-      .replace('#include <colorspace_fragment>', '// colorspace conversion disabled');
+      // .replace('#include <tonemapping_fragment>', '// tonemapping disabled')
+      // .replace('#include <colorspace_fragment>', '// colorspace conversion disabled');
+      // DON'T disable colorspace conversion - we need it for final output!
 
-    // Preserve alpha instead of hardcoding to 1.0
+    // Fix alpha: Just remove the hardcoded 1.0
     bokehShader = bokehShader.replace(
-      'gl_FragColor = col / 41.0;\n\t\t\tgl_FragColor.a = 1.0;',
-      `gl_FragColor = col / 41.0;
-      gl_FragColor.a = col.a / 41.0;`
+      'gl_FragColor.a = 1.0;',
+      '// gl_FragColor.a = 1.0;  // Don\'t override alpha!'
     );
+
+    // Fix for environment map colorspace when rendering to sRGB RT
+    // The render pass writes sRGB-encoded colors but env maps are Linear
+    // We need to ensure proper color handling
+    // bokehShader = bokehShader.replace(
+    //   'vec4 texel = texture2D( tColor, vUv );',
+    //   `vec4 texel = texture2D( tColor, vUv );
+    //   // Input is already in correct space from render pass`
+    // );
 
     // Proper DOF blur calculation
     bokehShader = bokehShader.replace(
@@ -169,12 +179,26 @@ async function addNativePostProcessing(renderer, scene, camera, frontPosition){
       `
     );
 
+    // Remove the broken fix for now
+
     bokehPass.materialBokeh.fragmentShader = bokehShader;
     bokehPass.materialBokeh.needsUpdate = true;
 
     composer.addPass(bokehPass);
 
-    console.log("✅ Using clean DOF with Three.js envmap RT fix");
+    // CRITICAL FIX: Add OutputPass to handle sRGB conversion properly!
+    // This ensures proper colorspace handling for render targets
+    const { OutputPass } = await import('three/examples/jsm/postprocessing/OutputPass.js');
+    const outputPass = new OutputPass();
+    composer.addPass(outputPass);
+
+    console.log("✅ Using clean DOF with OutputPass for proper sRGB handling!");
+
+    // DEBUG: Check render target colorspace
+    console.log("🔍 RT ColorSpace Debug:", {
+      rtColorSpace: renderTarget.texture.colorSpace,
+      rendererOutputColorSpace: renderer.outputColorSpace,
+    });
 
     return composer;
   } catch(e) {

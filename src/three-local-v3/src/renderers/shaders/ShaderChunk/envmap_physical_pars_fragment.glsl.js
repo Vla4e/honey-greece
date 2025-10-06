@@ -1,6 +1,28 @@
 export default /* glsl */`
 #ifdef USE_ENVMAP
 
+	// ROOT CAUSE FOUND: Environment map is Linear but being treated as sRGB
+	vec3 fixEnvironmentColor( vec3 color ) {
+    return color;
+		// The bug: When outputColorSpace is sRGB, Three.js seems to assume
+		// the envmap texture follows the output colorspace, but PMREMGenerator
+		// ALWAYS outputs Linear! This causes reflection paths to get wrong colors.
+
+		// Since sRGB->Linear made reflections stronger, let's do partial conversion
+		// to find the sweet spot
+		vec3 adjusted = mix(
+			color,  // Original (too dark)
+			// sRGB->Linear conversion
+			pow((color + vec3(0.055)) / 1.055, vec3(2.4)),
+			0.5  // 50% mix
+		);
+		adjusted.r *= 0.85;  // Reduce red specifically
+		return adjusted;
+
+		// The proper fix would be to tell Three.js that this specific texture
+		// should not be converted, or to fix the assumption in the renderer.
+	}
+
 	vec3 getIBLIrradiance( const in vec3 normal ) {
 
 		#ifdef ENVMAP_TYPE_CUBE_UV
@@ -9,7 +31,7 @@ export default /* glsl */`
 
 			vec4 envMapColor = textureCubeUV( envMap, envMapRotation * worldNormal, 1.0 );
 
-			return PI * envMapColor.rgb * envMapIntensity;
+			return PI * fixEnvironmentColor(envMapColor.rgb) * envMapIntensity;
 
 		#else
 
@@ -32,7 +54,7 @@ export default /* glsl */`
 
 			vec4 envMapColor = textureCubeUV( envMap, envMapRotation * reflectVec, roughness );
 
-			return envMapColor.rgb * envMapIntensity;
+			return fixEnvironmentColor(envMapColor.rgb) * envMapIntensity;
 
 		#else
 

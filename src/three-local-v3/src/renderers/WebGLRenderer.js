@@ -1658,7 +1658,21 @@ class WebGLRenderer {
 
 			materialProperties.environment = material.isMeshStandardMaterial ? scene.environment : null;
 			materialProperties.fog = scene.fog;
-			materialProperties.envMap = ( material.isMeshStandardMaterial ? cubeuvmaps : cubemaps ).get( material.envMap || materialProperties.environment );
+
+			// FIX: Ensure envMap is set even if cubemap lookup fails during RT rendering
+			// const envMapSource = material.envMap || materialProperties.environment;
+			// let envMapResult = ( material.isMeshStandardMaterial ? cubeuvmaps : cubemaps ).get( envMapSource );
+
+			// // If lookup fails but we have an environment, use it directly
+			// if ( !envMapResult && envMapSource ) {
+			// 	if ( material.name === 'Material.040' ) {
+			// 		console.log('🔧 WebGLRenderer: envMap lookup failed for lid, using source directly');
+			// 	}
+			// 	envMapResult = envMapSource;
+			// }
+
+			// materialProperties.envMap = envMapResult;
+      materialProperties.envMap = ( material.isMeshStandardMaterial ? cubeuvmaps : cubemaps ).get( material.envMap || materialProperties.environment );
 			materialProperties.envMapRotation = ( materialProperties.environment !== null && material.envMap === null ) ? scene.environmentRotation : material.envMapRotation;
 
 			if ( programs === undefined ) {
@@ -2269,6 +2283,10 @@ class WebGLRenderer {
 
 		const _scratchFrameBuffer = _gl.createFramebuffer();
 		this.setRenderTarget = function ( renderTarget, activeCubeFace = 0, activeMipmapLevel = 0 ) {
+
+		if (renderTarget && renderTarget.texture) {
+			console.trace('📍 setRenderTarget called with:', renderTarget.texture.name || 'unnamed RT');
+		}
 
 			_currentRenderTarget = renderTarget;
 			_currentActiveCubeFace = activeCubeFace;

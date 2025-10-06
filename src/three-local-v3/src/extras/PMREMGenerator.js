@@ -8,7 +8,8 @@ import {
 	RGBAFormat,
 	HalfFloatType,
 	BackSide,
-	LinearSRGBColorSpace
+	LinearSRGBColorSpace,
+	SRGBColorSpace
 } from '../constants.js';
 
 import { BufferAttribute } from '../core/BufferAttribute.js';
@@ -286,7 +287,8 @@ class PMREMGenerator {
 			generateMipmaps: false,
 			type: HalfFloatType,
 			format: RGBAFormat,
-			colorSpace: LinearSRGBColorSpace,
+			// REVERT: Go back to Linear but we'll lie about it elsewhere
+			colorSpace: LinearSRGBColorSpace, // Always Linear - environment maps need Linear space
 			depthBuffer: false
 		};
 

@@ -6785,11 +6785,24 @@ function WebGLPrograms( renderer, cubemaps, cubeuvmaps, extensions, capabilities
 
 	function getParameters( material, lights, shadows, scene, object ) {
 
+		// console.log('🚀 THREE.JS PATCHED VERSION RUNNING! Material:', material.name);
+
 		const fog = scene.fog;
 		const geometry = object.geometry;
 		const environment = material.isMeshStandardMaterial ? scene.environment : null;
 
-		const envMap = ( material.isMeshStandardMaterial ? cubeuvmaps : cubemaps ).get( material.envMap || environment );
+		// FIX: Ensure envMap is properly detected for render targets
+		const materialEnvMap = material.envMap || environment;
+		let envMap = ( material.isMeshStandardMaterial ? cubeuvmaps : cubemaps ).get( materialEnvMap );
+
+		// CRITICAL FIX: If envMap is null but we have environment, use the environment directly
+		if (!envMap && environment) {
+			console.log('🔧 Three.js RT fix: envMap lookup returned null, using environment directly');
+			console.log('Environment mapping:', environment.mapping, 'isCubeTexture:', environment.isCubeTexture);
+			envMap = environment;  // Use environment directly as fallback
+		}
+		const HAS_ENVMAP_SOURCE = !!(materialEnvMap);  // Track if we SHOULD have envmap
+
 		const envMapCubeUVHeight = ( !! envMap ) && ( envMap.mapping === CubeUVReflectionMapping ) ? envMap.image.height : null;
 
 		const shaderID = shaderIDs[ material.type ];
@@ -6852,7 +6865,8 @@ function WebGLPrograms( renderer, cubemaps, cubeuvmaps, extensions, capabilities
 
 		const HAS_MAP = !! material.map;
 		const HAS_MATCAP = !! material.matcap;
-		const HAS_ENVMAP = !! envMap;
+		// FIX: Use our new detection that accounts for environment even if cubemap lookup fails
+		const HAS_ENVMAP = !! envMap;  // Use whether we SHOULD have envmap, not whether lookup succeeded
 		const HAS_AOMAP = !! material.aoMap;
 		const HAS_LIGHTMAP = !! material.lightMap;
 		const HAS_BUMPMAP = !! material.bumpMap;
@@ -6942,7 +6956,7 @@ function WebGLPrograms( renderer, cubemaps, cubeuvmaps, extensions, capabilities
 			map: HAS_MAP,
 			matcap: HAS_MATCAP,
 			envMap: HAS_ENVMAP,
-			envMapMode: HAS_ENVMAP && envMap.mapping,
+			envMapMode: HAS_ENVMAP && (envMap ? envMap.mapping : null),
 			envMapCubeUVHeight: envMapCubeUVHeight,
 			aoMap: HAS_AOMAP,
 			lightMap: HAS_LIGHTMAP,

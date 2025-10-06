@@ -1,4 +1,4 @@
-import { BackSide, DoubleSide, CubeUVReflectionMapping, ObjectSpaceNormalMap, TangentSpaceNormalMap, NoToneMapping, NormalBlending, LinearSRGBColorSpace, SRGBTransfer } from '../../constants.js';
+import { BackSide, DoubleSide, CubeUVReflectionMapping, ObjectSpaceNormalMap, TangentSpaceNormalMap, NoToneMapping, NormalBlending, LinearSRGBColorSpace, SRGBColorSpace, SRGBTransfer } from '../../constants.js';
 import { Layers } from '../../core/Layers.js';
 import { WebGLProgram } from './WebGLProgram.js';
 import { WebGLShaderCache } from './WebGLShaderCache.js';
@@ -48,11 +48,39 @@ function WebGLPrograms( renderer, cubemaps, cubeuvmaps, extensions, capabilities
 
 	function getParameters( material, lights, shadows, scene, object ) {
 
+		const currentRT = renderer.getRenderTarget();
+		const isRT = currentRT !== null;
+
+		if (material.name === 'Material.040') {  // The lid material
+			// console.log('🚨 LID MATERIAL DEBUG:', {
+			// 	isRT: isRT,
+			// 	hasEnvironment: !!scene.environment,
+			// 	materialEnvMap: !!material.envMap
+			// });
+		}
+
 		const fog = scene.fog;
 		const geometry = object.geometry;
 		const environment = material.isMeshStandardMaterial ? scene.environment : null;
 
-		const envMap = ( material.isMeshStandardMaterial ? cubeuvmaps : cubemaps ).get( material.envMap || environment );
+		// FIX: Better envmap detection for RT
+		const materialEnvMap = material.envMap || environment;
+    const envMap = ( material.isMeshStandardMaterial ? cubeuvmaps : cubemaps ).get( material.envMap || environment );
+		// let envMap = ( material.isMeshStandardMaterial ? cubeuvmaps : cubemaps ).get( materialEnvMap );
+
+		if (material.name === 'Material.040') {
+			// console.log('🔍 LID envMap lookup:', {
+			// 	materialEnvMap: !!materialEnvMap,
+			// 	envMapFromLookup: !!envMap,
+			// 	cubeuvmapsSize: cubeuvmaps.maps ? cubeuvmaps.maps.size : 'unknown'
+			// });
+		}
+
+		// If lookup fails but we have environment, use it directly
+		if (!envMap && materialEnvMap) {
+			// console.log('🔧 RT FIX: envMap lookup failed for', material.name, '- using materialEnvMap directly');
+			// envMap = materialEnvMap;
+		}
 		const envMapCubeUVHeight = ( !! envMap ) && ( envMap.mapping === CubeUVReflectionMapping ) ? envMap.image.height : null;
 
 		const shaderID = shaderIDs[ material.type ];
@@ -107,7 +135,8 @@ function WebGLPrograms( renderer, cubemaps, cubeuvmaps, extensions, capabilities
 
 		}
 
-		const currentRenderTarget = renderer.getRenderTarget();
+		// const currentRenderTarget = currentRT;  // Use the one we already defined above
+    const currentRenderTarget = renderer.getRenderTarget();
 		const reverseDepthBuffer = renderer.state.buffers.depth.getReversed();
 
 		const IS_INSTANCEDMESH = object.isInstancedMesh === true;
@@ -115,7 +144,13 @@ function WebGLPrograms( renderer, cubemaps, cubeuvmaps, extensions, capabilities
 
 		const HAS_MAP = !! material.map;
 		const HAS_MATCAP = !! material.matcap;
-		const HAS_ENVMAP = !! envMap;
+    const HAS_ENVMAP = !! envMap;
+		// FIX: Use whether we SHOULD have envmap, not whether lookup succeeded
+		// const HAS_ENVMAP = !! materialEnvMap;
+
+		if (material.name === 'Material.040') {
+			// console.log('🎯 LID HAS_ENVMAP:', HAS_ENVMAP, 'envMap:', !!envMap, 'envMapMode:', envMap?.mapping);
+		}
 		const HAS_AOMAP = !! material.aoMap;
 		const HAS_LIGHTMAP = !! material.lightMap;
 		const HAS_BUMPMAP = !! material.bumpMap;
@@ -174,6 +209,26 @@ function WebGLPrograms( renderer, cubemaps, cubeuvmaps, extensions, capabilities
 
 		}
 
+		if (material.name === 'Material.040') {
+			// console.log('📊 LID PARAMS:', {
+			// 	isRT: isRT,
+			// 	outputColorSpace: ( currentRT === null ) ? renderer.outputColorSpace : ( currentRT.isXRRenderTarget === true ? currentRT.texture.colorSpace : LinearSRGBColorSpace ),
+			// 	toneMapping: material.toneMapped ? (currentRT === null ? renderer.toneMapping : NoToneMapping) : NoToneMapping
+			// });
+		}
+
+		// Check if we need the environment map colorspace fix
+		const needsEnvMapFix = HAS_ENVMAP && currentRenderTarget &&
+			(currentRenderTarget.texture?.colorSpace === 'srgb' || currentRenderTarget.texture?.colorSpace === SRGBColorSpace);
+
+		// Check if we're outputting to sRGB (our envmap fix condition)
+		const outputColorSpace = ( currentRenderTarget === null ) ? renderer.outputColorSpace :
+			( currentRenderTarget.isXRRenderTarget === true ? currentRenderTarget.texture.colorSpace :
+				(currentRenderTarget.texture?.colorSpace || LinearSRGBColorSpace) );
+
+		const isSRGBOutput = outputColorSpace === 'srgb' || outputColorSpace === SRGBColorSpace ||
+			(currentRenderTarget && currentRenderTarget.texture && currentRenderTarget.texture.colorSpace === SRGBColorSpace);
+
 		const parameters = {
 
 			shaderID: shaderID,
@@ -192,6 +247,8 @@ function WebGLPrograms( renderer, cubemaps, cubeuvmaps, extensions, capabilities
 
 			precision: precision,
 
+			envMapSRGBFix: isSRGBOutput && HAS_ENVMAP,  // Enable fix only when needed
+
 			batching: IS_BATCHEDMESH,
 			batchingColor: IS_BATCHEDMESH && object._colorsTexture !== null,
 			instancing: IS_INSTANCEDMESH,
@@ -199,13 +256,17 @@ function WebGLPrograms( renderer, cubemaps, cubeuvmaps, extensions, capabilities
 			instancingMorph: IS_INSTANCEDMESH && object.morphTexture !== null,
 
 			supportsVertexTextures: SUPPORTS_VERTEX_TEXTURES,
-			outputColorSpace: ( currentRenderTarget === null ) ? renderer.outputColorSpace : ( currentRenderTarget.isXRRenderTarget === true ? currentRenderTarget.texture.colorSpace : LinearSRGBColorSpace ),
+			// FIX: Use the RT's actual colorSpace if it exists, otherwise use Linear as before
+			// outputColorSpace: ( currentRT === null ) ? renderer.outputColorSpace : ( currentRT.isXRRenderTarget === true ? currentRT.texture.colorSpace : (currentRT.texture?.colorSpace || LinearSRGBColorSpace) ),
+      outputColorSpace: ( currentRenderTarget === null ) ? renderer.outputColorSpace : ( currentRT.isXRRenderTarget === true ? currentRT.texture.colorSpace : (currentRT.texture?.colorSpace || LinearSRGBColorSpace) ),
 			alphaToCoverage: !! material.alphaToCoverage,
 
 			map: HAS_MAP,
 			matcap: HAS_MATCAP,
 			envMap: HAS_ENVMAP,
-			envMapMode: HAS_ENVMAP && envMap.mapping,
+			envMapSRGBFix: needsEnvMapFix, // Add our fix flag
+			// envMapMode: HAS_ENVMAP && (envMap ? envMap.mapping : (materialEnvMap ? materialEnvMap.mapping : null)),
+      envMapMode: HAS_ENVMAP && envMap.mapping,
 			envMapCubeUVHeight: envMapCubeUVHeight,
 			aoMap: HAS_AOMAP,
 			lightMap: HAS_LIGHTMAP,
@@ -563,6 +624,8 @@ function WebGLPrograms( renderer, cubemaps, cubeuvmaps, extensions, capabilities
 			_programLayers.enable( 20 );
 		if ( parameters.alphaToCoverage )
 			_programLayers.enable( 21 );
+		if ( parameters.envMapSRGBFix )
+			_programLayers.enable( 22 );
 
 		array.push( _programLayers.mask );
 

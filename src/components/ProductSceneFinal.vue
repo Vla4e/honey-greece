@@ -200,7 +200,7 @@ Cache.enabled = true;
 export default {
   setup() {
     // ========== DOF TOGGLE ==========
-    const ENABLE_DOF = false; // Set to false to disable DOF blur
+    const ENABLE_DOF = true; // Set to false to disable DOF blur
     // ================================
 
     let composer = null; // addPostprocessing, animate
@@ -663,7 +663,7 @@ export default {
 
             // FIX: Set lid material to preserve reflections during postprocessing!
             if (obj.material) {
-              obj.material.envMapIntensity = 2.0; // Strong environment reflections
+              obj.material.envMapIntensity = 2.0; // Restored - tone mapping handles overflow now
               obj.material.roughness = 0.2; // Slightly rough for realistic metal
               obj.material.metalness = 0.8; // Metallic lid
               obj.material.needsUpdate = true;
@@ -705,7 +705,7 @@ export default {
             obj.material.depthTest = true;
             obj.material.opacity = 0.3; // Default - front jar uses this, back jar gets 0.75
             obj.material.blending = NormalBlending;
-            obj.material.envMapIntensity = 1.5; // Reflections make glass visible
+            obj.material.envMapIntensity = 1.5; // Restored - tone mapping handles overflow now
             obj.material.needsUpdate = true;
             obj.material.renderOrder = 1000; // Render glass AFTER caps/labels
             obj.material.polygonOffset = true; // Prevent z-fighting
@@ -1129,6 +1129,12 @@ export default {
       );
       // console.log("EXRTEX", exrTexture);
       let envMap = pmremGenerator.fromEquirectangular(exrTexture).texture;
+
+      // BREAKING: Lie about colorspace - tell Three.js it's sRGB when it's actually Linear
+      // This should prevent any conversion
+      console.log("🔍 Original envmap colorSpace:", envMap.colorSpace);
+      envMap.colorSpace = SRGBColorSpace;  // Lie! It's actually Linear
+      console.log("🔄 Lying about colorSpace, set to:", envMap.colorSpace);
       // console.log(envMap.type);
       // console.log(envMap.mapping);
       // console.log("envMap", envMap);
@@ -1136,7 +1142,7 @@ export default {
       // pmremGenerator.compileEquirectangularShader();
       globalScene.background = null;
       globalScene.environment = envMap;
-      globalScene.environmentIntensity = 0.85;
+      globalScene.environmentIntensity = 0.85; // Restored - tone mapping handles overflow now
       globalScene.toneMappingExposure = 1.0;
 
       // CRITICAL FIX: Explicitly set environment on lids to preserve reflections!
